@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "../lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Building2, Layers, Users, Banknote } from "lucide-react";
+import LogoutButton from "../components/LogoutButton";
 
 export default async function Home() {
   // 1. Lexojmë statistikat
@@ -48,9 +49,16 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 p-4 md:p-8">
+      
+      {/* Pjesa e sipërme me Butonin e Daljes */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Dashboard-i i Pronarit</h1>
+        <LogoutButton />
+      </div>
+
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Përmbledhja e Sistemit</h1>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Statistikat</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="bg-blue-100 p-4 rounded-lg text-blue-600"><Building2 size={24} /></div>
@@ -116,7 +124,7 @@ export default async function Home() {
                     <td className="py-4 text-right">
                       <form action={deleteBusiness}>
                         <input type="hidden" name="id" value={biznes.id} />
-                        <button type="submit" className="text-red-500 bg-red-50 px-3 py-1.5 rounded-md">Fshi</button>
+                        <button type="submit" className="text-red-500 bg-red-50 px-3 py-1.5 rounded-md hover:bg-red-100 transition">Fshi</button>
                       </form>
                     </td>
                   </tr>
