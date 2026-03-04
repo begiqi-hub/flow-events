@@ -1,11 +1,14 @@
-export { default } from "next-auth/middleware"
+import { withAuth } from "next-auth/middleware";
 
-// Këtu i tregojmë cilat faqe duam të mbyllim me çelës
+export default withAuth({
+  pages: {
+    signIn: "/login", // I tregojmë saktësisht ku është dera e hyrjes
+  },
+});
+
 export const config = {
   matcher: [
-    "/",          // Mbyll Dashboard-in
-    "/bookings",  // Mbyll Rezervimet
-    // "/halls",  // Mund t'i heqësh komentet kur të krijosh këto faqe
-    // "/clients"
-  ]
-}
+    "/",          // Mbrojmë Dashboard-in
+    "/bookings",  // Mbrojmë Rezervimet
+  ],
+};
