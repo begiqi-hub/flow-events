@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model audit_logs {
+  id           String     @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id  String     @db.VarChar(36)
+  user_id      String?    @db.VarChar(36)
+  action       String     @db.VarChar(255)
+  entity       String     @db.VarChar(100)
+  entity_id    String     @db.VarChar(36)
+  before_state String?    @db.LongText
+  after_state  String?    @db.LongText
+  created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  businesses   businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "audit_logs_ibfk_1")
+  users        users?     @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "audit_logs_ibfk_2")
+
+  @@index([business_id], map: "business_id")
+  @@index([user_id], map: "user_id")
+}
+
+model booking_extras {
+  id         String   @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  booking_id String   @db.VarChar(36)
+  extra_id   String   @db.VarChar(36)
+  qty        Int
+  unit_price Decimal  @db.Decimal(10, 2)
+  line_total Decimal? @db.Decimal(10, 2)
+  bookings   bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "booking_extras_ibfk_1")
+  extras     extras   @relation(fields: [extra_id], references: [id], onUpdate: Restrict, map: "booking_extras_ibfk_2")
+
+  @@index([booking_id], map: "booking_id")
+  @@index([extra_id], map: "extra_id")
+}
+
+model bookings {
+  id             String           @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id    String           @db.VarChar(36)
+  hall_id        String           @db.VarChar(36)
+  client_id      String           @db.VarChar(36)
+  event_date     DateTime         @db.Date
+  start_time     DateTime         @db.Time(0)
+  end_time       DateTime         @db.Time(0)
+  participants   Int              @default(0)
+  status         bookings_status? @default(pending)
+  total_amount   Decimal          @default(0.00) @db.Decimal(10, 2)
+  created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  booking_extras booking_extras[]
+  businesses     businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookings_ibfk_1")
+  halls          halls            @relation(fields: [hall_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
+  clients        clients          @relation(fields: [client_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_3")
+  documents      documents[]
+  payments       payments[]
+
+  @@index([business_id], map: "business_id")
+  @@index([client_id], map: "client_id")
+  @@index([hall_id], map: "hall_id")
+}
+
+model businesses {
+  id                  String       @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  name                String       @db.VarChar(255)
+  nui                 String       @unique(map: "nui") @db.VarChar(50)
+  email               String       @unique(map: "email") @db.VarChar(255)
+  phone               String       @db.VarChar(50)
+  deposit_percent     Decimal?     @default(20.00) @db.Decimal(5, 2)
+  cancellation_policy String?      @db.Text
+  created_at          DateTime?    @default(now()) @db.Timestamp(0)
+  deleted_at          DateTime?    @db.Timestamp(0)
+  audit_logs          audit_logs[]
+  bookings            bookings[]
+  clients             clients[]
+  extras              extras[]
+  halls               halls[]
+  menus               menus[]
+  users               users[]
+}
+
+model clients {
+  id          String     @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id String     @db.VarChar(36)
+  name        String     @db.VarChar(255)
+  phone       String     @db.VarChar(50)
+  email       String?    @db.VarChar(255)
+  created_at  DateTime?  @default(now()) @db.Timestamp(0)
+  bookings    bookings[]
+  businesses  businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "clients_ibfk_1")
+
+  @@unique([business_id, phone], map: "business_id")
+}
+
+model documents {
+  id         String          @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  booking_id String          @db.VarChar(36)
+  type       documents_type? @default(agreement)
+  file_url   String          @db.Text
+  status     String?         @default("generated") @db.VarChar(50)
+  created_at DateTime?       @default(now()) @db.Timestamp(0)
+  bookings   bookings        @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "documents_ibfk_1")
+
+  @@index([booking_id], map: "booking_id")
+}
+
+model extras {
+  id             String           @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id    String           @db.VarChar(36)
+  name           String           @db.VarChar(255)
+  unit           String           @db.VarChar(50)
+  unit_price     Decimal          @db.Decimal(10, 2)
+  is_active      Boolean?         @default(true)
+  created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  booking_extras booking_extras[]
+  businesses     businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "extras_ibfk_1")
+
+  @@index([business_id], map: "business_id")
+}
+
+model halls {
+  id          String        @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id String        @db.VarChar(36)
+  name        String        @db.VarChar(255)
+  capacity    Int
+  status      halls_status? @default(active)
+  created_at  DateTime?     @default(now()) @db.Timestamp(0)
+  bookings    bookings[]
+  businesses  businesses    @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "halls_ibfk_1")
+  user_halls  user_halls[]
+
+  @@index([business_id], map: "business_id")
+}
+
+model menus {
+  id               String     @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id      String     @db.VarChar(36)
+  name             String     @db.VarChar(255)
+  description      String?    @db.Text
+  price_per_person Decimal    @db.Decimal(10, 2)
+  is_active        Boolean?   @default(true)
+  created_at       DateTime?  @default(now()) @db.Timestamp(0)
+  businesses       businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menus_ibfk_1")
+
+  @@index([business_id], map: "business_id")
+}
+
+model payments {
+  id          String          @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  booking_id  String          @db.VarChar(36)
+  amount      Decimal         @db.Decimal(10, 2)
+  method      payments_method
+  paid_at     DateTime?       @default(now()) @db.Timestamp(0)
+  recorded_by String?         @db.VarChar(36)
+  bookings    bookings        @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "payments_ibfk_1")
+  users       users?          @relation(fields: [recorded_by], references: [id], onUpdate: Restrict, map: "payments_ibfk_2")
+
+  @@index([booking_id], map: "booking_id")
+  @@index([recorded_by], map: "recorded_by")
+}
+
+model user_halls {
+  user_id String @db.VarChar(36)
+  hall_id String @db.VarChar(36)
+  users   users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_halls_ibfk_1")
+  halls   halls  @relation(fields: [hall_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_halls_ibfk_2")
+
+  @@id([user_id, hall_id])
+  @@index([hall_id], map: "hall_id")
+}
+
+model users {
+  id          String            @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  business_id String            @db.VarChar(36)
+  email       String            @unique(map: "email") @db.VarChar(255)
+  full_name   String            @db.VarChar(255)
+  role        users_role
+  hall_scope  users_hall_scope? @default(all)
+  status      users_status?     @default(active)
+  created_at  DateTime?         @default(now()) @db.Timestamp(0)
+  audit_logs  audit_logs[]
+  payments    payments[]
+  user_halls  user_halls[]
+  businesses  businesses        @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "users_ibfk_1")
+
+  @@index([business_id], map: "business_id")
+}
+
+enum documents_type {
+  agreement
+  invoice
+}
+
+enum payments_method {
+  cash
+  bank
+  pos
+}
+
+enum users_role {
+  superadmin
+  admin
+  staff
+}
+
+enum halls_status {
+  active
+  inactive
+}
+
+enum users_hall_scope {
+  all
+  selected
+}
+
+enum users_status {
+  active
+  inactive
+}
+
+enum bookings_status {
+  draft
+  pending
+  confirmed
+  completed
+  cancelled
+  no_show
+}
