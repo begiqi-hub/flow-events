@@ -1,14 +1,13 @@
-import { withAuth } from "next-auth/middleware";
+import createMiddleware from 'next-intl/middleware';
 
-export default withAuth({
-  pages: {
-    signIn: "/login", // I tregojmë saktësisht ku është dera e hyrjes
-  },
+export default createMiddleware({
+  // Lista e gjuhëve tuaja
+  locales: ['sq', 'en', 'mk', 'cg'],
+  // Gjuha që hapet by default
+  defaultLocale: 'sq'
 });
 
 export const config = {
-  matcher: [
-    "/",          // Mbrojmë Dashboard-in
-    "/bookings",  // Mbrojmë Rezervimet
-  ],
+  // Lejon middleware të kapë vetëm faqet vizuale dhe injoron API-të ose fotot
+  matcher: ['/((?!api|_next|.*\\..*).*)']
 };

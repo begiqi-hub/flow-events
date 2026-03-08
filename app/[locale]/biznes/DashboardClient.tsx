@@ -1,0 +1,291 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { format, getDaysInMonth, startOfMonth, getDay } from "date-fns";
+import { 
+  Plus, Calendar as CalendarIcon, CalendarDays, List, 
+  Clock, ArrowRight, MapPin, Users, CalendarCheck, CheckCircle2, Clock4, X, Phone, Banknote
+} from "lucide-react";
+
+export default function DashboardClient({ business, locale, stats, monthBookings }: any) {
+  const [view, setView] = useState<'list' | 'calendar'>('list');
+  // KËTU RUAJMË EVENTIN QË KLIKOHET PËR TË HAPUR POPUP-IN
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  
+  const now = new Date();
+  const currentMonthName = format(now, 'MMMM yyyy'); 
+
+  // LOGJIKA E KALENDARIT
+  const daysInMonth = getDaysInMonth(now);
+  const firstDay = startOfMonth(now);
+  const startDay = getDay(firstDay);
+  const emptyCells = startDay === 0 ? 6 : startDay - 1;
+  
+  const blanks = Array.from({ length: emptyCells }, (_, i) => i);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const renderStatus = (status: string) => {
+    switch(status) {
+      case 'confirmed':
+      case 'paid':
+        return <span className="inline-flex items-center gap-1 bg-[#E6F8F0] text-[#059669] px-3 py-1.5 rounded-full text-xs font-bold border border-emerald-100"><CheckCircle2 size={12}/> Konfirmuar</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-100"><Clock4 size={12}/> Në Pritje</span>;
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto p-4 md:p-8 relative">
+      
+      {/* ------------------------------------------------------------------ */}
+      {/* POPUP (MODAL) PËR DETAJET E EVENTIT TË KLIKUAR */}
+      {/* ------------------------------------------------------------------ */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+            
+            {/* Koka e Popup-it */}
+            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900">{selectedBooking.clients?.name || "Klient i panjohur"}</h3>
+                <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5 mt-1.5">
+                  <Phone size={14} className="text-gray-400"/> {selectedBooking.clients?.phone || "S'ka numër"}
+                </p>
+              </div>
+              <button onClick={() => setSelectedBooking(null)} className="p-2.5 bg-white hover:bg-gray-200 border border-gray-200 rounded-full text-gray-500 transition-colors shadow-sm">
+                <X size={18}/>
+              </button>
+            </div>
+            
+            {/* Trupi i Popup-it */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-blue-50 text-blue-900 p-3 rounded-xl border border-blue-100">
+                <CalendarIcon className="text-blue-500 shrink-0" size={18} />
+                <span className="font-bold">{format(new Date(selectedBooking.event_date), 'dd MMMM yyyy')}</span>
+              </div>
+              
+              <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-amber-50 text-amber-900 p-3 rounded-xl border border-amber-100">
+                <Clock className="text-amber-500 shrink-0" size={18} />
+                <span className="font-bold">{format(new Date(selectedBooking.start_time), 'HH:mm')} - {format(new Date(selectedBooking.end_time), 'HH:mm')}</span>
+              </div>
+              
+              <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-purple-50 text-purple-900 p-3 rounded-xl border border-purple-100">
+                <MapPin className="text-purple-500 shrink-0" size={18} />
+                <span className="font-bold">{selectedBooking.halls?.name || "Pa sallë"} <span className="text-purple-300 mx-1">•</span> {selectedBooking.participants} pax</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-gray-900 rounded-2xl border border-gray-800 mt-6 shadow-lg">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Totali</span>
+                  <span className="text-2xl font-black text-emerald-400">{Number(selectedBooking.total_amount).toFixed(2)} €</span>
+                </div>
+                <div>
+                  {renderStatus(selectedBooking.status)}
+                </div>
+              </div>
+            </div>
+            
+            {/* Fundi i Popup-it (Butoni) */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
+              <Link 
+                href={`/${locale}/biznes/rezervimet`} 
+                className="flex-1 bg-white border-2 border-gray-200 hover:border-gray-900 text-gray-900 font-bold py-3.5 px-4 rounded-xl text-center transition-colors shadow-sm"
+              >
+                Shko te Rezervimet
+              </Link>
+            </div>
+
+          </div>
+        </div>
+      )}
+      {/* ------------------------------------------------------------------ */}
+
+      {/* HEADER DHE BANERI I PROVËS I INTEGRUAR */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-extrabold text-gray-900">{business.name}</h1>
+            <span className="bg-amber-100 text-amber-800 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md border border-amber-200 shadow-sm">
+              Provë
+            </span>
+          </div>
+          <p className="text-gray-500 text-sm font-medium">Mirësevini në pultin tuaj të menaxhimit të eventeve.</p>
+        </div>
+        
+        <div className="flex items-center gap-4 bg-white border border-amber-200 shadow-sm p-2 pr-4 rounded-2xl w-full lg:w-auto">
+          <div className="bg-amber-50 p-2.5 rounded-xl text-amber-500"><Clock size={20}/></div>
+          <div className="flex-1 lg:flex-none">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Koha e Provës</p>
+            <p className="text-sm font-black text-gray-900">13 ditë të mbetura</p>
+          </div>
+          <button className="ml-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 px-5 rounded-xl transition-colors shadow-sm">
+            Abonohu
+          </button>
+        </div>
+      </div>
+
+      {/* 4 KARTAT MODERNE TË STATISTIKAVE */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        
+        {/* KARTA 1: REZERVIM I RI */}
+        <Link 
+          href={`/${locale}/biznes/rezervimet/shto`}
+          className="bg-[#0F172A] rounded-3xl p-6 flex flex-col justify-between group hover:-translate-y-1 transition-transform shadow-xl shadow-slate-900/10 relative overflow-hidden h-[150px]"
+        >
+          <div className="absolute -right-4 -top-4 opacity-10 text-white transform group-hover:scale-110 transition-transform duration-500">
+            <CalendarIcon size={120} />
+          </div>
+          <div className="w-12 h-12 rounded-full border border-white/20 bg-white/5 flex items-center justify-center text-white mb-2 backdrop-blur-sm">
+            <Plus size={24} />
+          </div>
+          <div className="relative z-10">
+            <h3 className="text-white font-bold text-lg">Rezervo Eventin</h3>
+            <p className="text-slate-400 text-xs mt-1 font-medium">Krijo një regjistrim të ri</p>
+          </div>
+        </Link>
+
+        {/* KARTA 2 */}
+        <Link href={`/${locale}/biznes/rezervimet`} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-3xl p-6 border border-orange-100 shadow-sm flex flex-col justify-between h-[150px] group hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 rounded-xl bg-orange-100/50 text-orange-600 flex items-center justify-center shrink-0">
+              <CalendarDays size={24} />
+            </div>
+            <p className="text-4xl font-black text-orange-900">{stats.week}</p>
+          </div>
+          <div>
+            <h3 className="font-bold text-orange-950 text-base">Agjenda e Javës</h3>
+            <p className="text-orange-600/80 text-xs mt-1 font-semibold uppercase tracking-wider">Evente Këtë Javë</p>
+          </div>
+        </Link>
+
+        {/* KARTA 3 */}
+        <Link href={`/${locale}/biznes/rezervimet`} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-6 border border-blue-100 shadow-sm flex flex-col justify-between h-[150px] group hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 rounded-xl bg-blue-100/50 text-blue-600 flex items-center justify-center shrink-0">
+              <CalendarCheck size={24} />
+            </div>
+            <p className="text-4xl font-black text-blue-900">{stats.month}</p>
+          </div>
+          <div>
+            <h3 className="font-bold text-blue-950 text-base">Aktiviteti i Muajit</h3>
+            <p className="text-blue-600/80 text-xs mt-1 font-semibold uppercase tracking-wider">Evente Këtë Muaj</p>
+          </div>
+        </Link>
+
+        {/* KARTA 4 */}
+        <Link href={`/${locale}/biznes/rezervimet`} className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between h-[150px] group hover:-translate-y-1 transition-transform">
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100/50 text-emerald-600 flex items-center justify-center shrink-0">
+              <List size={24} />
+            </div>
+            <p className="text-4xl font-black text-emerald-900">{stats.total}</p>
+          </div>
+          <div>
+            <h3 className="font-bold text-emerald-950 text-base">Historiku i Eventeve</h3>
+            <p className="text-emerald-600/80 text-xs mt-1 font-semibold uppercase tracking-wider">Gjithsej në Sistem</p>
+          </div>
+        </Link>
+
+      </div>
+
+      {/* SEKSIONI I TABS (KALENDARI DHE LISTA) */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 min-h-[500px]">
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 capitalize">{currentMonthName}</h2>
+            <p className="text-sm text-gray-500 mt-1">Pasqyra e eventeve për këtë muaj</p>
+          </div>
+          
+          <div className="bg-gray-100 p-1.5 rounded-xl flex items-center w-full sm:w-auto">
+            <button 
+              onClick={() => setView('list')} 
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all ${view === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <List size={16} /> Lista
+            </button>
+            <button 
+              onClick={() => setView('calendar')} 
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all ${view === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <CalendarIcon size={16} /> Kalendari
+            </button>
+          </div>
+        </div>
+
+        {/* PAMJA E LISTËS */}
+        {view === 'list' && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            {monthBookings.length > 0 ? monthBookings.map((booking: any) => (
+              <div 
+                key={booking.id} 
+                onClick={() => setSelectedBooking(booking)} // HAP MODALIN
+                className="cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/20 transition-all group gap-4"
+              >
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div className="bg-gray-50 px-3 py-2 rounded-xl text-center border border-gray-100 shrink-0">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase leading-none">{format(new Date(booking.event_date), 'MMM')}</p>
+                    <p className="text-lg font-black text-gray-900 mt-1 leading-none">{format(new Date(booking.event_date), 'dd')}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">{booking.clients?.name || "Klient i panjohur"}</h4>
+                    <p className="text-xs text-gray-500 flex items-center gap-2 mt-1 font-medium">
+                       <Clock size={12}/> {format(new Date(booking.start_time), 'HH:mm')} 
+                       <span className="text-gray-300">•</span>
+                       <MapPin size={12}/> {booking.halls?.name || "Pa sallë"}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full sm:w-auto text-left sm:text-right">
+                  {renderStatus(booking.status)}
+                </div>
+              </div>
+            )) : (
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300"><List size={32}/></div>
+                <p className="text-gray-900 font-bold">Nuk keni evente këtë muaj.</p>
+                <p className="text-gray-500 text-sm mt-1">Lista do të shfaqet këtu sapo të shtohen rezervime.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PAMJA E KALENDARIT (GRID) */}
+        {view === 'calendar' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              {['Hë', 'Ma', 'Më', 'En', 'Pr', 'Sh', 'Di'].map(d => <div key={d} className="text-center text-[10px] sm:text-xs font-bold text-gray-400 uppercase py-2">{d}</div>)}
+              {blanks.map(i => <div key={`b-${i}`} className="h-20 sm:h-28 rounded-xl bg-transparent border border-dashed border-gray-100/50"></div>)}
+              
+              {days.map(day => {
+                const dayBookings = monthBookings.filter((b: any) => new Date(b.event_date).getDate() === day);
+                const hasEvent = dayBookings.length > 0;
+                return (
+                  <div key={day} className={`h-20 sm:h-28 rounded-xl p-1 sm:p-2 border transition-all flex flex-col overflow-hidden ${hasEvent ? 'bg-emerald-50/20 border-emerald-100 hover:border-emerald-300 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-300'}`}>
+                    <span className={`text-xs sm:text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${hasEvent ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-500'}`}>{day}</span>
+                    
+                    {/* Lista e Eventeve në Kalendar */}
+                    <div className="flex flex-col gap-1 overflow-y-auto mt-1 no-scrollbar">
+                      {dayBookings.map((b: any) => (
+                        <button 
+                          key={b.id} 
+                          onClick={() => setSelectedBooking(b)} // HAP MODALIN
+                          className="text-left w-full bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500 hover:text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-1 rounded transition-colors truncate border border-emerald-500/20"
+                          title={b.clients?.name}
+                        >
+                          {b.clients?.name || "Event"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}

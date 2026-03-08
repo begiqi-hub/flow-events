@@ -1,0 +1,12 @@
+{
+  "Sidebar": {
+    "dashboard": "Dashboard",
+    "calendar": "Kalendari",
+    "bookings": "Rezervimet",
+    "clients": "Klientët",
+    "reports": "Raportet",
+    "halls": "Sallat",
+    "menus": "Menutë",
+    "settings": "Konfigurimet"
+  }
+}

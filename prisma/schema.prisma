@@ -8,7 +8,7 @@ datasource db {
 }
 
 model audit_logs {
-  id           String     @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id           String     @id @default(uuid()) @db.VarChar(36)
   business_id  String     @db.VarChar(36)
   user_id      String?    @db.VarChar(36)
   action       String     @db.VarChar(255)
@@ -25,7 +25,7 @@ model audit_logs {
 }
 
 model booking_extras {
-  id         String   @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id         String   @id @default(uuid()) @db.VarChar(36)
   booking_id String   @db.VarChar(36)
   extra_id   String   @db.VarChar(36)
   qty        Int
@@ -33,13 +33,13 @@ model booking_extras {
   line_total Decimal? @db.Decimal(10, 2)
   bookings   bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "booking_extras_ibfk_1")
   extras     extras   @relation(fields: [extra_id], references: [id], onUpdate: Restrict, map: "booking_extras_ibfk_2")
-
+  
   @@index([booking_id], map: "booking_id")
   @@index([extra_id], map: "extra_id")
 }
 
 model bookings {
-  id             String           @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id             String           @id @default(uuid()) @db.VarChar(36)
   business_id    String           @db.VarChar(36)
   hall_id        String           @db.VarChar(36)
   client_id      String           @db.VarChar(36)
@@ -48,6 +48,8 @@ model bookings {
   end_time       DateTime         @db.Time(0)
   participants   Int              @default(0)
   status         bookings_status? @default(pending)
+  payment_status String           @default("pending")
+  cancel_reason  String?
   total_amount   Decimal          @default(0.00) @db.Decimal(10, 2)
   created_at     DateTime?        @default(now()) @db.Timestamp(0)
   booking_extras booking_extras[]
@@ -63,39 +65,59 @@ model bookings {
 }
 
 model businesses {
-  id                  String       @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
-  name                String       @db.VarChar(255)
-  nui                 String       @unique(map: "nui") @db.VarChar(50)
-  email               String       @unique(map: "email") @db.VarChar(255)
-  phone               String       @db.VarChar(50)
-  deposit_percent     Decimal?     @default(20.00) @db.Decimal(5, 2)
-  cancellation_policy String?      @db.Text
-  created_at          DateTime?    @default(now()) @db.Timestamp(0)
-  deleted_at          DateTime?    @db.Timestamp(0)
-  audit_logs          audit_logs[]
-  bookings            bookings[]
-  clients             clients[]
-  extras              extras[]
-  halls               halls[]
-  menus               menus[]
-  users               users[]
+  id              String    @id @default(uuid()) @db.VarChar(36)
+  name            String    @db.VarChar(255)
+  nui             String    @unique @db.VarChar(50)
+  email           String    @unique @db.VarChar(255)
+  phone           String    @db.VarChar(50)
+  city            String?   @db.VarChar(100)
+  deposit_percent Decimal?  @db.Decimal(5, 2)
+  cancel_penalty  Int       @default(0)
+  cancel_days     Int       @default(0)
+  
+  // Lidhja me Veprimtarinë
+  activityId      String?   @db.VarChar(36)
+  activity        Activity? @relation(fields: [activityId], references: [id])
+  
+  // Lidhja me Pakon dhe Provën
+  packageId       String?   @db.VarChar(36)
+  package         Package?  @relation(fields: [packageId], references: [id])
+  status          String    @default("trial") @db.VarChar(50)
+  trialEndsAt     DateTime? 
+  
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+
+  // Relacionet
+  audit_logs      audit_logs[]
+  bookings        bookings[]
+  clients         clients[]
+  extras          extras[]
+  halls           halls[]
+  menus           menus[]
+  users           users[]
 }
 
 model clients {
-  id          String     @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
-  business_id String     @db.VarChar(36)
-  name        String     @db.VarChar(255)
-  phone       String     @db.VarChar(50)
-  email       String?    @db.VarChar(255)
-  created_at  DateTime?  @default(now()) @db.Timestamp(0)
-  bookings    bookings[]
-  businesses  businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "clients_ibfk_1")
-
+  id           String     @id @default(uuid()) @db.VarChar(36)
+  business_id  String     @db.VarChar(36)
+  name         String     @db.VarChar(255)
+  phone        String     @db.VarChar(50)
+  email        String?    @db.VarChar(255)
+  personal_id  String?
+  gender       String?
+  city         String?
+  client_type  String     @default("individual")
+  business_num String?
+  address      String?
+  created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  bookings     bookings[]
+  businesses   businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "clients_ibfk_1")
+  
   @@unique([business_id, phone], map: "business_id")
 }
 
 model documents {
-  id         String          @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id         String          @id @default(uuid()) @db.VarChar(36)
   booking_id String          @db.VarChar(36)
   type       documents_type? @default(agreement)
   file_url   String          @db.Text
@@ -107,13 +129,14 @@ model documents {
 }
 
 model extras {
-  id             String           @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id             String           @id @default(uuid()) @db.VarChar(36)
   business_id    String           @db.VarChar(36)
   name           String           @db.VarChar(255)
-  unit           String           @db.VarChar(50)
-  unit_price     Decimal          @db.Decimal(10, 2)
+  price          Decimal          @db.Decimal(10, 2)
   is_active      Boolean?         @default(true)
   created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?        @updatedAt
+
   booking_extras booking_extras[]
   businesses     businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "extras_ibfk_1")
 
@@ -121,12 +144,21 @@ model extras {
 }
 
 model halls {
-  id          String        @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id          String        @id @default(uuid()) @db.VarChar(36)
   business_id String        @db.VarChar(36)
   name        String        @db.VarChar(255)
   capacity    Int
+  
+  description String?       @db.Text
+  price       Float?
+  parking     Boolean       @default(true)
+  ac          Boolean       @default(true)
+  image       String?       @db.LongText
+  
   status      halls_status? @default(active)
   created_at  DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?     @updatedAt
+  
   bookings    bookings[]
   businesses  businesses    @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "halls_ibfk_1")
   user_halls  user_halls[]
@@ -135,20 +167,23 @@ model halls {
 }
 
 model menus {
-  id               String     @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id               String     @id @default(uuid()) @db.VarChar(36)
   business_id      String     @db.VarChar(36)
   name             String     @db.VarChar(255)
   description      String?    @db.Text
   price_per_person Decimal    @db.Decimal(10, 2)
+  image            String?    @db.LongText  
   is_active        Boolean?   @default(true)
   created_at       DateTime?  @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?  @updatedAt
+  
   businesses       businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menus_ibfk_1")
 
   @@index([business_id], map: "business_id")
 }
 
 model payments {
-  id          String          @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id          String          @id @default(uuid()) @db.VarChar(36)
   booking_id  String          @db.VarChar(36)
   amount      Decimal         @db.Decimal(10, 2)
   method      payments_method
@@ -172,7 +207,7 @@ model user_halls {
 }
 
 model users {
-  id          String            @id @default(dbgenerated("(uuid())")) @db.VarChar(36)
+  id          String            @id @default(uuid()) @db.VarChar(36)
   business_id String            @db.VarChar(36)
   email       String            @unique(map: "email") @db.VarChar(255)
   full_name   String            @db.VarChar(255)
@@ -186,6 +221,29 @@ model users {
   businesses  businesses        @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "users_ibfk_1")
 
   @@index([business_id], map: "business_id")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Activity {
+  id         String       @id @default(uuid()) @db.VarChar(36)
+  name       String       @unique
+  businesses businesses[] 
+}
+
+model Package {
+  id         String       @id @default(uuid()) @db.VarChar(36)
+  name       String
+  price      Float
+  businesses businesses[] 
 }
 
 enum documents_type {
@@ -227,14 +285,4 @@ enum bookings_status {
   completed
   cancelled
   no_show
-}
-
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
