@@ -32,5 +32,16 @@ export default async function ReservationsPage({ params }: { params: Promise<{ l
     orderBy: { event_date: 'asc' }
   });
 
-  return <BookingsClient initialBookings={bookings} business={business} locale={locale} />;
+  // 1. Pastrojmë të dhënat nga formati Decimal i Prismës
+  const safeBookings = JSON.parse(JSON.stringify(bookings));
+  const safeBusiness = JSON.parse(JSON.stringify(business));
+
+  // 2. I dërgojmë të dhënat e pastruara tek Klienti
+  return (
+    <BookingsClient 
+      initialBookings={safeBookings} 
+      business={safeBusiness} 
+      locale={locale} 
+    />
+  );
 }

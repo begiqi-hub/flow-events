@@ -22,7 +22,12 @@ export default function BookingsClient({ initialBookings, business, locale }: an
   const filteredBookings = useMemo(() => {
     return initialBookings.filter((booking: any) => {
       const eventDate = new Date(booking.event_date);
-      const isWithinDate = eventDate >= new Date(dateRange.from) && eventDate <= new Date(dateRange.to);
+      
+      // LOGJIKA E RE: Nëse po kërkojmë me emër, shpërfillim datat!
+      let isWithinDate = true;
+      if (searchTerm.trim() === "") {
+         isWithinDate = eventDate >= new Date(dateRange.from) && eventDate <= new Date(dateRange.to);
+      }
 
       const searchMatch = 
         booking.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,7 +72,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
   return (
     <div className="max-w-[1600px] mx-auto p-4 md:p-6 space-y-6 relative">
       
-      {/* POPUP (MODAL) PËR BUTONIN "SHIKO" */}
       {viewBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -171,7 +175,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </div>
       )}
 
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Menaxhimi i Rezervimeve</h1>
@@ -182,7 +185,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </Link>
       </div>
 
-      {/* KARTAT E STATISTIKAVE */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
           <p className="text-emerald-600 text-sm font-bold uppercase tracking-wider mb-1 flex items-center gap-2"><Clock4 size={16}/> Në Ardhje</p>
@@ -202,7 +204,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </div>
       </div>
 
-      {/* FILTRAT */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Kërko Klient / Sallë</label>
@@ -240,7 +241,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </div>
       </div>
 
-      {/* TABELA E REZERVIMEVE */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -264,7 +264,8 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                 return (
                   <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-4 px-5">
-                      <Link href={`/${locale}/biznes/klientet/${booking.client_id}`} className="text-sm font-bold text-gray-900 hover:text-emerald-600 transition-colors block mb-1">
+                      {/* LINKU I RREGULLUAR PËR KLIENTIN (Të dërgon te faqja ndrysho/[id]) */}
+                      <Link href={`/${locale}/biznes/klientet/ndrysho/${booking.client_id}`} className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors block mb-1">
                         {booking.clients?.name || "Klient i panjohur"}
                       </Link>
                       <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">

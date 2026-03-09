@@ -27,6 +27,16 @@ export default async function AddReservationPage({ params }: { params: Promise<{
   const extras = await prisma.extras.findMany({ where: { business_id: business.id } });
   const clients = await prisma.clients.findMany({ where: { business_id: business.id } });
 
+  // ===================================================================
+  // FORMULA MAGJIKE: Pastrojmë të dhënat nga formati Decimal i Prismës
+  // Kjo ndalon gabimin "Decimal objects are not supported"
+  // ===================================================================
+  const safeBusiness = JSON.parse(JSON.stringify(business));
+  const safeHalls = JSON.parse(JSON.stringify(halls));
+  const safeMenus = JSON.parse(JSON.stringify(menus));
+  const safeExtras = JSON.parse(JSON.stringify(extras));
+  const safeClients = JSON.parse(JSON.stringify(clients));
+
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8">
       <div className="mb-6">
@@ -35,11 +45,11 @@ export default async function AddReservationPage({ params }: { params: Promise<{
       </div>
       
       <ReservationWizard 
-        business={business} // <--- Kjo është e vetmja gjë që u shtua
-        halls={halls} 
-        menus={menus} 
-        extras={extras} 
-        clients={clients} 
+        business={safeBusiness} 
+        halls={safeHalls} 
+        menus={safeMenus} 
+        extras={safeExtras} 
+        clients={safeClients} 
         locale={locale} 
       />
     </div>
