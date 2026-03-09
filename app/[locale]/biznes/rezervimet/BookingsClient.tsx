@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   PlusCircle, Search, Calendar, MapPin, CheckCircle2, Wallet, 
-  AlertCircle, Edit, Eye, XCircle, Clock4, User, ArrowRightLeft, UserCircle, Phone, Sparkles
+  AlertCircle, Edit, Eye, XCircle, Clock4, User, ArrowRightLeft, UserCircle, Phone, Sparkles, PartyPopper
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isPast } from "date-fns";
 import DownloadInvoiceBtn from "./DownloadInvoiceBtn";
@@ -99,6 +99,14 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                 <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Detajet e Eventit</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><PartyPopper size={14}/> Lloji:</p>
+                    <p className="font-bold text-gray-900">{viewBooking.event_type || "Nuk është specifikuar"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><MapPin size={14}/> Salla:</p>
+                    <p className="font-bold text-gray-900">{viewBooking.halls?.name}</p>
+                  </div>
+                  <div>
                     <p className="text-sm text-gray-500 flex items-center gap-1"><Calendar size={14}/> Data:</p>
                     <p className="font-bold text-gray-900">{format(new Date(viewBooking.event_date), 'dd MMM yyyy')}</p>
                   </div>
@@ -107,11 +115,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                     <p className="font-bold text-gray-900">{format(new Date(viewBooking.start_time), 'HH:mm')} - {format(new Date(viewBooking.end_time), 'HH:mm')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 flex items-center gap-1"><MapPin size={14}/> Salla:</p>
-                    <p className="font-bold text-gray-900">{viewBooking.halls?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 flex items-center gap-1"><User size={14}/> Të ftuar (Pax):</p>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><User size={14}/> Pjesëmarrës:</p>
                     <p className="font-bold text-gray-900">{viewBooking.participants} persona</p>
                   </div>
                 </div>
@@ -148,7 +152,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                 </div>
               )}
 
-              {/* HISTORIKU NË POPUP */}
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Historiku i Eventit</p>
                  <p className="text-sm font-medium text-gray-700">Regjistruar: <strong>{format(new Date(viewBooking.created_at), 'dd.MM.yyyy HH:mm')}</strong> nga {business?.name || 'Administratori'}</p>
@@ -160,7 +163,6 @@ export default function BookingsClient({ initialBookings, business, locale }: an
             
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
               <DownloadInvoiceBtn booking={viewBooking} business={business} />
-              
               <Link href={`/${locale}/biznes/rezervimet/ndrysho/${viewBooking.id}`} className="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-md">
                 <Edit size={16} /> Ndrysho
               </Link>
@@ -169,7 +171,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </div>
       )}
 
-      {/* Pjesa tjetër e faqes (List/Tabela) Mbetet 100% njësoj */}
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Menaxhimi i Rezervimeve</h1>
@@ -180,6 +182,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </Link>
       </div>
 
+      {/* KARTAT E STATISTIKAVE */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center">
           <p className="text-emerald-600 text-sm font-bold uppercase tracking-wider mb-1 flex items-center gap-2"><Clock4 size={16}/> Në Ardhje</p>
@@ -199,6 +202,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </div>
       </div>
 
+      {/* FILTRAT */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Kërko Klient / Sallë</label>
@@ -236,6 +240,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
         </div>
       </div>
 
+      {/* TABELA E REZERVIMEVE */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -259,10 +264,12 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                 return (
                   <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-4 px-5">
-                      <Link href={`/${locale}/biznes/klientet/${booking.client_id}`} className="text-sm font-bold text-gray-900 hover:text-emerald-600 transition-colors block mb-0.5">
+                      <Link href={`/${locale}/biznes/klientet/${booking.client_id}`} className="text-sm font-bold text-gray-900 hover:text-emerald-600 transition-colors block mb-1">
                         {booking.clients?.name || "Klient i panjohur"}
                       </Link>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mt-1">
+                      <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                        <span className="bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-bold">{booking.event_type || "Event"}</span>
+                        <span className="text-gray-300">|</span>
                         <Calendar size={12}/> {format(eventDateObj, 'dd MMM yyyy')}
                         <span className="text-gray-300">|</span>
                         <Clock4 size={12}/> {format(new Date(booking.start_time), 'HH:mm')}
@@ -270,7 +277,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                     </td>
                     <td className="py-4 px-5">
                       <p className="text-sm font-bold text-gray-700 mb-0.5 flex items-center gap-1.5"><MapPin size={14} className="text-gray-400"/> {booking.halls?.name || "N/A"}</p>
-                      <p className="text-xs text-gray-500 font-medium ml-5">{booking.participants} persona (Pax)</p>
+                      <p className="text-xs text-gray-500 font-medium ml-5">{booking.participants} persona</p>
                     </td>
                     <td className="py-4 px-5">
                       <div className="flex flex-col gap-1.5">
@@ -297,7 +304,7 @@ export default function BookingsClient({ initialBookings, business, locale }: an
                     <td className="py-4 px-5">
                       <div className="flex items-center gap-2 mb-1">
                         <UserCircle size={14} className="text-gray-400"/>
-                        <span className="text-xs font-bold text-gray-700">{business.name} (Admin)</span>
+                        <span className="text-xs font-bold text-gray-700">{business.name}</span>
                       </div>
                       <p className="text-[10px] text-gray-400 font-medium ml-5 flex flex-col">
                         <span>Krijuar: {format(new Date(booking.created_at), 'dd.MM.yy')}</span>

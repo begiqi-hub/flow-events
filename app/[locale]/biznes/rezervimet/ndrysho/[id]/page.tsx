@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { 
   CalendarDays, Users, Banknote, 
-  ArrowLeft, Save, User, CheckCircle2, AlertTriangle, Sparkles, Building2, XCircle, ArrowRightLeft, Clock4, Info, Utensils, Receipt
+  ArrowLeft, Save, User, CheckCircle2, AlertTriangle, Sparkles, Building2, XCircle, ArrowRightLeft, Clock4, Info, Utensils, Receipt, RotateCcw, PartyPopper
 } from "lucide-react";
 import Link from "next/link";
 import { getBookingAction, updateBookingAction } from "./actions";
@@ -19,7 +19,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const [fetching, setFetching] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   
-  // Sensori që mbron çmimin origjinal derisa përdoruesi të bëjë një ndryshim
   const [isModified, setIsModified] = useState(false);
 
   const [hallsList, setHallsList] = useState<any[]>([]);
@@ -31,8 +30,12 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const [auditLog, setAuditLog] = useState<any>({ created_at: null, updated_at: null });
   const [historicallyPaid, setHistoricallyPaid] = useState<number>(0);
 
+  const [originalTotal, setOriginalTotal] = useState("0");
+  const [lastMathTotal, setLastMathTotal] = useState(0);
+
   const [formData, setFormData] = useState({
     client_name: "",
+    event_type: "", // <--- FUSHA E RE
     hall_id: "",
     menu_id: "",
     event_date: "",
@@ -72,15 +75,28 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
         const totalPaid = data.booking.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
         setHistoricallyPaid(totalPaid);
 
+        const dbTotal = data.booking.total_amount?.toString() || "0";
+        setOriginalTotal(dbTotal);
+
+        const dbMenu = data.allMenus?.find((m: any) => m.id === (data.booking as any).menu_id);
+        const dbMenuPrice = dbMenu ? Number(dbMenu.price_per_person) : 0;
+        const dbHall = data.allHalls?.find((h: any) => h.id === data.booking.hall_id);
+        const dbHallPrice = dbHall?.price ? Number(dbHall.price) : 0;
+        const dbPax = Number(data.booking.participants) || 0;
+        const dbExtras = preSelected.reduce((sum: number, ext: any) => sum + Number(ext.price), 0);
+        
+        setLastMathTotal((dbPax * dbMenuPrice) + dbHallPrice + dbExtras);
+
         setFormData({
           client_name: data.booking.clients?.name || "Klient i panjohur",
+          event_type: (data.booking as any).event_type || "", // Mbushim të dhënat e reja
           hall_id: data.booking.hall_id || "",
           menu_id: (data.booking as any).menu_id || "", 
           event_date: data.booking.event_date ? new Date(data.booking.event_date).toISOString().split('T')[0] : "",
           start_time: formatTimeForInput(data.booking.start_time),
           end_time: formatTimeForInput(data.booking.end_time),
           participants: data.booking.participants?.toString() || "",
-          total_amount: data.booking.total_amount?.toString() || "0",
+          total_amount: dbTotal,
           status: data.booking.status || "confirmed",
           cancel_reason: data.booking.cancel_reason || "",
           new_payment_amount: "",
@@ -94,45 +110,38 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
     loadData();
   }, [id]);
 
-  // LLOGARITJA LIVE (Automatike sapo ndryshon një vlerë)
   useEffect(() => {
     if (fetching || !isModified) return;
 
-    const selectedMenu = menusList.find((m: any) => m.id === formData.menu_id);
-    const menuPrice = selectedMenu ? Number(selectedMenu.price_per_person) : 0;
+    const currentMenu = menusList.find((m: any) => m.id === formData.menu_id);
+    const currentMenuPrice = currentMenu ? Number(currentMenu.price_per_person) : 0;
+    const currentHall = hallsList.find((h: any) => h.id === formData.hall_id);
+    const currentHallPrice = currentHall?.price ? Number(currentHall.price) : 0;
+    const currentPax = Number(formData.participants) || 0;
+    const currentExtrasTotal = selectedExtras.reduce((sum: number, ext: any) => sum + Number(ext.price), 0);
+
+    const currentMathTotal = (currentPax * currentMenuPrice) + currentHallPrice + currentExtrasTotal;
+    const delta = currentMathTotal - lastMathTotal;
     
-    const selectedHall = hallsList.find((h: any) => h.id === formData.hall_id);
-    const hallPrice = selectedHall?.price ? Number(selectedHall.price) : 0;
-
-    const pax = Number(formData.participants) || 0;
-    const extrasTotal = selectedExtras.reduce((sum: number, ext: any) => sum + Number(ext.price), 0);
-
-    const calculatedTotal = (pax * menuPrice) + extrasTotal + hallPrice;
-    setFormData(prev => ({ ...prev, total_amount: calculatedTotal.toFixed(2) }));
+    if (delta !== 0) {
+      setFormData(prev => {
+        const previousTotal = Number(prev.total_amount) || 0;
+        const newTotal = Math.max(0, previousTotal + delta);
+        return { ...prev, total_amount: newTotal.toFixed(2) };
+      });
+      setLastMathTotal(currentMathTotal); 
+    }
   }, [formData.participants, formData.menu_id, formData.hall_id, selectedExtras, isModified]);
 
-  // Funksionet që njoftojnë sistemin se po bëjmë ndryshime manuale
-  const handleParticipantChange = (e: any) => {
-    setFormData({...formData, participants: e.target.value});
-    setIsModified(true);
-  };
-  const handleMenuChange = (e: any) => {
-    setFormData({...formData, menu_id: e.target.value});
-    setIsModified(true);
-  };
-  const handleHallChange = (e: any) => {
-    setFormData({...formData, hall_id: e.target.value});
-    setIsModified(true);
-  };
+  const handleParticipantChange = (e: any) => { setIsModified(true); setFormData({...formData, participants: e.target.value}); };
+  const handleMenuChange = (e: any) => { setIsModified(true); setFormData({...formData, menu_id: e.target.value}); };
+  const handleHallChange = (e: any) => { setIsModified(true); setFormData({...formData, hall_id: e.target.value}); };
   
   const toggleExtra = (extra: any) => {
     setIsModified(true);
     const exists = selectedExtras.find((e: any) => e.id === extra.id);
-    if (exists) {
-      setSelectedExtras(selectedExtras.filter((e: any) => e.id !== extra.id));
-    } else {
-      setSelectedExtras([...selectedExtras, extra]);
-    }
+    if (exists) setSelectedExtras(selectedExtras.filter((e: any) => e.id !== extra.id));
+    else setSelectedExtras([...selectedExtras, extra]);
   };
 
   const renderCancellationPolicy = () => {
@@ -237,15 +246,47 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
       <form onSubmit={handleSubmit} className={`bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
-        {/* RRESHTI 1: VETËM KLIENTI (E plotë) */}
         <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100">
            <label className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"><User size={14} /> Klienti / Rezervuesi</label>
            <div className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 w-full">{formData.client_name}</div>
         </div>
 
-        {/* RRESHTI 2: SALLA, MENU, PJESËMARRËS (Grid 3 për Tablet/Desktop) */}
+        {/* ======================================================== */}
+        {/* RRESHTI I RI ME 4 ELEMENTE (PËRFSHIRË LLOJIN E EVENTIT)  */}
+        {/* ======================================================== */}
         <div className="p-6 md:p-8 border-b border-gray-100">
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              
+              {/* Lloji i Eventit Inteligjent (Dropdown + Shkrim) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Lloji i Eventit</label>
+                <div className="relative">
+                  <PartyPopper size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input 
+                    type="text" 
+                    list="event-types" 
+                    required 
+                    placeholder="p.sh. Dasëm" 
+                    className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" 
+                    value={formData.event_type} 
+                    onChange={(e) => setFormData({...formData, event_type: e.target.value})} 
+                  />
+                  {/* Kjo është lista standarde që shfaqet kur klikon */}
+                  <datalist id="event-types">
+                    <option value="Dasëm" />
+                    <option value="Fejesë" />
+                    <option value="Ditëlindje" />
+                    <option value="Event Korporativ / Biznes" />
+                    <option value="Konferencë / Seminar" />
+                    <option value="Aheng Familjar" />
+                    <option value="Banket / Darkë Gala" />
+                    <option value="Përvjetor" />
+                    <option value="Mbrëmje e Maturës" />
+                    <option value="Syneti / Pagëzim" />
+                  </datalist>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Salla e Eventit</label>
                 <div className="relative">
@@ -256,8 +297,9 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                   </select>
                 </div>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">Menuja e Zgjedhur</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Menuja</label>
                 <div className="relative">
                   <Utensils size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.menu_id} onChange={handleMenuChange}>
@@ -266,6 +308,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                   </select>
                 </div>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Pjesëmarrës</label>
                 <div className="relative">
@@ -273,12 +316,12 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                   <input type="number" required placeholder="p.sh. 150" className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.participants} onChange={handleParticipantChange} />
                 </div>
               </div>
+
            </div>
         </div>
 
-        {/* RRESHTI 3: DATA DHE ORA */}
         <div className="p-6 md:p-8 border-b border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Data e Eventit</label>
               <input type="date" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
@@ -294,7 +337,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
           </div>
         </div>
 
-        {/* EKSTRAT */}
         <div className="p-6 md:p-8 border-b border-gray-100 space-y-4 bg-purple-50/20">
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2"><Sparkles size={16} className="text-purple-400"/> Shërbimet Ekstra</h3>
           <div className="flex flex-wrap gap-3">
@@ -312,7 +354,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
           </div>
         </div>
 
-        {/* FINANCAT */}
         <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6"><Receipt size={20} className="text-emerald-500"/> Paneli Financiar</h3>
           
@@ -321,7 +362,22 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
               <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-2">Totali i Faturës (€)</label>
                 <input type="number" step="0.01" className="w-full border border-gray-300 p-4 rounded-xl outline-none focus:border-emerald-500 font-semibold text-gray-800 bg-white shadow-sm text-lg" value={formData.total_amount} onChange={(e) => setFormData({...formData, total_amount: e.target.value})} />
-                <p className="text-xs text-gray-400 mt-2 font-medium">*Llogaritet automatikisht, por mund të editohet manualisht për t'i bërë zbritje.</p>
+                
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-400 font-medium">*Llogaritet automatikisht ndryshimi bazuar në origjinalin.</p>
+                  
+                  {formData.total_amount !== originalTotal && (
+                    <button type="button" onClick={() => {
+                        setFormData({...formData, total_amount: originalTotal});
+                        setLastMathTotal(lastMathTotal);
+                        setIsModified(false);
+                      }} 
+                      className="text-xs text-blue-500 font-bold hover:text-blue-700 flex items-center gap-1 transition-colors"
+                    >
+                      <RotateCcw size={12}/> Kthe tek {Number(originalTotal).toFixed(2)} €
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
@@ -367,7 +423,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
           </div>
         </div>
 
-        {/* STATUSI I EVENTIT */}
         <div className="p-6 md:p-8 bg-gray-50 space-y-6">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Gjendja Përfundimtare e Eventit</label>

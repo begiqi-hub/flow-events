@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth";
 import { prisma } from "../../../../../../lib/prisma"; 
 import { revalidatePath } from "next/cache";
 
-// Kjo formulë magjike pastron të gjitha "Decimal" error-et që të nxori inspekti!
 const serializeData = (data: any) => JSON.parse(JSON.stringify(data));
 
 export async function getBookingAction(id: string) {
@@ -32,7 +31,6 @@ export async function getBookingAction(id: string) {
     const allExtras = await prisma.extras.findMany({ where: { business_id: business.id } });
     const allMenus = await prisma.menus.findMany({ where: { business_id: business.id } });
 
-    // Këtu aplikojmë pastrimin e të dhënave para se t'i shkojnë klientit
     return serializeData({ booking, allHalls, allExtras, allMenus, business });
   } catch (error) {
     console.error("Gabim në leximin e rezervimit:", error);
@@ -66,6 +64,7 @@ export async function updateBookingAction(id: string, data: any) {
     await prisma.$transaction(async (tx) => {
       
       const updateData: any = {
+        event_type: data.event_type || null,
         event_date: data.event_date ? new Date(data.event_date) : undefined,
         start_time: data.start_time ? new Date(`${data.event_date}T${data.start_time}:00`) : undefined,
         end_time: data.end_time ? new Date(`${data.event_date}T${data.end_time}:00`) : undefined,
@@ -76,18 +75,24 @@ export async function updateBookingAction(id: string, data: any) {
         payment_status: calculatedPaymentStatus,
       };
 
-      if (data.hall_id && data.hall_id !== "") updateData.hall_id = data.hall_id;
-      
-      // Mbrojtje nëse nuk e ke bërë ende 'npx prisma db push' për menunë
-      if (data.menu_id !== undefined) {
-         updateData.menu_id = data.menu_id === "" ? null : data.menu_id;
+      // Lidhja e saktë për Sallën
+      if (data.hall_id && data.hall_id !== "") {
+        updateData.halls = { connect: { id: data.hall_id } };
       }
 
+      // ==========================================
+      // KUJDES: Kam çaktivizuar ruajtjen e Menusë!
+      // ==========================================
+      // Pasi të bësh hapat e Databazës më poshtë, hiqja dy vizat (//) këtij rreshti:
+      // if (data.menu_id && data.menu_id !== "") updateData.menu_id = data.menu_id;
+
+      // 1. Përditësojmë Rezervimin
       await tx.bookings.update({
         where: { id: id, business_id: business.id },
         data: updateData
       });
 
+      // 2. Rifreskojmë Ekstrat
       await tx.booking_extras.deleteMany({ where: { booking_id: id } });
       if (data.selectedExtras && data.selectedExtras.length > 0) {
         for (const ext of data.selectedExtras) {
@@ -103,6 +108,7 @@ export async function updateBookingAction(id: string, data: any) {
         }
       }
 
+      // 3. Regjistrojmë Pagesën e Re
       if (newPayment > 0) {
         await tx.payments.create({
           data: {
@@ -120,7 +126,6 @@ export async function updateBookingAction(id: string, data: any) {
 
   } catch (error: any) {
     console.error("GABIM DB:", error);
-    // Kjo nxjerr fjalinë ekzakte të databazës nëse ka ende një problem tjetër
     return { error: error.message ? error.message.split('\n').pop() : "Gabim i panjohur në ruajtje." };
   }
 }

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { 
   Check, ChevronRight, ChevronLeft, CalendarDays, Utensils, Users, 
   Banknote, Building2, Clock, UsersRound, AlertTriangle, Sparkles, Percent,
-  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck
+  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck, PartyPopper, Search
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,22 +17,26 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
   const [isPrefixOpen, setIsPrefixOpen] = useState(false);
   const prefixRef = useRef<HTMLDivElement>(null);
   
+  // SHTUAM SENSORIN PËR AUTOFILL TË KLIENTIT
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const clientInputRef = useRef<HTMLDivElement>(null);
+
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success", complete: false });
 
   const [formData, setFormData] = useState({
+    event_type: "",
     event_date: "", start_time: "", end_time: "", hall_id: "", participants: "",
     menu_id: "", 
     extras: [] as any[], 
     
-    // Të dhënat e Klientit
     client_type: "individual",
     client_name: "", 
     client_personal_id: "", 
     client_gender: "", 
     client_business_name: "",
     client_business_num: "",
-    client_representative: "", // <--- FUSHA E RE SHTUAR!
+    client_representative: "", 
     client_address: "",
     client_city: "", 
     client_phone_prefix: "+383", 
@@ -61,35 +65,59 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
     { code: "+49",  country: "Gjermani", icon: "https://flagcdn.com/w40/de.png" }
   ];
 
+  // Mbyllim dropdownet kur klikohet jashtë tyre
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (prefixRef.current && !prefixRef.current.contains(event.target as Node)) {
         setIsPrefixOpen(false);
+      }
+      if (clientInputRef.current && !clientInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (formData.client_phone.length > 5) {
-      const fullPhone = `${formData.client_phone_prefix} ${formData.client_phone.trim()}`;
-      const existingClient = clients?.find((c: any) => c.phone.replace(/\s+/g, '') === fullPhone.replace(/\s+/g, ''));
-      
-      if (existingClient) {
-        setFormData(prev => ({
-          ...prev,
-          client_type: existingClient.client_type || "individual",
-          client_name: prev.client_name || existingClient.name,
-          client_business_name: prev.client_business_name || (existingClient.client_type === 'business' ? existingClient.name : ""),
-          client_email: prev.client_email || (existingClient.email || ""),
-          client_city: prev.client_city || (existingClient.city || ""),
-          client_address: prev.client_address || (existingClient.address || ""),
-          client_business_num: prev.client_business_num || (existingClient.business_num || ""),
-        }));
-      }
+  // FUNKSIONI I AUTOFILL KUR ZGJEDH NJË KLIENT
+  const handleSelectClient = (c: any) => {
+    let prefix = "+383";
+    let phoneNum = c.phone || "";
+    
+    // Gjejmë prefiksin nga numri i plotë
+    const matchedPrefix = phonePrefixes.find(p => phoneNum.startsWith(p.code));
+    if (matchedPrefix) {
+      prefix = matchedPrefix.code;
+      phoneNum = phoneNum.slice(matchedPrefix.code.length).trim();
     }
-  }, [formData.client_phone, formData.client_phone_prefix, clients]);
+
+    // Nxjerrim të dhënat e biznesit nëse është biznes
+    let rep = "";
+    let bName = c.name;
+    if (c.client_type === 'business' && c.name.includes("(Përfaqësues:")) {
+       const parts = c.name.split("(Përfaqësues:");
+       bName = parts[0].trim();
+       rep = parts[1].replace(")", "").trim();
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      client_type: c.client_type || 'individual',
+      client_name: c.client_type === 'individual' ? c.name : prev.client_name,
+      client_business_name: c.client_type === 'business' ? bName : "",
+      client_representative: rep,
+      client_phone_prefix: prefix,
+      client_phone: phoneNum,
+      client_email: c.email || "",
+      client_personal_id: c.personal_id || "",
+      client_gender: c.gender || "",
+      client_city: c.city || "",
+      client_address: c.address || "",
+      client_business_num: c.business_num || ""
+    }));
+    
+    setShowSuggestions(false);
+  };
 
   const toggleExtra = (extra: any) => {
     const isSelected = formData.extras.find((e: any) => e.id === extra.id);
@@ -101,7 +129,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
   };
 
   const isStep1Valid = formData.event_date && formData.start_time && formData.end_time && formData.participants && formData.hall_id;
-  const isStep2Valid = formData.menu_id !== ""; 
+  const isStep2Valid = true; 
 
   const selectedHall = halls?.find((h: any) => h.id === formData.hall_id);
   const isOverCapacity = selectedHall && Number(formData.participants) > selectedHall.capacity;
@@ -109,9 +137,10 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
   const selectedMenu = menus?.find((m: any) => m.id === formData.menu_id);
   const totalMenuCost = selectedMenu ? (Number(formData.participants) * Number(selectedMenu.price_per_person)) : 0;
   
+  const hallPrice = selectedHall?.price ? Number(selectedHall.price) : 0;
   const extrasCost = formData.extras.reduce((sum: number, item: any) => sum + Number(item.price), 0);
   
-  const subTotal = totalMenuCost + extrasCost;
+  const subTotal = totalMenuCost + extrasCost + hallPrice;
   const discountAmount = (subTotal * Number(formData.discount_percent || 0)) / 100;
   const finalTotal = subTotal - discountAmount;
   
@@ -143,7 +172,6 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
   const handleDownloadWizardPDF = () => {
     const doc = new jsPDF();
-    // Tani fatura shfaq saktë emrin e biznesit dhe atij që e ka rezervuar!
     const billingName = formData.client_type === 'business' 
         ? `${formData.client_business_name} (${formData.client_representative})` 
         : formData.client_name;
@@ -162,11 +190,16 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
     doc.text(`Data e Eventit: ${formData.event_date}`, 14, 52);
     doc.text(`Salla: ${selectedHall?.name || "N/A"}`, 14, 58);
     doc.text(`Pjesëmarrës: ${formData.participants} persona`, 14, 64);
+    if(formData.event_type) doc.text(`Lloji i Eventit: ${formData.event_type}`, 14, 70);
 
+    const startYLine = formData.event_type ? 78 : 72;
     doc.setDrawColor(226, 232, 240);
-    doc.line(14, 72, 196, 72);
+    doc.line(14, startYLine, 196, startYLine);
 
     const tableData = [];
+    if (hallPrice > 0) {
+        tableData.push([`Salla: ${selectedHall?.name}`, `1`, `${hallPrice.toFixed(2)} €`, `${hallPrice.toFixed(2)} €`]);
+    }
     if (selectedMenu) {
       tableData.push([
         `Menu: ${selectedMenu.name}`,
@@ -182,7 +215,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
     });
 
     autoTable(doc, {
-      startY: 82,
+      startY: startYLine + 10,
       head: [['Përshkrimi', 'Sasia', 'Çmimi Njësi', 'Totali']],
       body: tableData,
       theme: 'grid',
@@ -218,8 +251,10 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
     setLoading(true);
     setToast({ show: false, message: "", type: "success", complete: false });
 
+    const finalData = { ...formData, total_amount: finalTotal.toString() };
+
     try {
-      const res = await saveReservationAction(formData);
+      const res = await saveReservationAction(finalData);
 
       if (res.error) {
         setToast({ show: true, message: res.error, type: "error", complete: false });
@@ -310,26 +345,52 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
       <div className="p-6 md:p-10 flex-1">
         
-        {/* HAPI 1 & 2 & 3 (Të paprekura, njësoj si më parë) */}
+        {/* HAPI 1: KOHA DHE SALLA */}
         {currentStep === 1 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Detajet e Eventit</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><CalendarDays size={16} className="text-gray-400" /> Data e Eventit</label>
-                <input type="date" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+              <div className="lg:col-span-2">
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><PartyPopper size={16} className="text-gray-400" /> Lloji i Eventit</label>
+                <input 
+                  type="text" 
+                  list="event-types" 
+                  className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" 
+                  placeholder="p.sh. Dasëm, Ditëlindje..." 
+                  value={formData.event_type} 
+                  onChange={(e) => setFormData({...formData, event_type: e.target.value})} 
+                />
+                <datalist id="event-types">
+                  <option value="Dasëm" />
+                  <option value="Fejesë" />
+                  <option value="Ditëlindje" />
+                  <option value="Event Korporativ / Biznes" />
+                  <option value="Konferencë / Seminar" />
+                  <option value="Aheng Familjar" />
+                  <option value="Mbrëmje e Maturës" />
+                  <option value="Syneti / Pagëzim" />
+                </datalist>
               </div>
+
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><UsersRound size={16} className="text-gray-400" /> Numri i Pjesëmarrësve</label>
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><UsersRound size={16} className="text-gray-400" /> Pjesëmarrës</label>
                 <input type="number" placeholder="p.sh. 150" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
               </div>
+
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Clock size={16} className="text-gray-400" /> Ora e Fillimit</label>
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Clock size={16} className="text-gray-400" /> Fillon në</label>
                 <input type="time" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.start_time} onChange={(e) => setFormData({...formData, start_time: e.target.value})} />
               </div>
+
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Clock size={16} className="text-gray-400" /> Ora e Përfundimit</label>
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Clock size={16} className="text-gray-400" /> Mbaron në</label>
                 <input type="time" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.end_time} onChange={(e) => setFormData({...formData, end_time: e.target.value})} />
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-5">
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><CalendarDays size={16} className="text-gray-400" /> Data e Eventit</label>
+                <input type="date" className="w-full sm:w-1/3 border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
               </div>
             </div>
 
@@ -367,10 +428,11 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
           </div>
         )}
         
+        {/* HAPI 2: MENUJA */}
         {currentStep === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Përzgjedhja e Menusë</h2>
-            <p className="text-gray-500 mb-8 font-medium">Zgjidhni pakon për <span className="text-gray-900 font-bold bg-gray-100 px-2 py-0.5 rounded">{formData.participants} pjesëmarrës</span>.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Përzgjedhja e Menusë (Opsionale)</h2>
+            <p className="text-gray-500 mb-8 font-medium">Mund të zgjidhni një menu ose të kaloni te hapi tjetër nëse menuja është e personalizuar.</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {menus?.length > 0 ? menus.map((menu: any) => (
@@ -391,6 +453,14 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
               )) : (<p className="text-gray-500 text-sm">Nuk keni shtuar menu.</p>)}
             </div>
 
+            {formData.menu_id && (
+              <div className="mt-4 flex justify-end">
+                 <button onClick={() => setFormData({...formData, menu_id: ""})} className="text-sm font-bold text-gray-500 hover:text-red-500 transition-colors">
+                   Hiq Menunë e Zgjedhur
+                 </button>
+              </div>
+            )}
+
             {formData.menu_id && selectedMenu && (
               <div className="mt-8 bg-gray-900 text-white rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between shadow-xl animate-in zoom-in-95 duration-300">
                 <div className="flex items-center gap-4 mb-4 sm:mb-0 w-full sm:w-auto">
@@ -409,6 +479,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
           </div>
         )}
 
+        {/* HAPI 3: EKSTRA */}
         {currentStep === 3 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Shërbime Ekstra (Opsionale)</h2>
@@ -451,7 +522,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
           </div>
         )}
 
-        {/* HAPI 4: KLIENTI (Ndarja fizike e plotë) */}
+        {/* HAPI 4: KLIENTI ME AUTOFILL */}
         {currentStep === 4 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Të dhënat e Klientit</h2>
@@ -481,13 +552,47 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
             <div className="bg-gray-50/50 p-6 md:p-8 rounded-3xl border border-gray-100">
                 
-                {/* BLOKU I INDIVIDIT */}
                 {formData.client_type === 'individual' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
-                    <div>
+                    
+                    {/* AUTOFILL I MENÇUR PËR INDIVIDËT */}
+                    <div className="relative" ref={clientInputRef}>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Users size={16} className="text-gray-400" /> Emri dhe Mbiemri</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Agim Ramadani" value={formData.client_name} onChange={(e) => setFormData({...formData, client_name: e.target.value})} />
+                      <input 
+                        type="text" 
+                        className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" 
+                        placeholder="Kërko ose shkruaj emrin..." 
+                        value={formData.client_name} 
+                        onChange={(e) => {
+                          setFormData({...formData, client_name: e.target.value});
+                          setShowSuggestions(true);
+                        }} 
+                      />
+                      
+                      {/* LISTA E SUGJERIMEVE (DROP DOWN) */}
+                      {showSuggestions && formData.client_name.length > 1 && (
+                        <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-50 overflow-hidden py-2 max-h-60 overflow-y-auto">
+                          {clients?.filter((c: any) => c.name.toLowerCase().includes(formData.client_name.toLowerCase())).map((c: any) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleSelectClient(c)}
+                              className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0"
+                            >
+                              <div className="bg-gray-100 p-2 rounded-full text-gray-500"><Search size={14}/></div>
+                              <div>
+                                <span className="block font-bold text-gray-900">{c.name}</span>
+                                <span className="text-xs text-gray-500">{c.phone} • {c.city || 'Pa qytet'}</span>
+                              </div>
+                            </button>
+                          ))}
+                          {clients?.filter((c: any) => c.name.toLowerCase().includes(formData.client_name.toLowerCase())).length === 0 && (
+                            <div className="px-4 py-3 text-sm text-gray-500 italic">Nuk u gjet asnjë klient me këtë emër. Shkruajeni të plotë për ta regjistruar të ri.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
+
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> Numri Personal (ID)</label>
                       <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. 1234567890" value={formData.client_personal_id} onChange={(e) => setFormData({...formData, client_personal_id: e.target.value})} />
@@ -534,13 +639,47 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                   </div>
                 )}
 
-                {/* BLOKU I BIZNESIT */}
                 {formData.client_type === 'business' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
-                    <div className="md:col-span-2">
+                    
+                    {/* AUTOFILL I MENÇUR PËR BIZNESET */}
+                    <div className="md:col-span-2 relative" ref={clientInputRef}>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Building size={16} className="text-gray-400" /> Emri i Biznesit</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Flow Events L.L.C." value={formData.client_business_name} onChange={(e) => setFormData({...formData, client_business_name: e.target.value})} />
+                      <input 
+                        type="text" 
+                        className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" 
+                        placeholder="Kërko biznesin..." 
+                        value={formData.client_business_name} 
+                        onChange={(e) => {
+                          setFormData({...formData, client_business_name: e.target.value});
+                          setShowSuggestions(true);
+                        }} 
+                      />
+                      
+                      {/* LISTA E SUGJERIMEVE (DROP DOWN) PËR BIZNESE */}
+                      {showSuggestions && formData.client_business_name.length > 1 && (
+                        <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-50 overflow-hidden py-2 max-h-60 overflow-y-auto">
+                          {clients?.filter((c: any) => c.name.toLowerCase().includes(formData.client_business_name.toLowerCase())).map((c: any) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleSelectClient(c)}
+                              className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0"
+                            >
+                              <div className="bg-gray-100 p-2 rounded-full text-gray-500"><Building size={14}/></div>
+                              <div>
+                                <span className="block font-bold text-gray-900">{c.name}</span>
+                                <span className="text-xs text-gray-500">{c.phone} • NUI: {c.business_num || 'N/A'}</span>
+                              </div>
+                            </button>
+                          ))}
+                          {clients?.filter((c: any) => c.name.toLowerCase().includes(formData.client_business_name.toLowerCase())).length === 0 && (
+                            <div className="px-4 py-3 text-sm text-gray-500 italic">Nuk u gjet asnjë biznes. Vazhdoni ta shkruani për ta regjistruar si të ri.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
+
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> NUI (Numri Unik)</label>
                       <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="812345678" value={formData.client_business_num} onChange={(e) => setFormData({...formData, client_business_num: e.target.value})} />
@@ -590,7 +729,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
           </div>
         )}
 
-        {/* HAPI 5: FINANCAT (E paprekur, saktë siç ishte) */}
+        {/* HAPI 5: FINANCAT */}
         {currentStep === 5 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Financat dhe Pagesa</h2>
@@ -598,13 +737,26 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
               
               <div className="lg:col-span-3 space-y-6">
-                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-gray-900">Ushqimi ({selectedMenu?.name})</p>
-                    <p className="text-sm text-gray-500">{formData.participants} persona x {selectedMenu?.price_per_person} €</p>
+                
+                {hallPrice > 0 && (
+                  <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-blue-900">Çmimi i Sallës ({selectedHall?.name})</p>
+                      <p className="text-sm text-blue-700">Pagesë fikse për qiranë e ambientit</p>
+                    </div>
+                    <p className="font-bold text-lg text-blue-900">{hallPrice.toFixed(2)} €</p>
                   </div>
-                  <p className="font-bold text-lg text-gray-900">{totalMenuCost.toFixed(2)} €</p>
-                </div>
+                )}
+
+                {totalMenuCost > 0 && (
+                  <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-gray-900">Ushqimi ({selectedMenu?.name})</p>
+                      <p className="text-sm text-gray-500">{formData.participants} persona x {selectedMenu?.price_per_person} €</p>
+                    </div>
+                    <p className="font-bold text-lg text-gray-900">{totalMenuCost.toFixed(2)} €</p>
+                  </div>
+                )}
                 
                 {formData.extras.length > 0 && (
                   <div className="bg-gray-50 p-5 rounded-2xl border border-dashed border-gray-200 space-y-2">
@@ -656,7 +808,6 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                   )}
                 </div>
                 
-                {/* POLITIKA E ANULIMIT */}
                 <div className="bg-[#FFF8E6] p-6 rounded-3xl border border-[#FFE7B3]">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="bg-[#FFA000] text-white p-2 rounded-xl"><ShieldAlert size={20} /></div>
@@ -670,16 +821,23 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
               </div>
 
-              {/* Totali Final Card */}
               <div className="lg:col-span-2 bg-gray-900 text-white p-8 rounded-3xl shadow-xl flex flex-col relative overflow-hidden">
                 <div className="absolute -right-6 -top-6 text-white/5"><Banknote size={180} /></div>
                 
                 <div className="relative z-10 flex-1 flex flex-col justify-center">
                   
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-gray-400 text-sm font-bold uppercase tracking-wider">Ushqimi</span>
-                    <span className="text-gray-300 font-medium">{totalMenuCost.toFixed(2)} €</span>
-                  </div>
+                  {hallPrice > 0 && (
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-gray-400 text-sm font-bold uppercase tracking-wider">Salla</span>
+                      <span className="text-gray-300 font-medium">{hallPrice.toFixed(2)} €</span>
+                    </div>
+                  )}
+                  {totalMenuCost > 0 && (
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-gray-400 text-sm font-bold uppercase tracking-wider">Ushqimi</span>
+                      <span className="text-gray-300 font-medium">{totalMenuCost.toFixed(2)} €</span>
+                    </div>
+                  )}
                   {extrasCost > 0 && (
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-gray-400 text-sm font-bold uppercase tracking-wider">Ekstra</span>
