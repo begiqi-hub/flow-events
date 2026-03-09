@@ -3,22 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { format, getDaysInMonth, startOfMonth, getDay } from "date-fns";
-import { sq, enUS, de } from "date-fns/locale"; // <--- SHTUAM GJUHËT KËTU
+import { sq, enUS, de } from "date-fns/locale";
 import { 
   Plus, Calendar as CalendarIcon, CalendarDays, List, 
-  Clock, ArrowRight, MapPin, Users, CalendarCheck, CheckCircle2, Clock4, X, Phone, Banknote, PartyPopper, UsersRound
+  Clock, ArrowRight, MapPin, Users, CalendarCheck, CheckCircle2, Clock4, X, Phone, Banknote, PartyPopper, UsersRound, Eye, Edit, Sparkles
 } from "lucide-react";
 
 export default function DashboardClient({ business, locale, stats, monthBookings }: any) {
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   
-  // LOGJIKA E GJUHËS SË KALENDARIT
   const dateLocales: any = { sq: sq, en: enUS, de: de };
-  const currentLocale = dateLocales[locale] || sq; // Default në Shqip nëse s'e gjen
+  const currentLocale = dateLocales[locale] || sq; 
   
   const now = new Date();
-  const currentMonthName = format(now, 'MMMM yyyy', { locale: currentLocale }); // <--- ZBATUAM GJUHËN KËTU
+  const currentMonthName = format(now, 'MMMM yyyy', { locale: currentLocale }); 
 
   const daysInMonth = getDaysInMonth(now);
   const firstDay = startOfMonth(now);
@@ -47,61 +46,96 @@ export default function DashboardClient({ business, locale, stats, monthBookings
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 relative">
       
-      {/* POPUP I DETAJEVE TË EVENTIT */}
+      {/* ========================================= */}
+      {/* POPUP I DETAJEVE (I njëjtë me Kalendarin) */}
+      {/* ========================================= */}
       {selectedBooking && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-            
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
-              <div>
-                <h3 className="text-2xl font-black text-gray-900">{selectedBooking.clients?.name || "Klient i panjohur"}</h3>
-                <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5 mt-1.5">
-                  <Phone size={14} className="text-gray-400"/> {selectedBooking.clients?.phone || "S'ka numër"}
-                </p>
-              </div>
-              <button onClick={() => setSelectedBooking(null)} className="p-2.5 bg-white hover:bg-gray-200 border border-gray-200 rounded-full text-gray-500 transition-colors shadow-sm">
-                <X size={18}/>
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Eye className="text-blue-500" /> Detajet e Rezervimit
+              </h3>
+              <button onClick={() => setSelectedBooking(null)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-200 rounded-full transition-colors">
+                <X size={24}/>
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-blue-50 text-blue-900 p-3 rounded-xl border border-blue-100">
-                <CalendarIcon className="text-blue-500 shrink-0" size={18} />
-                {/* ZBATUAM GJUHËN EDHE TE DATA E POPUP-IT */}
-                <span className="font-bold">{format(new Date(selectedBooking.event_date), 'dd MMMM yyyy', { locale: currentLocale })}</span>
-              </div>
-              
-              <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-amber-50 text-amber-900 p-3 rounded-xl border border-amber-100">
-                <Clock className="text-amber-500 shrink-0" size={18} />
-                <span className="font-bold">{format(new Date(selectedBooking.start_time), 'HH:mm')} - {format(new Date(selectedBooking.end_time), 'HH:mm')}</span>
-              </div>
-              
-              <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-purple-50 text-purple-900 p-3 rounded-xl border border-purple-100">
-                <MapPin className="text-purple-500 shrink-0" size={18} />
-                <span className="font-bold">{selectedBooking.halls?.name || "Pa sallë"} <span className="text-purple-300 mx-1">•</span> {selectedBooking.participants} pax</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-gray-900 rounded-2xl border border-gray-800 mt-6 shadow-lg">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Totali</span>
-                  <span className="text-2xl font-black text-emerald-400">{Number(selectedBooking.total_amount).toFixed(2)} €</span>
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Të dhënat e Klientit</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">Emri:</p>
+                    <p className="font-bold text-gray-900">{selectedBooking.clients?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><Phone size={14}/> Telefoni:</p>
+                    <p className="font-bold text-gray-900">{selectedBooking.clients?.phone}</p>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  {renderStatus(selectedBooking.status)}
+              </div>
+
+              <div className="bg-blue-50/30 p-4 rounded-2xl border border-blue-100">
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Detajet e Eventit</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><PartyPopper size={14}/> Lloji:</p>
+                    <p className="font-bold text-gray-900">{selectedBooking.event_type || "Nuk është specifikuar"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><MapPin size={14}/> Salla:</p>
+                    <p className="font-bold text-gray-900">{selectedBooking.halls?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><CalendarIcon size={14}/> Data:</p>
+                    <p className="font-bold text-gray-900">{format(new Date(selectedBooking.event_date), 'dd MMM yyyy', { locale: currentLocale })}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><Clock size={14}/> Orari:</p>
+                    <p className="font-bold text-gray-900">{format(new Date(selectedBooking.start_time), 'HH:mm')} - {format(new Date(selectedBooking.end_time), 'HH:mm')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 flex items-center gap-1"><UsersRound size={14}/> Pjesëmarrës:</p>
+                    <p className="font-bold text-gray-900">{selectedBooking.participants} persona</p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedBooking.booking_extras && selectedBooking.booking_extras.length > 0 && (
+                <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100">
+                  <p className="text-xs font-bold text-purple-500 uppercase tracking-wider mb-3">Shërbime Ekstra të Zgjedhura</p>
+                  <div className="space-y-2">
+                    {selectedBooking.booking_extras.map((item: any) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <span className="font-medium text-gray-700 flex items-center gap-2"><Sparkles size={14} className="text-purple-400"/> {item.extras?.name}</span>
+                        <span className="font-bold text-gray-900">+{Number(item.line_total || item.extras?.price).toFixed(2)} €</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-emerald-50/30 p-4 rounded-2xl border border-emerald-100 flex justify-between items-center">
+                <div>
+                  <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">Totali i Kontratës</p>
+                  <p className="text-2xl font-black text-gray-900">{Number(selectedBooking.total_amount).toFixed(2)} €</p>
+                </div>
+                <div className="text-right">
                   {renderFinanceBadge(selectedBooking.payment_status)}
                 </div>
               </div>
             </div>
             
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
-              <Link 
-                href={`/${locale}/biznes/rezervimet`} 
-                className="flex-1 bg-white border-2 border-gray-200 hover:border-gray-900 text-gray-900 font-bold py-3.5 px-4 rounded-xl text-center transition-colors shadow-sm"
-              >
-                Shko te Rezervimet
+            {/* Butonat e Veprimit */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center gap-4">
+              <Link href={`/${locale}/biznes/rezervimet`} className="text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors">
+                Shko te lista e plotë
+              </Link>
+              <Link href={`/${locale}/biznes/rezervimet/ndrysho/${selectedBooking.id}`} className="bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-md">
+                <Edit size={16} /> Ndrysho Rezervimin
               </Link>
             </div>
-
           </div>
         </div>
       )}
@@ -215,7 +249,7 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         </div>
 
-        {/* PAMJA E PËRMIRËSUAR E LISTËS */}
+        {/* PAMJA E LISTËS */}
         {view === 'list' && (
           <div className="space-y-4 animate-in fade-in duration-300">
             {monthBookings.length > 0 ? monthBookings.map((booking: any) => (
@@ -224,11 +258,8 @@ export default function DashboardClient({ business, locale, stats, monthBookings
                 onClick={() => setSelectedBooking(booking)}
                 className="cursor-pointer flex flex-col lg:flex-row items-start lg:items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/20 transition-all group gap-4 lg:gap-8"
               >
-                
-                {/* 1. Data dhe Emri */}
                 <div className="flex items-center gap-4 w-full lg:w-auto lg:min-w-[280px]">
                   <div className="bg-gray-50 px-3 py-2 rounded-xl text-center border border-gray-100 shrink-0 group-hover:bg-white group-hover:border-emerald-200 transition-colors">
-                    {/* ZBATUAM GJUHËN TE MUAJI I LISTËS */}
                     <p className="text-[10px] font-bold text-gray-400 uppercase leading-none">{format(new Date(booking.event_date), 'MMM', { locale: currentLocale })}</p>
                     <p className="text-lg font-black text-gray-900 mt-1 leading-none">{format(new Date(booking.event_date), 'dd')}</p>
                   </div>
@@ -246,7 +277,6 @@ export default function DashboardClient({ business, locale, stats, monthBookings
                   </div>
                 </div>
 
-                {/* 2. Salla dhe Pjesëmarrësit */}
                 <div className="flex-1 w-full flex gap-6 lg:justify-center border-y lg:border-y-0 lg:border-x border-gray-100 py-3 lg:py-0 lg:px-6">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1"><MapPin size={10}/> Salla</span>
@@ -258,14 +288,12 @@ export default function DashboardClient({ business, locale, stats, monthBookings
                   </div>
                 </div>
 
-                {/* 3. Statusi dhe Financat */}
                 <div className="w-full lg:w-auto text-left lg:text-right flex lg:flex-col items-center lg:items-end justify-between lg:min-w-[140px]">
                   {renderStatus(booking.status)}
                   <div className="lg:mt-2">
                     {renderFinanceBadge(booking.payment_status)}
                   </div>
                 </div>
-
               </div>
             )) : (
               <div className="py-16 text-center">

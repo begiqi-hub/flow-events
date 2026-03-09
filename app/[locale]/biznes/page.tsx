@@ -26,13 +26,19 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   const sMonth = startOfMonth(now);
   const eMonth = endOfMonth(now);
 
-  // Tërheqim të gjitha rezervimet aktive të këtij biznesi
+  // Tërheqim të gjitha rezervimet aktive të këtij biznesi (BASHKË ME EKSTRAT)
   const allBookings = await prisma.bookings.findMany({
     where: { 
       business_id: business.id,
       status: { notIn: ['cancelled', 'draft'] }
     },
-    include: { clients: true, halls: true }
+    include: { 
+      clients: true, 
+      halls: true,
+      booking_extras: {       // <--- SHTUAM EKSTRAT KËTU
+        include: { extras: true }
+      }
+    }
   });
 
   // STATISTIKAT E KARTAVE
@@ -51,10 +57,11 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   // Evitojmë gabimet me datat duke i kthyer ato në tekst përpara se t'i dërgojmë në Client Component
   const serializedMonthBookings = JSON.parse(JSON.stringify(monthBookings));
+  const safeBusiness = JSON.parse(JSON.stringify(business));
 
   return (
     <DashboardClient 
-      business={business} 
+      business={safeBusiness} 
       locale={locale} 
       stats={{ total: totalCount, week: weekCount, month: monthCount }}
       monthBookings={serializedMonthBookings}

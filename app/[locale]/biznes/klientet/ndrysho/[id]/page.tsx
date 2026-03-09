@@ -2,9 +2,14 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Phone, Mail, ArrowLeft, Save, FileDigit, MapPin } from "lucide-react";
+import { 
+  Users, Phone, Mail, ArrowLeft, Save, FileDigit, MapPin, 
+  CalendarCheck, Clock, CheckCircle2, AlertTriangle, PartyPopper, ChevronRight 
+} from "lucide-react";
 import Link from "next/link";
 import { updateClientAction, getClientAction } from "./actions";
+import { format } from "date-fns";
+import { sq } from "date-fns/locale";
 
 export default function EditClientPage({ params }: { params: Promise<{ locale: string, id: string }> }) {
   const router = useRouter();
@@ -18,6 +23,9 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
   const [formData, setFormData] = useState({
     name: "", phone: "", email: "", personal_id: "", gender: "", city: ""
   });
+  
+  // SHTUAM HISTORIKUN KËTU
+  const [clientBookings, setClientBookings] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -31,6 +39,11 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
           gender: data.gender || "",
           city: data.city || ""
         });
+        
+        // PRESIM HISTORIKUN NGA ACTION
+        if(data.bookings) {
+          setClientBookings(data.bookings);
+        }
       } else {
         setToast({ show: true, message: "Ky Klient nuk u gjet!", type: "error" });
       }
@@ -59,8 +72,20 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
     }
   };
 
+  const renderStatus = (status: string) => {
+    switch(status) {
+      case 'confirmed':
+      case 'completed':
+        return <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100"><CheckCircle2 size={10}/> Realizuar</span>;
+      case 'cancelled':
+        return <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100"><AlertTriangle size={10}/> Anuluar</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-100"><Clock size={10}/> Në Pritje</span>;
+    }
+  };
+
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
+    <div className="max-w-7xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
       
       {/* POPUP I GABIMIT/SUKSESIT */}
       {toast.show && (
@@ -85,75 +110,125 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
         <Link href={`/${locale}/biznes/klientet`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-2 transition-colors">
           <ArrowLeft size={16} className="mr-1" /> Kthehu te Klientët
         </Link>
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Ndrysho Klientin</h1>
-        <p className="text-gray-500 mt-2 text-sm">Përditëso të dhënat e kontaktit për këtë klient.</p>
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+           Profili i Klientit
+        </h1>
+        <p className="text-gray-500 mt-2 text-sm">Menaxho të dhënat dhe shiko historikun e plotë të eventeve të tij.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className={`bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10 flex flex-col gap-6 transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-8 transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* EMRI */}
-          <div className="md:col-span-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <Users size={16} className="text-gray-400" /> Emri dhe Mbiemri
-            </label>
-            <input type="text" required placeholder="p.sh. Agim Ramadani" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-          </div>
+        {/* ======================================= */}
+        {/* SHTYLLA E MAJTË (TË DHËNAT PËR EDITIM) */}
+        {/* ======================================= */}
+        <div className="lg:col-span-4 space-y-6">
+          <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col gap-6">
+            <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-4">Të dhënat Personale</h3>
+            
+            <div className="flex flex-col gap-5">
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <Users size={14} /> Emri dhe Mbiemri
+                </label>
+                <input type="text" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-bold text-gray-900" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              </div>
 
-          {/* NUMRI PERSONAL (TANI ËSHTË I SAKTË) */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <FileDigit size={16} className="text-gray-400" /> Numri Personal (ID)
-            </label>
-            <input type="text" placeholder="p.sh. 1234567890" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.personal_id} onChange={(e) => setFormData({...formData, personal_id: e.target.value})} />
-          </div>
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <FileDigit size={14} /> Numri Personal (ID)
+                </label>
+                <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.personal_id} onChange={(e) => setFormData({...formData, personal_id: e.target.value})} />
+              </div>
 
-          {/* GJINIA */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <Users size={16} className="text-gray-400" /> Gjinia
-            </label>
-            <select className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})}>
-              <option value="">Zgjidh Gjininë</option>
-              <option value="M">Mashkull</option>
-              <option value="F">Femër</option>
-            </select>
-          </div>
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <Phone size={14} /> Telefoni
+                </label>
+                <input type="text" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+              </div>
 
-          {/* TELEFONI */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <Phone size={16} className="text-gray-400" /> Numri i Telefonit
-            </label>
-            <input type="text" required placeholder="p.sh. +383 44 123 456" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-          </div>
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <MapPin size={14} /> Qyteti
+                </label>
+                <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} />
+              </div>
 
-          {/* QYTETI */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <MapPin size={16} className="text-gray-400" /> Qyteti
-            </label>
-            <input type="text" placeholder="p.sh. Prishtinë" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} />
-          </div>
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  <Mail size={14} /> Email
+                </label>
+                <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              </div>
+            </div>
 
-          {/* EMAIL */}
-          <div className="md:col-span-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
-              <Mail size={16} className="text-gray-400" /> Adresa Email
-            </label>
-            <input type="email" placeholder="p.sh. email@shembull.com" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            <button type="submit" disabled={loading || fetching} className="w-full mt-4 bg-[#0F172A] text-white font-bold py-4 rounded-xl hover:bg-black disabled:bg-gray-400 transition-all flex items-center justify-center gap-2 shadow-sm">
+              <Save size={18} /> {loading ? "Po Ruhet..." : "Përditëso"}
+            </button>
+          </form>
+        </div>
+
+        {/* ======================================= */}
+        {/* SHTYLLA E DJATHTË (HISTORIKU I EVENTEVE) */}
+        {/* ======================================= */}
+        <div className="lg:col-span-8">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 min-h-full">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-8">
+              <CalendarCheck className="text-blue-500"/> Historiku i Rezervimeve
+            </h3>
+
+            {clientBookings.length > 0 ? (
+              <div className="space-y-4">
+                {clientBookings.map((booking: any) => (
+                  <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group gap-4">
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="bg-blue-50 w-12 h-12 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
+                        <PartyPopper size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                           {booking.event_type || 'Event'} 
+                           {renderStatus(booking.status)}
+                        </h4>
+                        <p className="text-xs text-gray-500 mt-1 font-semibold flex items-center gap-1.5">
+                           <CalendarCheck size={12}/> {format(new Date(booking.event_date), 'dd MMM yyyy', { locale: sq })} 
+                           <span className="text-gray-300">•</span> 
+                           <MapPin size={12}/> {booking.halls?.name || 'Salla'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full sm:w-auto sm:gap-8">
+                      <div className="text-left sm:text-right">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Totali Faturës</p>
+                        <p className="font-black text-gray-900 text-lg">{Number(booking.total_amount).toFixed(2)} €</p>
+                      </div>
+                      <Link 
+                        href={`/${locale}/biznes/rezervimet/ndrysho/${booking.id}`}
+                        className="p-2.5 bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-400 rounded-xl transition-colors shrink-0"
+                        title="Shiko Rezervimin"
+                      >
+                        <ChevronRight size={20} />
+                      </Link>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-20 text-center flex flex-col items-center justify-center h-full">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
+                  <CalendarCheck size={40} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Nuk ka asnjë event</h3>
+                <p className="text-gray-500 text-sm max-w-sm">Ky klient nuk ka realizuar ende asnjë rezervim. Historiku do të shfaqet këtu automatikisht.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <hr className="border-gray-100 mt-4 mb-2" />
-
-        {/* BUTONI RUAJ */}
-        <button type="submit" disabled={loading || fetching} className="w-full bg-[#0F172A] text-white font-bold py-4 rounded-xl hover:bg-black disabled:bg-gray-400 transition-all flex items-center justify-center gap-2 shadow-sm">
-          <Save size={20} />
-          {loading ? "Po Ruhet..." : "Ruaj Ndryshimet"}
-        </button>
-
-      </form>
+      </div>
     </div>
   );
 }
