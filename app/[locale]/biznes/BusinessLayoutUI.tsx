@@ -177,7 +177,7 @@ export default function BusinessLayoutUI({ business, children }: { business: any
                 </Link>
                 
                 {/* JA KU ËSHTË SHTUAR POLITIKA E ANULIMIT */}
-                <Link href={`/${locale}/biznes/konfigurimet/profili`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors border-b border-gray-100 pb-3 mb-1">
+                <Link href={`/${locale}/biznes/konfigurimet/politika`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors border-b border-gray-100 pb-3 mb-1">
                   <ShieldAlert size={16} className="text-gray-400" /> Politika e Anulimit
                 </Link>
                 

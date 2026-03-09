@@ -6,27 +6,39 @@ import { useRouter } from "next/navigation";
 import { 
   Check, ChevronRight, ChevronLeft, CalendarDays, Utensils, Users, 
   Banknote, Building2, Clock, UsersRound, AlertTriangle, Sparkles, Percent,
-  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText
+  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export default function ReservationWizard({ halls, menus, extras, clients, locale }: any) {
+export default function ReservationWizard({ business, halls, menus, extras, clients, locale }: any) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isPrefixOpen, setIsPrefixOpen] = useState(false);
   const prefixRef = useRef<HTMLDivElement>(null);
   
   const [loading, setLoading] = useState(false);
-  // Shtuam 'complete' për të ditur kur mbaron plotësisht rezervimi
   const [toast, setToast] = useState({ show: false, message: "", type: "success", complete: false });
 
   const [formData, setFormData] = useState({
     event_date: "", start_time: "", end_time: "", hall_id: "", participants: "",
     menu_id: "", 
     extras: [] as any[], 
-    client_name: "", client_personal_id: "", client_gender: "", client_city: "", 
-    client_phone_prefix: "+383", client_phone: "", client_email: "",
+    
+    // Të dhënat e Klientit
+    client_type: "individual",
+    client_name: "", 
+    client_personal_id: "", 
+    client_gender: "", 
+    client_business_name: "",
+    client_business_num: "",
+    client_representative: "", // <--- FUSHA E RE SHTUAR!
+    client_address: "",
+    client_city: "", 
+    client_phone_prefix: "+383", 
+    client_phone: "", 
+    client_email: "",
+    
     discount_percent: 0, 
     payment_status: "pending",
     payment_method: "cash",
@@ -67,8 +79,13 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
       if (existingClient) {
         setFormData(prev => ({
           ...prev,
+          client_type: existingClient.client_type || "individual",
           client_name: prev.client_name || existingClient.name,
+          client_business_name: prev.client_business_name || (existingClient.client_type === 'business' ? existingClient.name : ""),
           client_email: prev.client_email || (existingClient.email || ""),
+          client_city: prev.client_city || (existingClient.city || ""),
+          client_address: prev.client_address || (existingClient.address || ""),
+          client_business_num: prev.client_business_num || (existingClient.business_num || ""),
         }));
       }
     }
@@ -124,9 +141,12 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  // GJENERIMI I PDF NGA WIZARDI
   const handleDownloadWizardPDF = () => {
     const doc = new jsPDF();
+    // Tani fatura shfaq saktë emrin e biznesit dhe atij që e ka rezervuar!
+    const billingName = formData.client_type === 'business' 
+        ? `${formData.client_business_name} (${formData.client_representative})` 
+        : formData.client_name;
     
     doc.setFontSize(22);
     doc.setTextColor(15, 23, 42);
@@ -137,7 +157,7 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
     doc.text("Faturuar për:", 14, 34);
     
     doc.setFontSize(10);
-    doc.text(`Klienti: ${formData.client_name}`, 14, 40);
+    doc.text(`Klienti: ${billingName}`, 14, 40);
     doc.text(`Telefoni: ${formData.client_phone_prefix} ${formData.client_phone}`, 14, 46);
     doc.text(`Data e Eventit: ${formData.event_date}`, 14, 52);
     doc.text(`Salla: ${selectedHall?.name || "N/A"}`, 14, 58);
@@ -191,7 +211,7 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
     doc.setTextColor(16, 185, 129);
     doc.text(`${finalTotal.toFixed(2)} €`, 175, totalY, { align: 'left' });
 
-    doc.save(`Fatura_${formData.client_name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Fatura_${billingName.replace(/\s+/g, '_')}.pdf`);
   };
 
   const handleSubmit = async () => {
@@ -205,7 +225,6 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
         setToast({ show: true, message: res.error, type: "error", complete: false });
         setLoading(false);
       } else {
-        // Shfaqim popup-in e suksesit dhe ndalojmë loading-un, por nuk e bëjmë redirect automatikisht
         setToast({ show: true, message: "Rezervimi u ruajt me sukses! Çfarë dëshironi të bëni tani?", type: "success", complete: true });
         setLoading(false);
       }
@@ -231,7 +250,6 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
             </h3>
             <p className="text-gray-500 text-sm mb-8 leading-relaxed">{toast.message}</p>
             
-            {/* NËSE ËSHTË I PËRFUNDUAR ME SUKSES, SHFAQIM DY BUTONA */}
             {toast.complete ? (
               <div className="flex flex-col gap-3">
                 <button 
@@ -292,7 +310,7 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
 
       <div className="p-6 md:p-10 flex-1">
         
-        {/* HAPI 1: KOHA DHE SALLA */}
+        {/* HAPI 1 & 2 & 3 (Të paprekura, njësoj si më parë) */}
         {currentStep === 1 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Detajet e Eventit</h2>
@@ -349,7 +367,6 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
           </div>
         )}
         
-        {/* HAPI 2: MENUJA */}
         {currentStep === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Përzgjedhja e Menusë</h2>
@@ -392,7 +409,6 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
           </div>
         )}
 
-        {/* HAPI 3: EKSTRAT */}
         {currentStep === 3 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Shërbime Ekstra (Opsionale)</h2>
@@ -435,78 +451,146 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
           </div>
         )}
 
-        {/* HAPI 4: KLIENTI */}
+        {/* HAPI 4: KLIENTI (Ndarja fizike e plotë) */}
         {currentStep === 4 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Të dhënat e Klientit</h2>
             
+            <div className="flex p-1 bg-gray-100 rounded-2xl w-full sm:w-72 mb-8">
+              <button 
+                type="button" 
+                onClick={() => setFormData({
+                  ...formData, client_type: 'individual',
+                  client_name: '', client_personal_id: '', client_phone: '', client_email: '', client_city: ''
+                })}
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.client_type === 'individual' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <User size={16} /> Individ
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setFormData({
+                  ...formData, client_type: 'business',
+                  client_business_name: '', client_business_num: '', client_representative: '', client_address: '', client_phone: '', client_email: '', client_city: ''
+                })}
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.client_type === 'business' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <Building size={16} /> Biznes
+              </button>
+            </div>
+
             <div className="bg-gray-50/50 p-6 md:p-8 rounded-3xl border border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Users size={16} className="text-gray-400" /> Emri dhe Mbiemri</label>
-                  <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Agim Ramadani" value={formData.client_name} onChange={(e) => setFormData({...formData, client_name: e.target.value})} />
-                </div>
                 
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> Numri Personal (ID)</label>
-                  <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. 1234567890" value={formData.client_personal_id} onChange={(e) => setFormData({...formData, client_personal_id: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Gjinia</label>
-                  <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" value={formData.client_gender} onChange={(e) => setFormData({...formData, client_gender: e.target.value})}>
-                    <option value="">Zgjidh Gjininë</option>
-                    <option value="M">Mashkull</option>
-                    <option value="F">Femër</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> Qyteti</label>
-                  <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Prishtinë" value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Phone size={16} className="text-gray-400" /> Telefoni</label>
-                  <div className="flex border border-gray-200 rounded-xl focus-within:border-gray-900 focus-within:ring-1 bg-white relative">
-                    <div className="relative" ref={prefixRef}>
-                      <button 
-                        type="button"
-                        onClick={() => setIsPrefixOpen(!isPrefixOpen)}
-                        className="flex items-center gap-2 bg-gray-50 border-r border-gray-200 px-3 py-3.5 outline-none font-medium text-gray-700 h-full rounded-l-xl hover:bg-gray-100 transition-colors"
-                      >
-                        <img src={phonePrefixes.find(p => p.code === formData.client_phone_prefix)?.icon} alt="flag" className="w-5 h-auto rounded-sm shadow-sm" />
-                        <span>{formData.client_phone_prefix}</span>
-                        <ChevronDown size={14} className="text-gray-400" />
-                      </button>
-                      {isPrefixOpen && (
-                        <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-xl z-50 overflow-hidden py-1 animate-in fade-in zoom-in-95">
-                          {phonePrefixes.map(p => (
-                            <button 
-                              key={p.code} type="button"
-                              onClick={() => { setFormData({...formData, client_phone_prefix: p.code}); setIsPrefixOpen(false); }} 
-                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors"
-                            >
-                              <img src={p.icon} alt={p.country} className="w-5 h-auto rounded-sm shadow-sm" />
-                              <span className="text-sm font-bold text-gray-700">{p.code}</span>
-                              <span className="text-xs text-gray-400 ml-auto">{p.country}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                {/* BLOKU I INDIVIDIT */}
+                {formData.client_type === 'individual' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Users size={16} className="text-gray-400" /> Emri dhe Mbiemri</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Agim Ramadani" value={formData.client_name} onChange={(e) => setFormData({...formData, client_name: e.target.value})} />
                     </div>
-                    <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> Numri Personal (ID)</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. 1234567890" value={formData.client_personal_id} onChange={(e) => setFormData({...formData, client_personal_id: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Gjinia</label>
+                      <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" value={formData.client_gender} onChange={(e) => setFormData({...formData, client_gender: e.target.value})}>
+                        <option value="">Zgjidh Gjininë</option>
+                        <option value="M">Mashkull</option>
+                        <option value="F">Femër</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> Qyteti</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Prishtinë" value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Phone size={16} className="text-gray-400" /> Telefoni</label>
+                      <div className="flex border border-gray-200 rounded-xl focus-within:border-gray-900 focus-within:ring-1 bg-white relative">
+                        <div className="relative" ref={prefixRef}>
+                          <button type="button" onClick={() => setIsPrefixOpen(!isPrefixOpen)} className="flex items-center gap-2 bg-gray-50 border-r border-gray-200 px-3 py-3.5 outline-none font-medium text-gray-700 h-full rounded-l-xl hover:bg-gray-100 transition-colors">
+                            <img src={phonePrefixes.find(p => p.code === formData.client_phone_prefix)?.icon} alt="flag" className="w-5 h-auto rounded-sm shadow-sm" />
+                            <span>{formData.client_phone_prefix}</span>
+                            <ChevronDown size={14} className="text-gray-400" />
+                          </button>
+                          {isPrefixOpen && (
+                            <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-xl z-50 overflow-hidden py-1">
+                              {phonePrefixes.map(p => (
+                                <button key={p.code} type="button" onClick={() => { setFormData({...formData, client_phone_prefix: p.code}); setIsPrefixOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors">
+                                  <img src={p.icon} alt={p.country} className="w-5 h-auto rounded-sm shadow-sm" />
+                                  <span className="text-sm font-bold text-gray-700">{p.code}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Mail size={16} className="text-gray-400" /> Email</label>
+                      <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. email@shembull.com" value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Mail size={16} className="text-gray-400" /> Email</label>
-                  <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. email@shembull.com" value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
-                </div>
-              </div>
+                {/* BLOKU I BIZNESIT */}
+                {formData.client_type === 'business' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
+                    <div className="md:col-span-2">
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Building size={16} className="text-gray-400" /> Emri i Biznesit</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Flow Events L.L.C." value={formData.client_business_name} onChange={(e) => setFormData({...formData, client_business_name: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> NUI (Numri Unik)</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="812345678" value={formData.client_business_num} onChange={(e) => setFormData({...formData, client_business_num: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><UserCheck size={16} className="text-gray-400" /> Përfaqësuesi (Kush e bën rezervimin)</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Agim Ramadani" value={formData.client_representative} onChange={(e) => setFormData({...formData, client_representative: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> Adresa e Biznesit</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="Rruga Nëna Terezë, Nr. 15" value={formData.client_address} onChange={(e) => setFormData({...formData, client_address: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> Qyteti</label>
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. Prishtinë" value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Phone size={16} className="text-gray-400" /> Telefoni i Kontaktit</label>
+                      <div className="flex border border-gray-200 rounded-xl focus-within:border-gray-900 focus-within:ring-1 bg-white relative">
+                        <div className="relative" ref={prefixRef}>
+                          <button type="button" onClick={() => setIsPrefixOpen(!isPrefixOpen)} className="flex items-center gap-2 bg-gray-50 border-r border-gray-200 px-3 py-3.5 outline-none font-medium text-gray-700 h-full rounded-l-xl hover:bg-gray-100 transition-colors">
+                            <img src={phonePrefixes.find(p => p.code === formData.client_phone_prefix)?.icon} alt="flag" className="w-5 h-auto rounded-sm shadow-sm" />
+                            <span>{formData.client_phone_prefix}</span>
+                            <ChevronDown size={14} className="text-gray-400" />
+                          </button>
+                          {isPrefixOpen && (
+                            <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-xl z-50 overflow-hidden py-1">
+                              {phonePrefixes.map(p => (
+                                <button key={p.code} type="button" onClick={() => { setFormData({...formData, client_phone_prefix: p.code}); setIsPrefixOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left transition-colors">
+                                  <img src={p.icon} alt={p.country} className="w-5 h-auto rounded-sm shadow-sm" />
+                                  <span className="text-sm font-bold text-gray-700">{p.code}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Mail size={16} className="text-gray-400" /> Email i Biznesit</label>
+                      <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder="p.sh. email@shembull.com" value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
         )}
 
-        {/* HAPI 5: FINANCAT, ZBRITJA DHE STATUSI I PAGESES */}
+        {/* HAPI 5: FINANCAT (E paprekur, saktë siç ishte) */}
         {currentStep === 5 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Financat dhe Pagesa</h2>
@@ -571,6 +655,19 @@ export default function ReservationWizard({ halls, menus, extras, clients, local
                     </div>
                   )}
                 </div>
+                
+                {/* POLITIKA E ANULIMIT */}
+                <div className="bg-[#FFF8E6] p-6 rounded-3xl border border-[#FFE7B3]">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-[#FFA000] text-white p-2 rounded-xl"><ShieldAlert size={20} /></div>
+                    <h3 className="font-bold text-amber-900">Politika e Anulimit</h3>
+                  </div>
+                  <p className="text-sm text-amber-800 leading-relaxed">
+                    Në rast anulimi të këtij rezervimi, sipas rregullave të biznesit tuaj ndalet <strong>{business?.cancel_penalty || 0}%</strong> e shumës totale. 
+                    Afati i fundit për anulim pa penalizim është <strong>{business?.cancel_days || 0} ditë</strong> para datës së eventit.
+                  </p>
+                </div>
+
               </div>
 
               {/* Totali Final Card */}

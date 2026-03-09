@@ -9,6 +9,7 @@ export const revalidate = 0;
 export default async function AddReservationPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const session = await getServerSession();
+  
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
   const business = await prisma.businesses.findUnique({
@@ -19,9 +20,9 @@ export default async function AddReservationPage({ params }: { params: Promise<{
 
   // Tërheqim të dhënat e nevojshme për Wizard-in
   const halls = await prisma.halls.findMany({ 
-  where: { business_id: business.id },
-  orderBy: { created_at: 'asc' } // <--- Kjo bën që e fundit të dalë në fund!
-});
+    where: { business_id: business.id },
+    orderBy: { created_at: 'asc' }
+  });
   const menus = await prisma.menus.findMany({ where: { business_id: business.id } });
   const extras = await prisma.extras.findMany({ where: { business_id: business.id } });
   const clients = await prisma.clients.findMany({ where: { business_id: business.id } });
@@ -34,6 +35,7 @@ export default async function AddReservationPage({ params }: { params: Promise<{
       </div>
       
       <ReservationWizard 
+        business={business} // <--- Kjo është e vetmja gjë që u shtua
         halls={halls} 
         menus={menus} 
         extras={extras} 

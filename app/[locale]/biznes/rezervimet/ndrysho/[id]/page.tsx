@@ -3,11 +3,12 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  CalendarDays, Clock, Users, Banknote, CreditCard, 
-  ArrowLeft, Save, User, MapPin, CheckCircle2 
+  CalendarDays, Users, Banknote, 
+  ArrowLeft, Save, User, CheckCircle2, AlertTriangle, Sparkles, Building2, XCircle, ArrowRightLeft, Clock4, Info, Utensils, Receipt
 } from "lucide-react";
 import Link from "next/link";
 import { getBookingAction, updateBookingAction } from "./actions";
+import { format } from "date-fns";
 
 export default function EditBookingPage({ params }: { params: Promise<{ locale: string, id: string }> }) {
   const router = useRouter();
@@ -18,21 +19,30 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const [fetching, setFetching] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   
+  const [hallsList, setHallsList] = useState<any[]>([]);
+  const [menusList, setMenusList] = useState<any[]>([]);
+  const [availableExtras, setAvailableExtras] = useState<any[]>([]);
+  const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
+  
+  const [businessInfo, setBusinessInfo] = useState<any>(null);
+  const [auditLog, setAuditLog] = useState<any>({ created_at: null, updated_at: null });
+  const [historicallyPaid, setHistoricallyPaid] = useState<number>(0);
+
   const [formData, setFormData] = useState({
     client_name: "",
-    hall_name: "",
     hall_id: "",
+    menu_id: "",
     event_date: "",
     start_time: "",
     end_time: "",
     participants: "",
-    total_amount: "",
-    payment_status: "pending",
-    deposit_amount: "",
-    status: "confirmed"
+    total_amount: "0",
+    status: "confirmed",
+    cancel_reason: "",
+    new_payment_amount: "",
+    payment_method: "cash"
   });
 
-  // Funksion ndihmës për të marrë orën në formatin HH:mm nga Databaza
   const formatTimeForInput = (dateObj: any) => {
     if (!dateObj) return "";
     const d = new Date(dateObj);
@@ -42,19 +52,36 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   useEffect(() => {
     async function loadData() {
       const data = await getBookingAction(id);
-      if (data) {
+      if (data && data.booking) {
+        setHallsList(data.allHalls || []);
+        setAvailableExtras(data.allExtras || []);
+        setMenusList(data.allMenus || []);
+        setBusinessInfo(data.business);
+        
+        setAuditLog({ 
+          created_at: (data.booking as any).created_at || null, 
+          updated_at: (data.booking as any).updated_at || null 
+        });
+        
+        const preSelected = data.booking.booking_extras?.map((be: any) => be.extras) || [];
+        setSelectedExtras(preSelected);
+
+        const totalPaid = data.booking.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+        setHistoricallyPaid(totalPaid);
+
         setFormData({
-          client_name: data.clients?.name || "Klient i panjohur",
-          hall_name: data.halls?.name || "Sallë e panjohur",
-          hall_id: data.hall_id || "",
-          event_date: data.event_date ? new Date(data.event_date).toISOString().split('T')[0] : "",
-          start_time: formatTimeForInput(data.start_time),
-          end_time: formatTimeForInput(data.end_time),
-          participants: data.participants?.toString() || "",
-          total_amount: data.total_amount?.toString() || "0",
-          payment_status: data.payment_status || "pending",
-          deposit_amount: data.deposit_amount?.toString() || "", // Nëse e ke në DB
-          status: data.status || "confirmed"
+          client_name: data.booking.clients?.name || "Klient i panjohur",
+          hall_id: data.booking.hall_id || "",
+          menu_id: (data.booking as any).menu_id || "", 
+          event_date: data.booking.event_date ? new Date(data.booking.event_date).toISOString().split('T')[0] : "",
+          start_time: formatTimeForInput(data.booking.start_time),
+          end_time: formatTimeForInput(data.booking.end_time),
+          participants: data.booking.participants?.toString() || "",
+          total_amount: data.booking.total_amount?.toString() || "0",
+          status: data.booking.status || "confirmed",
+          cancel_reason: data.booking.cancel_reason || "",
+          new_payment_amount: "",
+          payment_method: "cash"
         });
       } else {
         setToast({ show: true, message: "Rezervimi nuk u gjet!", type: "error" });
@@ -64,170 +91,307 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
     loadData();
   }, [id]);
 
+  // LLOGARITJA AUTOMATIKE E HESHTUR (Live)
+  useEffect(() => {
+    if (fetching) return;
+
+    const selectedMenu = menusList.find((m: any) => m.id === formData.menu_id);
+    const menuPrice = selectedMenu ? Number(selectedMenu.price_per_person) : 0;
+    
+    // Nëse Salla ka çmim fiks në DB, e përfshijmë (ndryshe llogaritet 0)
+    const selectedHall = hallsList.find((h: any) => h.id === formData.hall_id);
+    const hallPrice = selectedHall?.price ? Number(selectedHall.price) : 0;
+
+    const pax = Number(formData.participants) || 0;
+    const extrasTotal = selectedExtras.reduce((sum: number, ext: any) => sum + Number(ext.price), 0);
+
+    // Bëjmë llogaritjen vetëm nëse të paktën njëra ka vlerë
+    if (menuPrice > 0 || extrasTotal > 0 || hallPrice > 0) {
+      const calculatedTotal = (pax * menuPrice) + extrasTotal + hallPrice;
+      setFormData(prev => ({ ...prev, total_amount: calculatedTotal.toFixed(2) }));
+    }
+  }, [formData.participants, formData.menu_id, formData.hall_id, selectedExtras, menusList, hallsList, fetching]);
+
+  const toggleExtra = (extra: any) => {
+    const exists = selectedExtras.find((e: any) => e.id === extra.id);
+    if (exists) setSelectedExtras(selectedExtras.filter((e: any) => e.id !== extra.id));
+    else setSelectedExtras([...selectedExtras, extra]);
+  };
+
+  const renderCancellationPolicy = () => {
+    if (!formData.event_date) return null;
+    const eventDate = new Date(formData.event_date);
+    const today = new Date();
+    eventDate.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const penalty = businessInfo?.cancel_penalty || 0;
+    const limitDays = businessInfo?.cancel_days || 0;
+    const totalAmount = Number(formData.total_amount) || 0;
+    const penaltyValue = (totalAmount * penalty) / 100;
+    const refundValue = Math.max(0, historicallyPaid - penaltyValue);
+    const clientOwes = Math.max(0, penaltyValue - historicallyPaid);
+
+    if (penalty === 0) return null;
+
+    if (diffDays <= limitDays) {
+      return (
+        <div className="bg-red-50/50 border border-red-100 p-5 rounded-2xl text-red-800 text-sm">
+          <div className="flex gap-3 mb-4">
+            <AlertTriangle size={20} className="text-red-500 shrink-0" />
+            <div>
+              <strong className="text-red-600 block text-base font-semibold">Penalizimi Aplikohet!</strong>
+              <p className="text-red-500/90 font-medium">Anulimi {diffDays} ditë para kalon afatin prej {limitDays} ditësh. Biznesi ndal <strong>{penalty}%</strong> ({penaltyValue.toFixed(2)} €).</p>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-red-100 grid grid-cols-2 gap-4 text-center shadow-sm">
+             <div>
+               <p className="text-gray-500 text-xs uppercase tracking-wider mb-1 font-medium">Klienti ka paguar</p>
+               <strong className="text-lg text-gray-900 font-semibold">{historicallyPaid.toFixed(2)} €</strong>
+             </div>
+             <div>
+               <p className="text-gray-500 text-xs uppercase tracking-wider mb-1 font-medium">{refundValue > 0 ? "Për t'i kthyer" : "Klienti detyrohet"}</p>
+               <strong className={`text-lg font-semibold ${refundValue > 0 ? 'text-emerald-500' : 'text-red-500'}`}>{refundValue > 0 ? refundValue.toFixed(2) : clientOwes.toFixed(2)} €</strong>
+             </div>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-2xl text-emerald-800 text-sm flex gap-3">
+          <CheckCircle2 size={24} className="text-emerald-500 shrink-0" />
+          <div>
+            <strong className="text-emerald-600 block text-base font-semibold">Jashtë Rrezikut</strong>
+            <p className="font-medium text-emerald-600/80">U anulua brenda afatit. Asnjë penalizim nuk aplikohet. <br/> {historicallyPaid > 0 && <span className="text-emerald-600 font-semibold">Duhet t'i kthehen: {historicallyPaid.toFixed(2)} € (E plotë)</span>}</p>
+          </div>
+        </div>
+      );
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setToast({ show: false, message: "", type: "success" });
 
+    const dataToSubmit = { ...formData, selectedExtras, historically_paid: historicallyPaid };
+    if (dataToSubmit.status !== 'cancelled') dataToSubmit.cancel_reason = "";
+
     try {
-      const res = await updateBookingAction(id, formData);
+      const res = await updateBookingAction(id, dataToSubmit);
       if (res?.error) {
         setToast({ show: true, message: res.error, type: "error" });
         setLoading(false);
       } else {
         setToast({ show: true, message: "Rezervimi u përditësua me sukses!", type: "success" });
-        // E dërgojmë përdoruesin tek Raportet ose Rezervimet pas suksesit
         setTimeout(() => { router.push(`/${locale}/biznes/rezervimet`); }, 1500);
       }
     } catch (error) {
-      setToast({ show: true, message: "Mungon interneti ose serveri nuk përgjigjet.", type: "error" });
+      setToast({ show: true, message: "Mungon interneti.", type: "error" });
       setLoading(false);
     }
   };
 
+  const currentTotal = Number(formData.total_amount) || 0;
+  const remainingToPay = Math.max(0, currentTotal - historicallyPaid);
+
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
-      
-      {/* POPUP I GABIMIT/SUKSESIT */}
+    <div className="max-w-5xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
       {toast.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center relative animate-in zoom-in-95 duration-300">
-             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {toast.type === "success" ? "Sukses!" : "Kujdes!"}
-            </h3>
-            <p className="text-gray-500 text-sm mb-8">{toast.message}</p>
-            <button 
-              onClick={() => setToast({ ...toast, show: false })}
-              className={`w-full text-white font-bold py-4 px-6 rounded-2xl ${toast.type === "success" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#FF5C39] hover:bg-[#e84e2d]"}`}
-            >
-              Mbyll
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 z-50">
+          <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95">
+             <h3 className="text-xl font-semibold text-gray-900 mb-2">{toast.type === "success" ? "Sukses!" : "Kujdes!"}</h3>
+            <p className="text-gray-500 text-sm mb-8 font-medium">{toast.message}</p>
+            <button onClick={() => setToast({ ...toast, show: false })} className={`w-full text-white font-semibold py-4 px-6 rounded-2xl ${toast.type === "success" ? "bg-emerald-500" : "bg-[#FF5C39]"}`}>Mbyll</button>
           </div>
         </div>
       )}
 
-      {/* KOKA E FAQES */}
       <div className="mb-8">
-        <Link href={`/${locale}/biznes/rezervimet`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-2 transition-colors">
+        <Link href={`/${locale}/biznes/rezervimet`} className="inline-flex items-center text-sm font-medium text-gray-400 hover:text-gray-700 mb-2 transition-colors">
           <ArrowLeft size={16} className="mr-1" /> Kthehu te Rezervimet
         </Link>
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Ndrysho Rezervimin</h1>
-        <p className="text-gray-500 mt-2 text-sm">Përditëso datën, orarin apo statusin e pagesës për këtë event.</p>
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 tracking-tight">Ndrysho Rezervimin</h1>
+        <p className="text-gray-500 mt-2 text-sm font-medium">Përditëso të dhënat, ekstrat apo menaxho pagesat e këtij klienti.</p>
       </div>
 
       <form onSubmit={handleSubmit} className={`bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
-        {/* SEKSIONI 1: TË DHËNAT BAZË (READ-ONLY) */}
-        <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              <User size={14} /> Klienti
-            </label>
-            <div className="p-4 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 cursor-not-allowed">
-              {formData.client_name}
-            </div>
-          </div>
-          <div>
-            <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              <MapPin size={14} /> Salla e Zgjedhur
-            </label>
-            <div className="p-4 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 cursor-not-allowed">
-              {formData.hall_name}
-            </div>
-          </div>
+        {/* RRESHTI 1: VETËM KLIENTI */}
+        <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100">
+           <label className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"><User size={14} /> Klienti / Rezervuesi</label>
+           <div className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 w-full">{formData.client_name}</div>
         </div>
 
-        {/* SEKSIONI 2: ORARI DHE DETAJET */}
-        <div className="p-6 md:p-8 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-3">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <CalendarDays size={20} className="text-blue-500"/> Detajet e Eventit
-            </h3>
-          </div>
+        {/* RRESHTI 2: SALLA, MENU, PJESËMARRËS (TABLET FRIENDLY) */}
+        <div className="p-6 md:p-8 border-b border-gray-100">
+           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Salla e Eventit</label>
+                <div className="relative">
+                  <Building2 size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.hall_id} onChange={(e) => setFormData({...formData, hall_id: e.target.value})}>
+                    <option value="">Zgjidh Sallën</option>
+                    {hallsList.map((h: any) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Menuja e Zgjedhur</label>
+                <div className="relative">
+                  <Utensils size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.menu_id} onChange={(e) => setFormData({...formData, menu_id: e.target.value})}>
+                    <option value="">Nuk ka Menu</option>
+                    {menusList.map((m: any) => <option key={m.id} value={m.id}>{m.name} - {m.price_per_person}€</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Pjesëmarrës</label>
+                <div className="relative">
+                  <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="number" required placeholder="p.sh. 150" className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
+                </div>
+              </div>
+           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Data e Eventit</label>
-            <input type="date" required className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        {/* RRESHTI 3: DATA DHE ORA */}
+        <div className="p-6 md:p-8 border-b border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Fillon</label>
-              <input type="time" required className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.start_time} onChange={(e) => setFormData({...formData, start_time: e.target.value})} />
+              <label className="block text-sm font-medium text-gray-600 mb-2">Data e Eventit</label>
+              <input type="date" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Mbaron</label>
-              <input type="time" required className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.end_time} onChange={(e) => setFormData({...formData, end_time: e.target.value})} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Pjesëmarrës (Pax)</label>
-            <div className="relative">
-              <Users size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="number" required className="w-full border border-gray-200 p-4 pl-12 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-medium text-gray-900" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
+              <label className="block text-sm font-medium text-gray-600 mb-2">Ora (Fillon - Mbaron)</label>
+              <div className="flex items-center gap-2">
+                <input type="time" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.start_time} onChange={(e) => setFormData({...formData, start_time: e.target.value})} />
+                <span className="text-gray-300">-</span>
+                <input type="time" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.end_time} onChange={(e) => setFormData({...formData, end_time: e.target.value})} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* SEKSIONI 3: FINANCAT DHE PAGESA */}
-        <div className="p-6 md:p-8 bg-emerald-50/30 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-3">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <Banknote size={20} className="text-emerald-500"/> Financat dhe Statusi
-            </h3>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Totali për t'u paguar (€)</label>
-            <div className="relative">
-              <Banknote size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="number" step="0.01" required className="w-full border border-gray-200 p-4 pl-12 rounded-xl outline-none focus:border-emerald-500 focus:ring-1 bg-white font-black text-emerald-700 text-lg" value={formData.total_amount} onChange={(e) => setFormData({...formData, total_amount: e.target.value})} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Statusi i Pagesës</label>
-            <div className="relative">
-              <CreditCard size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <select className="w-full border border-gray-200 p-4 pl-12 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-bold text-gray-900 appearance-none" value={formData.payment_status} onChange={(e) => setFormData({...formData, payment_status: e.target.value})}>
-                <option value="pending">Në Pritje (E Papaguar)</option>
-                <option value="deposit">Ka lënë Paradhënie</option>
-                <option value="paid">E Paguar Plotësisht</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Shfaqet vetëm nëse pagesa është "deposit" */}
-          <div className={`transition-opacity duration-300 ${formData.payment_status === 'deposit' ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Shuma e Paradhënies (€)</label>
-            <input 
-              type="number" 
-              step="0.01"
-              placeholder="p.sh. 500"
-              className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-emerald-500 focus:ring-1 bg-white font-bold text-gray-900" 
-              value={formData.deposit_amount} 
-              onChange={(e) => setFormData({...formData, deposit_amount: e.target.value})} 
-              disabled={formData.payment_status !== 'deposit'}
-            />
+        {/* EKSTRAT */}
+        <div className="p-6 md:p-8 border-b border-gray-100 space-y-4 bg-purple-50/20">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2"><Sparkles size={16} className="text-purple-400"/> Shërbimet Ekstra</h3>
+          <div className="flex flex-wrap gap-3">
+            {availableExtras.map((extra: any) => {
+              const isSelected = selectedExtras.some((e: any) => e.id === extra.id);
+              return (
+                <button key={extra.id} type="button" onClick={() => toggleExtra(extra)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all ${isSelected ? 'border-purple-300 bg-purple-50 shadow-sm' : 'border-gray-200 bg-white hover:border-purple-200'}`}>
+                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'bg-purple-500 border-purple-500 text-white' : 'border-gray-300'}`}>
+                     {isSelected && <CheckCircle2 size={10} strokeWidth={4} />}
+                   </div>
+                   <span className={`text-sm font-medium ${isSelected ? 'text-purple-800' : 'text-gray-600'}`}>{extra.name} <span className="text-purple-400/80">+{Number(extra.price)}€</span></span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* SEKSIONI 4: STATUSI I EVENTIT DHE RUAJTJA */}
-        <div className="p-6 md:p-8 bg-gray-900 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="w-full sm:w-auto">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Gjendja e Eventit</label>
-            <select className="bg-gray-800 border border-gray-700 text-white p-3 rounded-xl outline-none focus:border-white font-bold min-w-[200px]" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-              <option value="confirmed">🟢 E Konfirmuar</option>
-              <option value="pending">🟡 Në Pritje</option>
-              <option value="cancelled">🔴 E Anuluar</option>
-            </select>
+        {/* FINANCAT */}
+        <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6"><Receipt size={20} className="text-emerald-500"/> Paneli Financiar</h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-2">Totali i Faturës (€)</label>
+                <input type="number" step="0.01" className="w-full border border-gray-300 p-4 rounded-xl outline-none focus:border-emerald-500 font-semibold text-gray-800 bg-white shadow-sm text-lg" value={formData.total_amount} onChange={(e) => setFormData({...formData, total_amount: e.target.value})} />
+                <p className="text-xs text-gray-400 mt-2 font-medium">*Llogaritet automatikisht kur ndryshon opsionet e mësipërme.</p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
+                 <div className="flex justify-between items-center">
+                   <span className="text-sm font-medium text-gray-500">Ka paguar deri tani:</span>
+                   <span className="text-base font-semibold text-emerald-600">{historicallyPaid.toFixed(2)} €</span>
+                 </div>
+                 <div className="flex justify-between items-center border-t border-gray-100 pt-2">
+                   <span className="text-sm font-medium text-gray-500">Mbetja për t'u paguar:</span>
+                   <span className="text-lg font-semibold text-red-500">{remainingToPay > 0 ? remainingToPay.toFixed(2) : "0.00"} €</span>
+                 </div>
+              </div>
+            </div>
+
+            <div>
+              {remainingToPay > 0 ? (
+                 <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-sm h-full">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-4"><Banknote size={16}/> Shto Pagesë Sot (Opsionale)</label>
+                    <p className="text-sm text-gray-500 mb-4 font-medium">Shënoni shumën nëse klienti po bën një pagesë në këtë moment.</p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">€</span>
+                        <input type="number" step="0.01" placeholder="Shuma..." className="w-full border border-gray-300 p-3.5 pl-8 rounded-xl outline-none focus:border-emerald-500 font-semibold text-gray-800 bg-gray-50" value={formData.new_payment_amount} onChange={(e) => setFormData({...formData, new_payment_amount: e.target.value})} />
+                      </div>
+                      <select className="border border-gray-300 p-3.5 rounded-xl outline-none bg-gray-50 text-sm font-semibold text-gray-600" value={formData.payment_method} onChange={(e) => setFormData({...formData, payment_method: e.target.value})}>
+                        <option value="cash">Në dorë (Cash)</option>
+                        <option value="bank">Banka</option>
+                        <option value="pos">Karta (POS)</option>
+                      </select>
+                    </div>
+                 </div>
+               ) : (
+                 <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 h-full flex flex-col items-center justify-center text-center">
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-3">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <h4 className="font-semibold text-emerald-700 mb-1">E Paguar Plotësisht</h4>
+                    <p className="text-sm text-emerald-600/80 font-medium">Nuk ka mbetje për këtë faturë.</p>
+                 </div>
+               )}
+            </div>
+          </div>
+        </div>
+
+        {/* STATUSI DHE HISTORIKU */}
+        <div className="p-6 md:p-8 bg-gray-50 space-y-6">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Gjendja Përfundimtare e Eventit</label>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={() => setFormData({...formData, status: 'confirmed'})} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all border ${formData.status === 'confirmed' ? 'border-emerald-500 bg-emerald-500 text-white shadow-md' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                <CheckCircle2 size={18}/> Konfirmuar
+              </button>
+              <button type="button" onClick={() => setFormData({...formData, status: 'pending'})} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all border ${formData.status === 'pending' ? 'border-amber-500 bg-amber-500 text-white shadow-md' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                <Clock4 size={18}/> Në Pritje
+              </button>
+              <button type="button" onClick={() => setFormData({...formData, status: 'postponed'})} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all border ${formData.status === 'postponed' ? 'border-blue-500 bg-blue-500 text-white shadow-md' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                <ArrowRightLeft size={18}/> E Shtyer
+              </button>
+              <button type="button" onClick={() => setFormData({...formData, status: 'cancelled'})} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all border ${formData.status === 'cancelled' ? 'border-red-500 bg-red-500 text-white shadow-md' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                <XCircle size={18}/> E Anuluar
+              </button>
+            </div>
           </div>
 
-          <button type="submit" disabled={loading || fetching} className="w-full sm:w-auto bg-emerald-500 text-white font-bold py-4 px-10 rounded-xl hover:bg-emerald-400 disabled:bg-gray-600 transition-all flex items-center justify-center gap-2 shadow-lg">
-            <Save size={20} />
-            {loading ? "Po Ruhet..." : "Ruaj Ndryshimet"}
-          </button>
+          {formData.status === 'cancelled' && (
+            <div className="w-full animate-in slide-in-from-top-2 fade-in space-y-4 pt-4 border-t border-gray-200">
+              {renderCancellationPolicy()}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Arsyeja e Anulimit (E detyrueshme)</label>
+                <input type="text" required placeholder="p.sh. Ndryshim planesh nga klienti..." className="w-full bg-white border border-gray-300 p-4 rounded-xl outline-none focus:border-red-400 text-gray-700 font-medium transition-colors" value={formData.cancel_reason} onChange={(e) => setFormData({...formData, cancel_reason: e.target.value})} />
+              </div>
+            </div>
+          )}
+
+          <div className="pt-6 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-gray-400 text-xs font-medium space-y-1">
+               <p>Regjistruar: <span className="text-gray-600 font-semibold">{auditLog.created_at ? format(new Date(auditLog.created_at), 'dd.MM.yyyy HH:mm') : '...'}</span> nga {businessInfo?.name}</p>
+               {auditLog.updated_at && new Date(auditLog.updated_at).getTime() - new Date(auditLog.created_at).getTime() > 60000 && (
+                 <p>Ndryshuar: <span className="text-gray-600 font-semibold">{format(new Date(auditLog.updated_at), 'dd.MM.yyyy HH:mm')}</span> nga {businessInfo?.name}</p>
+               )}
+            </div>
+
+            <button type="submit" disabled={loading || fetching} className="w-full md:w-auto bg-gray-900 text-white font-semibold py-4 px-12 rounded-xl hover:bg-black disabled:bg-gray-400 transition-all flex items-center justify-center gap-2 shadow-md">
+              <Save size={20} /> {loading ? "Po Ruhet..." : "Ruaj Ndryshimet"}
+            </button>
+          </div>
         </div>
 
       </form>

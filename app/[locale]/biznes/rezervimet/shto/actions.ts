@@ -49,7 +49,7 @@ export async function checkAvailabilityAction(hallId: string, dateStr: string, s
 }
 
 // ==========================================
-// 2. RUAJTJA E REZERVIMIT (Bashkë me Ekstrat)
+// 2. RUAJTJA E REZERVIMIT (Bashkë me Ekstrat dhe Të Dhënat Biznes/Individ)
 // ==========================================
 export async function saveReservationAction(data: any) {
   try {
@@ -64,25 +64,59 @@ export async function saveReservationAction(data: any) {
 
     const result = await prisma.$transaction(async (tx) => {
       
-      // A. Menaxhimi i Klientit
+      // ==========================================
+      // A. MENAXHIMI I KLIENTIT (Logjika e RE për Individ/Biznes)
+      // ==========================================
       const fullPhone = `${data.client_phone_prefix} ${data.client_phone}`;
+      
       let client = await tx.clients.findFirst({
         where: { business_id: business.id, phone: fullPhone }
       });
 
       if (!client) {
+        // Nëse klienti nuk ekziston, e krijojmë
         client = await tx.clients.create({
           data: {
             business_id: business.id,
-            name: data.client_name,
+            // Këtu shtuam Përfaqësuesin:
+            name: data.client_type === 'business' ? `${data.client_business_name} (Përfaqësues: ${data.client_representative})` : data.client_name,
             phone: fullPhone,
             email: data.client_email || null,
-            personal_id: data.client_personal_id || null, // Bonus: Ruan ID-në e klientit të ri automatikisht
+            client_type: data.client_type || 'individual', // individual ose business
+            
+            // Fushat specifike që ruhen vetëm nëse është Biznes
+            business_num: data.client_type === 'business' ? data.client_business_num : null,
+            address: data.client_type === 'business' ? data.client_address : null,
+            
+            // Fushat specifike që ruhen vetëm nëse është Individ
+            personal_id: data.client_type === 'individual' ? data.client_personal_id : null,
+            gender: data.client_type === 'individual' ? data.client_gender : null,
+            
+            // Fusha të përbashkëta
+            city: data.client_city || null,
+          }
+        });
+      } else {
+        // (Opsionale) Nëse klienti ekziston por të dhënat u ndryshuan në formë, i përditësojmë ato
+        client = await tx.clients.update({
+          where: { id: client.id },
+          data: {
+            client_type: data.client_type || 'individual',
+            // Këtu shtuam Përfaqësuesin gjithashtu:
+            name: data.client_type === 'business' ? `${data.client_business_name} (Përfaqësues: ${data.client_representative})` : data.client_name,
+            email: data.client_email || null,
+            business_num: data.client_type === 'business' ? data.client_business_num : null,
+            address: data.client_type === 'business' ? data.client_address : null,
+            personal_id: data.client_type === 'individual' ? data.client_personal_id : null,
+            gender: data.client_type === 'individual' ? data.client_gender : null,
+            city: data.client_city || null,
           }
         });
       }
 
+      // ==========================================
       // B. Llogaritja e Totaleve (Ushqim + Ekstra)
+      // ==========================================
       const menu = await tx.menus.findUnique({ where: { id: data.menu_id } });
       if (!menu) throw new Error("Menuja e zgjedhur nuk ekziston.");
       
@@ -109,7 +143,9 @@ export async function saveReservationAction(data: any) {
         calculatedPaymentStatus = "deposit";
       }
 
+      // ==========================================
       // C. Krijimi i Rezervimit
+      // ==========================================
       const booking = await tx.bookings.create({
         data: {
           business_id: business.id,
@@ -121,15 +157,14 @@ export async function saveReservationAction(data: any) {
           participants: Number(data.participants),
           status: data.payment_status === "pending" ? "pending" : "confirmed",
           total_amount: finalTotal,
-          
-          // KËTU VULISET NË DATABAZË PËRGJITHMONË! 
           payment_status: calculatedPaymentStatus, 
-          
           // deposit_amount: deposit, // Nëse ke shtuar fushën 'deposit_amount' tek schema.prisma, mund t'ja heqësh komentet këtij rreshti
         }
       });
 
+      // ==========================================
       // D. Ruajtja e Ekstrave në tabelën e bashkimit (booking_extras)
+      // ==========================================
       if (data.extras && data.extras.length > 0) {
         for (const extra of data.extras) {
           await tx.booking_extras.create({
@@ -144,7 +179,9 @@ export async function saveReservationAction(data: any) {
         }
       }
 
+      // ==========================================
       // E. Regjistrimi i Pagesës
+      // ==========================================
       if (data.payment_status === "deposit" && Number(data.deposit_amount) > 0) {
         await tx.payments.create({
           data: {
