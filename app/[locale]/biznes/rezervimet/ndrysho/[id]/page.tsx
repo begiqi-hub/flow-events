@@ -19,6 +19,9 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const [fetching, setFetching] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   
+  // Sensori që mbron çmimin origjinal derisa përdoruesi të bëjë një ndryshim
+  const [isModified, setIsModified] = useState(false);
+
   const [hallsList, setHallsList] = useState<any[]>([]);
   const [menusList, setMenusList] = useState<any[]>([]);
   const [availableExtras, setAvailableExtras] = useState<any[]>([]);
@@ -91,31 +94,45 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
     loadData();
   }, [id]);
 
-  // LLOGARITJA AUTOMATIKE E HESHTUR (Live)
+  // LLOGARITJA LIVE (Automatike sapo ndryshon një vlerë)
   useEffect(() => {
-    if (fetching) return;
+    if (fetching || !isModified) return;
 
     const selectedMenu = menusList.find((m: any) => m.id === formData.menu_id);
     const menuPrice = selectedMenu ? Number(selectedMenu.price_per_person) : 0;
     
-    // Nëse Salla ka çmim fiks në DB, e përfshijmë (ndryshe llogaritet 0)
     const selectedHall = hallsList.find((h: any) => h.id === formData.hall_id);
     const hallPrice = selectedHall?.price ? Number(selectedHall.price) : 0;
 
     const pax = Number(formData.participants) || 0;
     const extrasTotal = selectedExtras.reduce((sum: number, ext: any) => sum + Number(ext.price), 0);
 
-    // Bëjmë llogaritjen vetëm nëse të paktën njëra ka vlerë
-    if (menuPrice > 0 || extrasTotal > 0 || hallPrice > 0) {
-      const calculatedTotal = (pax * menuPrice) + extrasTotal + hallPrice;
-      setFormData(prev => ({ ...prev, total_amount: calculatedTotal.toFixed(2) }));
-    }
-  }, [formData.participants, formData.menu_id, formData.hall_id, selectedExtras, menusList, hallsList, fetching]);
+    const calculatedTotal = (pax * menuPrice) + extrasTotal + hallPrice;
+    setFormData(prev => ({ ...prev, total_amount: calculatedTotal.toFixed(2) }));
+  }, [formData.participants, formData.menu_id, formData.hall_id, selectedExtras, isModified]);
 
+  // Funksionet që njoftojnë sistemin se po bëjmë ndryshime manuale
+  const handleParticipantChange = (e: any) => {
+    setFormData({...formData, participants: e.target.value});
+    setIsModified(true);
+  };
+  const handleMenuChange = (e: any) => {
+    setFormData({...formData, menu_id: e.target.value});
+    setIsModified(true);
+  };
+  const handleHallChange = (e: any) => {
+    setFormData({...formData, hall_id: e.target.value});
+    setIsModified(true);
+  };
+  
   const toggleExtra = (extra: any) => {
+    setIsModified(true);
     const exists = selectedExtras.find((e: any) => e.id === extra.id);
-    if (exists) setSelectedExtras(selectedExtras.filter((e: any) => e.id !== extra.id));
-    else setSelectedExtras([...selectedExtras, extra]);
+    if (exists) {
+      setSelectedExtras(selectedExtras.filter((e: any) => e.id !== extra.id));
+    } else {
+      setSelectedExtras([...selectedExtras, extra]);
+    }
   };
 
   const renderCancellationPolicy = () => {
@@ -220,20 +237,20 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
       <form onSubmit={handleSubmit} className={`bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
-        {/* RRESHTI 1: VETËM KLIENTI */}
+        {/* RRESHTI 1: VETËM KLIENTI (E plotë) */}
         <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100">
            <label className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"><User size={14} /> Klienti / Rezervuesi</label>
            <div className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 w-full">{formData.client_name}</div>
         </div>
 
-        {/* RRESHTI 2: SALLA, MENU, PJESËMARRËS (TABLET FRIENDLY) */}
+        {/* RRESHTI 2: SALLA, MENU, PJESËMARRËS (Grid 3 për Tablet/Desktop) */}
         <div className="p-6 md:p-8 border-b border-gray-100">
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Salla e Eventit</label>
                 <div className="relative">
                   <Building2 size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.hall_id} onChange={(e) => setFormData({...formData, hall_id: e.target.value})}>
+                  <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.hall_id} onChange={handleHallChange}>
                     <option value="">Zgjidh Sallën</option>
                     {hallsList.map((h: any) => <option key={h.id} value={h.id}>{h.name}</option>)}
                   </select>
@@ -243,7 +260,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                 <label className="block text-sm font-medium text-gray-600 mb-2">Menuja e Zgjedhur</label>
                 <div className="relative">
                   <Utensils size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.menu_id} onChange={(e) => setFormData({...formData, menu_id: e.target.value})}>
+                  <select className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 font-medium bg-white text-gray-700" value={formData.menu_id} onChange={handleMenuChange}>
                     <option value="">Nuk ka Menu</option>
                     {menusList.map((m: any) => <option key={m.id} value={m.id}>{m.name} - {m.price_per_person}€</option>)}
                   </select>
@@ -253,7 +270,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                 <label className="block text-sm font-medium text-gray-600 mb-2">Pjesëmarrës</label>
                 <div className="relative">
                   <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="number" required placeholder="p.sh. 150" className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
+                  <input type="number" required placeholder="p.sh. 150" className="w-full border border-gray-200 p-3.5 pl-10 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.participants} onChange={handleParticipantChange} />
                 </div>
               </div>
            </div>
@@ -261,7 +278,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
         {/* RRESHTI 3: DATA DHE ORA */}
         <div className="p-6 md:p-8 border-b border-gray-100">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Data e Eventit</label>
               <input type="date" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-400 text-gray-700 font-medium" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
@@ -304,7 +321,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
               <div>
                 <label className="block text-sm font-semibold text-gray-600 mb-2">Totali i Faturës (€)</label>
                 <input type="number" step="0.01" className="w-full border border-gray-300 p-4 rounded-xl outline-none focus:border-emerald-500 font-semibold text-gray-800 bg-white shadow-sm text-lg" value={formData.total_amount} onChange={(e) => setFormData({...formData, total_amount: e.target.value})} />
-                <p className="text-xs text-gray-400 mt-2 font-medium">*Llogaritet automatikisht kur ndryshon opsionet e mësipërme.</p>
+                <p className="text-xs text-gray-400 mt-2 font-medium">*Llogaritet automatikisht, por mund të editohet manualisht për t'i bërë zbritje.</p>
               </div>
 
               <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2">
@@ -350,7 +367,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
           </div>
         </div>
 
-        {/* STATUSI DHE HISTORIKU */}
+        {/* STATUSI I EVENTIT */}
         <div className="p-6 md:p-8 bg-gray-50 space-y-6">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Gjendja Përfundimtare e Eventit</label>
@@ -384,7 +401,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
             <div className="text-gray-400 text-xs font-medium space-y-1">
                <p>Regjistruar: <span className="text-gray-600 font-semibold">{auditLog.created_at ? format(new Date(auditLog.created_at), 'dd.MM.yyyy HH:mm') : '...'}</span> nga {businessInfo?.name}</p>
                {auditLog.updated_at && new Date(auditLog.updated_at).getTime() - new Date(auditLog.created_at).getTime() > 60000 && (
-                 <p>Ndryshuar: <span className="text-gray-600 font-semibold">{format(new Date(auditLog.updated_at), 'dd.MM.yyyy HH:mm')}</span> nga {businessInfo?.name}</p>
+                 <p>Ndryshuar: <span className="text-blue-500 font-semibold">{format(new Date(auditLog.updated_at), 'dd.MM.yyyy HH:mm')}</span> nga {businessInfo?.name}</p>
                )}
             </div>
 
