@@ -60,26 +60,30 @@ export async function updateBookingAction(id: string, data: any) {
     }
 
     await prisma.$transaction(async (tx) => {
+      
+      // KRIJOJMË NJË OBJEKT TË SIGURT PËR PËRDITËSIM
+      const updateData: any = {
+        event_date: data.event_date ? new Date(data.event_date) : undefined,
+        start_time: data.start_time ? new Date(`${data.event_date}T${data.start_time}:00`) : undefined,
+        end_time: data.end_time ? new Date(`${data.event_date}T${data.end_time}:00`) : undefined,
+        participants: data.participants ? Number(data.participants) : undefined,
+        total_amount: finalTotal,
+        status: data.status || "confirmed", 
+        cancel_reason: data.status === 'cancelled' ? data.cancel_reason : null,
+        payment_status: calculatedPaymentStatus,
+      };
+
+      // Sigurohemi që nëse është bosh (nuk ka sallë ose menu), të ruhet si 'null' në DB
+      if (data.hall_id !== undefined) updateData.hall_id = data.hall_id || null;
+      if (data.menu_id !== undefined) updateData.menu_id = data.menu_id || null;
+
+      // 1. Përditësojmë Rezervimin (Hoqëm forcimin e updated_at pasi Prisma e bën automatikisht)
       await tx.bookings.update({
         where: { id: id, business_id: business.id },
-        data: {
-          event_date: data.event_date ? new Date(data.event_date) : undefined,
-          start_time: data.start_time ? new Date(`${data.event_date}T${data.start_time}:00`) : undefined,
-          end_time: data.end_time ? new Date(`${data.event_date}T${data.end_time}:00`) : undefined,
-          participants: data.participants ? Number(data.participants) : undefined,
-          hall_id: data.hall_id, 
-          // @ts-ignore
-          menu_id: data.menu_id || null,
-          total_amount: finalTotal,
-          status: data.status || "confirmed", 
-          cancel_reason: data.status === 'cancelled' ? data.cancel_reason : null,
-          payment_status: calculatedPaymentStatus,
-          // DETYROJMË PËRDITËSIMIN E ORËS SË NDRYSHIMIT
-          // @ts-ignore
-          updated_at: new Date()
-        }
+        data: updateData
       });
 
+      // 2. Rifreskojmë Ekstrat
       await tx.booking_extras.deleteMany({ where: { booking_id: id } });
       if (data.selectedExtras && data.selectedExtras.length > 0) {
         for (const ext of data.selectedExtras) {
@@ -95,6 +99,7 @@ export async function updateBookingAction(id: string, data: any) {
         }
       }
 
+      // 3. Regjistrojmë Pagesën e Re (Nëse ka shtuar)
       if (newPayment > 0) {
         await tx.payments.create({
           data: {
@@ -111,6 +116,7 @@ export async function updateBookingAction(id: string, data: any) {
     return { success: true };
 
   } catch (error: any) {
+    // Nëse ndodh gabim, ai do të shfaqet në Terminalin e VS Code (Dritarja poshtë)
     console.error("GABIM GJATË PËRDITËSIMIT TË REZERVIMIT:", error);
     return { error: "Ndodhi një gabim gjatë përditësimit." };
   }
