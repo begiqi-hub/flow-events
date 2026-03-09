@@ -10,10 +10,14 @@ import Link from "next/link";
 import { getBookingAction, updateBookingAction } from "./actions";
 import { format } from "date-fns";
 
+// KËTU ËSHTË NDRYSHIMI I NEXT.JS: Përkufizimi i saktë i props për Next.js 15
 export default function EditBookingPage({ params }: { params: Promise<{ locale: string, id: string }> }) {
   const router = useRouter();
+  
+  // Zgjidhja e errorit "Route used params.locale. params is a Promise":
   const resolvedParams = use(params);
-  const { locale, id } = resolvedParams;
+  const locale = resolvedParams.locale;
+  const id = resolvedParams.id;
   
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -35,7 +39,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
   const [formData, setFormData] = useState({
     client_name: "",
-    event_type: "", // <--- FUSHA E RE
+    event_type: "", 
     hall_id: "",
     menu_id: "",
     event_date: "",
@@ -57,7 +61,17 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
   useEffect(() => {
     async function loadData() {
-      const data = await getBookingAction(id);
+      // Marrim të dhënat dhe i kthejmë në tekst të sigurt menjëherë, për të zhdukur errorin "Decimal"
+      const rawData = await getBookingAction(id);
+      if (!rawData) {
+         setToast({ show: true, message: "Rezervimi nuk u gjet!", type: "error" });
+         setFetching(false);
+         return;
+      }
+
+      // Pastrimi Përfundimtar:
+      const data = JSON.parse(JSON.stringify(rawData));
+
       if (data && data.booking) {
         setHallsList(data.allHalls || []);
         setAvailableExtras(data.allExtras || []);
@@ -89,7 +103,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
         setFormData({
           client_name: data.booking.clients?.name || "Klient i panjohur",
-          event_type: (data.booking as any).event_type || "", // Mbushim të dhënat e reja
+          event_type: (data.booking as any).event_type || "",
           hall_id: data.booking.hall_id || "",
           menu_id: (data.booking as any).menu_id || "", 
           event_date: data.booking.event_date ? new Date(data.booking.event_date).toISOString().split('T')[0] : "",
@@ -102,8 +116,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
           new_payment_amount: "",
           payment_method: "cash"
         });
-      } else {
-        setToast({ show: true, message: "Rezervimi nuk u gjet!", type: "error" });
       }
       setFetching(false);
     }
@@ -203,7 +215,15 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
     setLoading(true);
     setToast({ show: false, message: "", type: "success" });
 
-    const dataToSubmit = { ...formData, selectedExtras, historically_paid: historicallyPaid };
+    // Sigurohemi që numrat dërgohen si string për të shmangur ngatërresat e Databazës
+    const dataToSubmit = { 
+      ...formData, 
+      total_amount: formData.total_amount.toString(),
+      new_payment_amount: formData.new_payment_amount.toString(),
+      selectedExtras, 
+      historically_paid: historicallyPaid 
+    };
+    
     if (dataToSubmit.status !== 'cancelled') dataToSubmit.cancel_reason = "";
 
     try {
@@ -227,7 +247,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
       {toast.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95">
              <h3 className="text-xl font-semibold text-gray-900 mb-2">{toast.type === "success" ? "Sukses!" : "Kujdes!"}</h3>
             <p className="text-gray-500 text-sm mb-8 font-medium">{toast.message}</p>
@@ -251,13 +271,9 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
            <div className="p-3.5 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 w-full">{formData.client_name}</div>
         </div>
 
-        {/* ======================================================== */}
-        {/* RRESHTI I RI ME 4 ELEMENTE (PËRFSHIRË LLOJIN E EVENTIT)  */}
-        {/* ======================================================== */}
         <div className="p-6 md:p-8 border-b border-gray-100">
            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               
-              {/* Lloji i Eventit Inteligjent (Dropdown + Shkrim) */}
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Lloji i Eventit</label>
                 <div className="relative">
@@ -271,7 +287,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                     value={formData.event_type} 
                     onChange={(e) => setFormData({...formData, event_type: e.target.value})} 
                   />
-                  {/* Kjo është lista standarde që shfaqet kur klikon */}
                   <datalist id="event-types">
                     <option value="Dasëm" />
                     <option value="Fejesë" />

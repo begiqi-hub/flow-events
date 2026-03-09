@@ -3,20 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { format, getDaysInMonth, startOfMonth, getDay } from "date-fns";
+import { sq, enUS, de } from "date-fns/locale"; // <--- SHTUAM GJUHËT KËTU
 import { 
   Plus, Calendar as CalendarIcon, CalendarDays, List, 
-  Clock, ArrowRight, MapPin, Users, CalendarCheck, CheckCircle2, Clock4, X, Phone, Banknote
+  Clock, ArrowRight, MapPin, Users, CalendarCheck, CheckCircle2, Clock4, X, Phone, Banknote, PartyPopper, UsersRound
 } from "lucide-react";
 
 export default function DashboardClient({ business, locale, stats, monthBookings }: any) {
   const [view, setView] = useState<'list' | 'calendar'>('list');
-  // KËTU RUAJMË EVENTIN QË KLIKOHET PËR TË HAPUR POPUP-IN
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   
+  // LOGJIKA E GJUHËS SË KALENDARIT
+  const dateLocales: any = { sq: sq, en: enUS, de: de };
+  const currentLocale = dateLocales[locale] || sq; // Default në Shqip nëse s'e gjen
+  
   const now = new Date();
-  const currentMonthName = format(now, 'MMMM yyyy'); 
+  const currentMonthName = format(now, 'MMMM yyyy', { locale: currentLocale }); // <--- ZBATUAM GJUHËN KËTU
 
-  // LOGJIKA E KALENDARIT
   const daysInMonth = getDaysInMonth(now);
   const firstDay = startOfMonth(now);
   const startDay = getDay(firstDay);
@@ -35,17 +38,20 @@ export default function DashboardClient({ business, locale, stats, monthBookings
     }
   };
 
+  const renderFinanceBadge = (paymentStatus: string) => {
+    if (paymentStatus === 'paid') return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 ml-2">E Paguar</span>;
+    if (paymentStatus === 'deposit') return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-700 ml-2">Ka lënë kapar</span>;
+    return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 ml-2">Pa paguar</span>;
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 relative">
       
-      {/* ------------------------------------------------------------------ */}
-      {/* POPUP (MODAL) PËR DETAJET E EVENTIT TË KLIKUAR */}
-      {/* ------------------------------------------------------------------ */}
+      {/* POPUP I DETAJEVE TË EVENTIT */}
       {selectedBooking && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
             
-            {/* Koka e Popup-it */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
               <div>
                 <h3 className="text-2xl font-black text-gray-900">{selectedBooking.clients?.name || "Klient i panjohur"}</h3>
@@ -58,11 +64,11 @@ export default function DashboardClient({ business, locale, stats, monthBookings
               </button>
             </div>
             
-            {/* Trupi i Popup-it */}
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-blue-50 text-blue-900 p-3 rounded-xl border border-blue-100">
                 <CalendarIcon className="text-blue-500 shrink-0" size={18} />
-                <span className="font-bold">{format(new Date(selectedBooking.event_date), 'dd MMMM yyyy')}</span>
+                {/* ZBATUAM GJUHËN EDHE TE DATA E POPUP-IT */}
+                <span className="font-bold">{format(new Date(selectedBooking.event_date), 'dd MMMM yyyy', { locale: currentLocale })}</span>
               </div>
               
               <div className="flex items-center gap-3 text-sm font-medium text-gray-700 bg-amber-50 text-amber-900 p-3 rounded-xl border border-amber-100">
@@ -80,13 +86,13 @@ export default function DashboardClient({ business, locale, stats, monthBookings
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Totali</span>
                   <span className="text-2xl font-black text-emerald-400">{Number(selectedBooking.total_amount).toFixed(2)} €</span>
                 </div>
-                <div>
+                <div className="flex flex-col items-end gap-1.5">
                   {renderStatus(selectedBooking.status)}
+                  {renderFinanceBadge(selectedBooking.payment_status)}
                 </div>
               </div>
             </div>
             
-            {/* Fundi i Popup-it (Butoni) */}
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
               <Link 
                 href={`/${locale}/biznes/rezervimet`} 
@@ -99,9 +105,8 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         </div>
       )}
-      {/* ------------------------------------------------------------------ */}
 
-      {/* HEADER DHE BANERI I PROVËS I INTEGRUAR */}
+      {/* HEADER DHE BANERI I PROVËS */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -128,7 +133,6 @@ export default function DashboardClient({ business, locale, stats, monthBookings
       {/* 4 KARTAT MODERNE TË STATISTIKAVE */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         
-        {/* KARTA 1: REZERVIM I RI */}
         <Link 
           href={`/${locale}/biznes/rezervimet/shto`}
           className="bg-[#0F172A] rounded-3xl p-6 flex flex-col justify-between group hover:-translate-y-1 transition-transform shadow-xl shadow-slate-900/10 relative overflow-hidden h-[150px]"
@@ -145,7 +149,6 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         </Link>
 
-        {/* KARTA 2 */}
         <Link href={`/${locale}/biznes/rezervimet`} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-3xl p-6 border border-orange-100 shadow-sm flex flex-col justify-between h-[150px] group hover:-translate-y-1 transition-transform">
           <div className="flex justify-between items-start">
             <div className="w-12 h-12 rounded-xl bg-orange-100/50 text-orange-600 flex items-center justify-center shrink-0">
@@ -159,7 +162,6 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         </Link>
 
-        {/* KARTA 3 */}
         <Link href={`/${locale}/biznes/rezervimet`} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-6 border border-blue-100 shadow-sm flex flex-col justify-between h-[150px] group hover:-translate-y-1 transition-transform">
           <div className="flex justify-between items-start">
             <div className="w-12 h-12 rounded-xl bg-blue-100/50 text-blue-600 flex items-center justify-center shrink-0">
@@ -173,7 +175,6 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         </Link>
 
-        {/* KARTA 4 */}
         <Link href={`/${locale}/biznes/rezervimet`} className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between h-[150px] group hover:-translate-y-1 transition-transform">
           <div className="flex justify-between items-start">
             <div className="w-12 h-12 rounded-xl bg-emerald-100/50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -214,32 +215,57 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         </div>
 
-        {/* PAMJA E LISTËS */}
+        {/* PAMJA E PËRMIRËSUAR E LISTËS */}
         {view === 'list' && (
           <div className="space-y-4 animate-in fade-in duration-300">
             {monthBookings.length > 0 ? monthBookings.map((booking: any) => (
               <div 
                 key={booking.id} 
-                onClick={() => setSelectedBooking(booking)} // HAP MODALIN
-                className="cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/20 transition-all group gap-4"
+                onClick={() => setSelectedBooking(booking)}
+                className="cursor-pointer flex flex-col lg:flex-row items-start lg:items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/20 transition-all group gap-4 lg:gap-8"
               >
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <div className="bg-gray-50 px-3 py-2 rounded-xl text-center border border-gray-100 shrink-0">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase leading-none">{format(new Date(booking.event_date), 'MMM')}</p>
+                
+                {/* 1. Data dhe Emri */}
+                <div className="flex items-center gap-4 w-full lg:w-auto lg:min-w-[280px]">
+                  <div className="bg-gray-50 px-3 py-2 rounded-xl text-center border border-gray-100 shrink-0 group-hover:bg-white group-hover:border-emerald-200 transition-colors">
+                    {/* ZBATUAM GJUHËN TE MUAJI I LISTËS */}
+                    <p className="text-[10px] font-bold text-gray-400 uppercase leading-none">{format(new Date(booking.event_date), 'MMM', { locale: currentLocale })}</p>
                     <p className="text-lg font-black text-gray-900 mt-1 leading-none">{format(new Date(booking.event_date), 'dd')}</p>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">{booking.clients?.name || "Klient i panjohur"}</h4>
-                    <p className="text-xs text-gray-500 flex items-center gap-2 mt-1 font-medium">
-                       <Clock size={12}/> {format(new Date(booking.start_time), 'HH:mm')} 
+                    <h4 className="font-bold text-gray-900 text-base">{booking.clients?.name || "Klient i panjohur"}</h4>
+                    <p className="text-xs text-gray-500 mt-1 font-semibold flex items-center gap-1.5">
+                       {booking.event_type ? (
+                         <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">{booking.event_type}</span>
+                       ) : (
+                         <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">Event</span>
+                       )}
                        <span className="text-gray-300">•</span>
-                       <MapPin size={12}/> {booking.halls?.name || "Pa sallë"}
+                       <Clock size={12}/> {format(new Date(booking.start_time), 'HH:mm')}
                     </p>
                   </div>
                 </div>
-                <div className="w-full sm:w-auto text-left sm:text-right">
-                  {renderStatus(booking.status)}
+
+                {/* 2. Salla dhe Pjesëmarrësit */}
+                <div className="flex-1 w-full flex gap-6 lg:justify-center border-y lg:border-y-0 lg:border-x border-gray-100 py-3 lg:py-0 lg:px-6">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1"><MapPin size={10}/> Salla</span>
+                    <span className="text-sm font-bold text-gray-700">{booking.halls?.name || "N/A"}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1"><UsersRound size={10}/> Kapaciteti</span>
+                    <span className="text-sm font-bold text-gray-700">{booking.participants} Pax</span>
+                  </div>
                 </div>
+
+                {/* 3. Statusi dhe Financat */}
+                <div className="w-full lg:w-auto text-left lg:text-right flex lg:flex-col items-center lg:items-end justify-between lg:min-w-[140px]">
+                  {renderStatus(booking.status)}
+                  <div className="lg:mt-2">
+                    {renderFinanceBadge(booking.payment_status)}
+                  </div>
+                </div>
+
               </div>
             )) : (
               <div className="py-16 text-center">
@@ -251,7 +277,7 @@ export default function DashboardClient({ business, locale, stats, monthBookings
           </div>
         )}
 
-        {/* PAMJA E KALENDARIT (GRID) */}
+        {/* PAMJA E KALENDARIT */}
         {view === 'calendar' && (
           <div className="animate-in fade-in duration-300">
             <div className="grid grid-cols-7 gap-1 sm:gap-2">
@@ -265,12 +291,11 @@ export default function DashboardClient({ business, locale, stats, monthBookings
                   <div key={day} className={`h-20 sm:h-28 rounded-xl p-1 sm:p-2 border transition-all flex flex-col overflow-hidden ${hasEvent ? 'bg-emerald-50/20 border-emerald-100 hover:border-emerald-300 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-300'}`}>
                     <span className={`text-xs sm:text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${hasEvent ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-500'}`}>{day}</span>
                     
-                    {/* Lista e Eventeve në Kalendar */}
                     <div className="flex flex-col gap-1 overflow-y-auto mt-1 no-scrollbar">
                       {dayBookings.map((b: any) => (
                         <button 
                           key={b.id} 
-                          onClick={() => setSelectedBooking(b)} // HAP MODALIN
+                          onClick={() => setSelectedBooking(b)}
                           className="text-left w-full bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500 hover:text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-1 rounded transition-colors truncate border border-emerald-500/20"
                           title={b.clients?.name}
                         >
