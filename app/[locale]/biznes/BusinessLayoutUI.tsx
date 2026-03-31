@@ -50,9 +50,6 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
     daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
   
-  // ==============================================================================
-  // KËTU U BË RREGULLIMI: Shiriti del VETËM nëse statusi NUK është 'active'
-  // ==============================================================================
   const isTrial = business.status !== 'active';
 
   useEffect(() => {
@@ -107,21 +104,23 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
   ];
 
   return (
-    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
+    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden w-full relative">
       
+      {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] md:hidden transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] md:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
+      {/* SIDEBAR */}
       <aside className={`
-        fixed inset-y-0 left-0 z-[110] flex flex-col bg-white border-r border-gray-100 shadow-2xl md:shadow-sm transition-all duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-[100] flex flex-col bg-white border-r border-gray-100 shadow-2xl md:shadow-sm transition-all duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
         md:relative md:translate-x-0 
         ${isMinimized ? 'md:w-20' : 'md:w-64'} 
-        w-64
+        w-64 shrink-0
       `}>
         
         <button 
@@ -138,13 +137,13 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
           {isMinimized ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
 
-        <div className={`h-20 flex items-center ${isMinimized ? 'md:justify-center md:px-0' : ''} px-6 border-b border-gray-50 transition-all`}>
+        <div className={`h-16 md:h-20 flex items-center ${isMinimized ? 'md:justify-center md:px-0' : ''} px-6 border-b border-gray-50 transition-all shrink-0`}>
           <div className="bg-gray-900 text-white p-2 rounded-xl shadow-md shrink-0">
             <Sparkles size={24} className={isMinimized ? "md:w-5 md:h-5" : ""} />
           </div>
-          <div className={`ml-3 overflow-hidden whitespace-nowrap ${isMinimized ? 'md:hidden block' : 'block'}`}>
-            <h1 className="text-lg font-extrabold text-gray-900 tracking-tight leading-none">{t("brandName")}</h1>
-            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5">{t("brandDesc")}</p>
+          <div className={`ml-3 overflow-hidden ${isMinimized ? 'md:hidden block' : 'block'}`}>
+            <h1 className="text-lg font-extrabold text-gray-900 tracking-tight leading-none truncate">{t("brandName")}</h1>
+            <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-0.5 truncate">{t("brandDesc")}</p>
           </div>
         </div>
 
@@ -240,71 +239,76 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
         </nav>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full relative">
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col h-full relative min-w-0">
         
-        {/* Header (TopNav) with high z-index */}
-        <header className="h-16 md:h-20 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 z-[60] sticky top-0 w-full shadow-sm">
-          <div className="flex items-center gap-3 sm:gap-4">
+        {/* HEADER */}
+        <header className="h-16 md:h-20 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 sm:px-6 z-[60] sticky top-0 w-full shadow-sm shrink-0">
+          
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 p-2 rounded-xl transition-colors"
+              className="md:hidden text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 p-2 rounded-xl transition-colors shrink-0"
             >
               <Menu size={22} />
             </button>
+            
+            {/* Shfaqja e emrit në mobile kur sidebar është mbyllur, opcionale por e bukur */}
+            <div className="md:hidden truncate min-w-0">
+               <h1 className="text-sm font-bold text-gray-900 truncate">{business.name}</h1>
+            </div>
           </div>
           
-          <div className="flex items-center gap-3 md:gap-5">
+          {/* KONTROLLET E DJATHTA */}
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             
             {isTrial && (
               <Link 
                 href={`/${locale}/biznes/abonimi`}
-                className="hidden md:flex items-center gap-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-4 py-2 rounded-xl transition-all group shadow-sm"
+                className="hidden sm:flex items-center gap-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all group shadow-sm shrink-0"
               >
                 <AlertCircle size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-amber-700 whitespace-nowrap">
+                  <span className="text-[10px] md:text-xs font-bold text-amber-700 whitespace-nowrap hidden md:block">
                     {daysRemaining} {t("trialDays")}
                   </span>
-                  <span className="w-1 h-1 bg-amber-300 rounded-full"></span>
-                  <span className="text-xs font-black text-amber-600 uppercase tracking-tight">
+                  <span className="text-[10px] md:text-xs font-black text-amber-600 uppercase tracking-tight whitespace-nowrap">
                     {t("subscribeBtn")}
                   </span>
                 </div>
               </Link>
             )}
 
-              {/* BUTONI PËR EKRANIN E RECEPSIONIT */}
             <Link 
               href={`/${locale}/recepsioni`}
-              className="flex items-center gap-2 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100 px-3 md:px-4 py-2 rounded-xl transition-colors shadow-sm"
+              className="hidden sm:flex items-center gap-2 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-colors shadow-sm shrink-0"
               title="Hap pamjen e Recepsionit"
             >
               <Monitor size={18} />
-              <span className="text-xs font-bold uppercase tracking-wider hidden sm:block">Recepsioni</span>
+              <span className="text-xs font-bold uppercase tracking-wider hidden md:block">Recepsioni</span>
             </Link>
 
-            <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+            <div className="h-6 w-px bg-gray-200 hidden sm:block shrink-0"></div>
 
-            {/* NOTIFICATIONS DROPDOWN */}
-            <div className="relative" ref={notifRef}>
+            {/* NOTIFIKIMET */}
+            <div className="relative shrink-0" ref={notifRef}>
               <button 
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-colors border ${isNotifOpen ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'hover:bg-gray-50 border-transparent hover:border-gray-100 text-gray-600'}`}
+                className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition-colors border ${isNotifOpen ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'hover:bg-gray-50 border-transparent hover:border-gray-100 text-gray-600'}`}
               >
-                <Bell size={20} className={notifications.length > 0 && !isNotifOpen ? 'animate-bounce' : ''} />
+                <Bell size={18} className={`sm:w-5 sm:h-5 ${notifications.length > 0 && !isNotifOpen ? 'animate-bounce' : ''}`} />
                 {notifications.length > 0 && (
-                  <span className="absolute top-2 right-2 flex items-center justify-center w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm"></span>
+                  <span className="absolute top-1.5 right-1.5 flex items-center justify-center w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm"></span>
                 )}
               </button>
 
               {isNotifOpen && (
-                <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 py-3 animate-in slide-in-from-top-2 z-[9999] origin-top-right">
-                  <div className="px-5 py-3 border-b border-gray-50 flex justify-between items-center mb-1">
-                    <p className="text-base font-extrabold text-gray-900">{tNotif("title")} ({notifications.length})</p>
+                <div className="absolute right-0 mt-3 w-[300px] max-w-[calc(100vw-2rem)] sm:w-80 md:w-96 bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 py-3 animate-in slide-in-from-top-2 z-[9999] origin-top-right">
+                  <div className="px-4 py-3 border-b border-gray-50 flex justify-between items-center mb-1">
+                    <p className="text-sm sm:text-base font-extrabold text-gray-900">{tNotif("title")} ({notifications.length})</p>
                   </div>
                   
-                  <div className="max-h-[60vh] overflow-y-auto custom-scrollbar relative z-[9999]">
+                  <div className="max-h-[50vh] sm:max-h-[60vh] overflow-y-auto custom-scrollbar relative">
                     {notifications.length > 0 ? (
                       notifications.map((notif: any, idx: number) => {
                         let icon = <Clock size={16} />;
@@ -328,21 +332,21 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
                             key={idx}
                             href={finalHref} 
                             onClick={() => setIsNotifOpen(false)}
-                            className="flex gap-4 px-5 py-4 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group"
+                            className="flex gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group"
                           >
-                            <div className={`mt-1 shrink-0 w-8 h-8 rounded-full border flex items-center justify-center ${colorClass}`}>
+                            <div className={`mt-1 shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full border flex items-center justify-center ${colorClass}`}>
                               {icon}
                             </div>
-                            <div>
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <p className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                            <div className="min-w-0">
+                              <div className="flex items-start sm:items-center justify-between gap-2 mb-1">
+                                <p className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors truncate">
                                   {notif.title}
                                 </p>
-                                <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap bg-gray-100 px-2 py-0.5 rounded-full">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 whitespace-nowrap bg-gray-100 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 mt-0.5 sm:mt-0">
                                   {notif.time}
                                 </span>
                               </div>
-                              <p className="text-xs font-medium text-gray-500 leading-relaxed">
+                              <p className="text-[11px] sm:text-xs font-medium text-gray-500 leading-relaxed line-clamp-2">
                                 {notif.message}
                               </p>
                             </div>
@@ -350,12 +354,12 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
                         )
                       })
                     ) : (
-                      <div className="px-4 py-12 text-center flex flex-col items-center">
-                        <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                          <Bell size={24} className="text-gray-300" />
+                      <div className="px-4 py-8 text-center flex flex-col items-center">
+                        <div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mb-3 shadow-inner">
+                          <Bell size={20} className="text-gray-300" />
                         </div>
-                        <p className="text-gray-500 font-medium">{tNotif("allGood")}</p>
-                        <p className="text-xs text-gray-400 mt-1">{tNotif("noNotifs")}</p>
+                        <p className="text-sm text-gray-500 font-medium">{tNotif("allGood")}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-400 mt-1">{tNotif("noNotifs")}</p>
                       </div>
                     )}
                   </div>
@@ -363,24 +367,24 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
               )}
             </div>
 
-            {/* LANGUAGE DROPDOWN */}
-            <div className="relative" ref={langRef}>
+            {/* GJUHA */}
+            <div className="relative shrink-0" ref={langRef}>
               <button 
                 onClick={() => setIsLangOpen(!isLangOpen)}
-                className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-xl transition-colors border border-transparent hover:border-gray-100"
+                className="flex items-center justify-center w-9 h-9 sm:w-auto sm:h-auto sm:px-2 sm:py-1.5 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100"
               >
-                <Globe size={18} className="text-gray-500" />
-                <span className="text-sm font-bold text-gray-700 hidden sm:block uppercase">{currentLang.code}</span>
+                <Globe size={18} className="text-gray-500 sm:w-4 sm:h-4" />
+                <span className="text-xs font-bold text-gray-700 hidden sm:block uppercase ml-1.5">{currentLang.code}</span>
               </button>
 
               {isLangOpen && (
-                <div className="absolute right-0 mt-3 w-40 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-in slide-in-from-top-2 z-[9999]">
-                  <p className="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("langSystem")}</p>
+                <div className="absolute right-0 mt-3 w-36 sm:w-40 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-in slide-in-from-top-2 z-[9999]">
+                  <p className="px-4 py-1.5 text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("langSystem")}</p>
                   {GJUHET.map((g) => (
                     <button
                       key={g.code}
                       onClick={() => changeLanguage(g.code)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                      className={`w-full flex items-center gap-2 sm:gap-3 px-4 py-2 text-xs sm:text-sm transition-colors
                         ${locale === g.code ? 'bg-indigo-50/50 text-indigo-700 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}
                       `}
                     >
@@ -392,60 +396,60 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
               )}
             </div>
 
-            <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+            <div className="h-6 w-px bg-gray-200 hidden sm:block shrink-0"></div>
 
-            {/* PROFILE DROPDOWN */}
-            <div className="relative" ref={profileRef}>
+            {/* PROFILI */}
+            <div className="relative shrink-0" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-3 hover:bg-gray-50 p-1.5 md:p-2 rounded-xl transition-colors focus:outline-none border border-transparent hover:border-gray-100"
+                className="flex items-center gap-2 sm:gap-3 hover:bg-gray-50 p-1 sm:p-1.5 md:p-2 rounded-xl transition-colors focus:outline-none border border-transparent hover:border-gray-100"
               >
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-bold text-gray-900 leading-none">{business.name}</p>
+                <div className="text-right hidden lg:block">
+                  <p className="text-sm font-bold text-gray-900 leading-none truncate max-w-[120px]">{business.name}</p>
                   <p className="text-xs text-gray-500 mt-1">{t("roleAdmin")}</p>
                 </div>
-                <div className="bg-gray-100 p-2 rounded-full text-gray-600 hover:bg-gray-200 transition-colors">
-                  <UserCircle size={22} className="md:w-5 md:h-5" />
+                <div className="bg-gray-100 p-1.5 sm:p-2 rounded-full text-gray-600 hover:bg-gray-200 transition-colors">
+                  <UserCircle size={20} className="sm:w-5 sm:h-5" />
                 </div>
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-in slide-in-from-top-2 z-[9999]">
-                  <div className="px-4 py-3 border-b border-gray-50 mb-1 md:hidden">
-                    <p className="text-sm font-bold text-gray-900 truncate">{business.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{business.email}</p>
+                <div className="absolute right-0 mt-3 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-in slide-in-from-top-2 z-[9999]">
+                  <div className="px-4 py-3 border-b border-gray-50 mb-1 lg:hidden">
+                    <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">{business.name}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500 truncate mt-0.5">{business.email}</p>
                   </div>
                   
-                  <Link href={`/${locale}/biznes/konfigurimet/profili`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                    <Settings size={16} className="text-gray-400" /> {t("menuProfile")}
+                  <Link href={`/${locale}/biznes/konfigurimet/profili`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <Settings size={16} className="text-gray-400 shrink-0" /> <span className="truncate">{t("menuProfile")}</span>
                   </Link>
-                  <Link href={`/${locale}/biznes/perdoruesit`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                    <Users size={16} className="text-gray-400" /> {t("menuStaff")}
+                  <Link href={`/${locale}/biznes/perdoruesit`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <Users size={16} className="text-gray-400 shrink-0" /> <span className="truncate">{t("menuStaff")}</span>
                   </Link>
-                  <Link href={`/${locale}/biznes/banka`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                    <Landmark size={16} className="text-gray-400" /> {t("menuBank")}
+                  <Link href={`/${locale}/biznes/banka`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <Landmark size={16} className="text-gray-400 shrink-0" /> <span className="truncate">{t("menuBank")}</span>
                   </Link>
-                  <Link href={`/${locale}/biznes/abonimi`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                    <Sparkles size={16} className="text-indigo-400" /> {t("menuSub")}
+                  <Link href={`/${locale}/biznes/abonimi`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <Sparkles size={16} className="text-indigo-400 shrink-0" /> <span className="truncate">{t("menuSub")}</span>
                   </Link>
                   
                   <div className="h-px bg-gray-100 my-1"></div>
 
-                  <Link href={`/${locale}/biznes/konfigurimet/politika`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                    <ShieldAlert size={16} className="text-gray-400" /> {t("menuPolicy")}
+                  <Link href={`/${locale}/biznes/konfigurimet/politika`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <ShieldAlert size={16} className="text-gray-400 shrink-0" /> <span className="truncate">{t("menuPolicy")}</span>
                   </Link>
                   
-                  <Link href={`/${locale}/biznes/logfile`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                    <FileText size={16} className="text-gray-400" /> {t("menuLogfile")}
+                  <Link href={`/${locale}/biznes/logfile`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <FileText size={16} className="text-gray-400 shrink-0" /> <span className="truncate">{t("menuLogfile")}</span>
                   </Link>
                   
                   <div className="h-px bg-gray-100 my-1"></div>
                   
                   <button 
                     onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    <LogOut size={16} /> {t("menuLogout")}
+                    <LogOut size={16} className="shrink-0" /> <span className="truncate">{t("menuLogout")}</span>
                   </button>
                 </div>
               )}
@@ -454,7 +458,8 @@ export default function BusinessLayoutUI({ business, notifications = [], childre
 
         </header>
 
-        <main className="flex-1 overflow-y-auto relative">
+        {/* MAIN CONTENT AREA */}
+        <main className="flex-1 overflow-y-auto relative p-4 md:p-8">
           {children}
         </main>
         
