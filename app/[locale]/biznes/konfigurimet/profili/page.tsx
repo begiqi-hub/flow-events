@@ -11,11 +11,30 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  const business = await prisma.businesses.findUnique({
-    where: { email: session.user.email }
+  let business = await prisma.businesses.findUnique({
+    where: { email: session.user.email },
+    include: {
+      users: true
+    }
   });
+
+  if (!business) {
+    const staffUser = await prisma.users.findUnique({
+      where: { email: session.user.email }
+    });
+    if (staffUser && staffUser.business_id) {
+      business = await prisma.businesses.findUnique({
+        where: { id: staffUser.business_id },
+        include: {
+          users: true
+        }
+      });
+    }
+  }
 
   if (!business) redirect(`/${locale}/login`);
 
-  return <ProfileClient business={business} />;
+  const safeBusiness = JSON.parse(JSON.stringify(business));
+
+  return <ProfileClient business={safeBusiness} locale={locale} />;
 }

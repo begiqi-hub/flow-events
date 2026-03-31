@@ -12,30 +12,95 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  const business = await prisma.businesses.findUnique({
+  let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
   });
 
+  if (!business) {
+    const staffUser = await prisma.users.findUnique({
+      where: { email: session.user.email }
+    });
+    if (staffUser && staffUser.business_id) {
+      business = await prisma.businesses.findUnique({
+        where: { id: staffUser.business_id }
+      });
+    }
+  }
+
   if (!business) redirect(`/${locale}/login`);
 
+  // 1. Marrim rezervimet (E rëndësishme: Përfshijmë 'cancelled' për të llogaritur gjobat)
   const allBookings = await prisma.bookings.findMany({
     where: { 
       business_id: business.id,
-      status: { notIn: ['cancelled', 'draft'] }
+      status: { notIn: ['draft'] } // <--- Hequr 'cancelled'
     },
     include: { 
       halls: true,
-      clients: true 
+      clients: true,
+      payments: true,
+      booking_extras: { 
+        include: { extras: true } 
+      } 
     },
     orderBy: { event_date: 'asc' }
   });
 
-  // MAGJIA KËTU: Kthejmë Decimal dhe Date në format të thjeshtë JSON
-  const serializedBookings = JSON.parse(JSON.stringify(allBookings));
+  const allMenus = await prisma.menus.findMany({
+    where: { business_id: business.id }
+  });
+
+  // 3. Kryqëzojmë të dhënat, llogarisim koston dhe NET CASHFLOW (Pagesat - Rimbursimet)
+  const bookingsWithCosts = allBookings.map((b: any) => {
+    const currentMenu = allMenus.find((m: any) => m.id === b.menu_id);
+    
+    const participants = Number(b.participants) || 0;
+    const menuInternalCost = currentMenu?.internal_cost ? Number(currentMenu.internal_cost) : 0;
+    const totalMenuCost = participants * menuInternalCost;
+
+    let totalExtrasCost = 0;
+    if (b.booking_extras && b.booking_extras.length > 0) {
+      b.booking_extras.forEach((be: any) => {
+        const extraCost = be.extras?.internal_cost ? Number(be.extras.internal_cost) : 0;
+        totalExtrasCost += (extraCost * (Number(be.qty) || 1));
+      });
+    }
+
+    const calculated_cost = totalMenuCost + totalExtrasCost;
+
+    // MATEMATIKA E RE FINANCIARE (PËR RAPORTET)
+    let net_paid = 0;
+    let refunded = 0;
+    if (b.payments) {
+      b.payments.forEach((p: any) => {
+        if (p.type === 'refund') {
+          net_paid -= Number(p.amount);
+          refunded += Number(p.amount);
+        } else {
+          net_paid += Number(p.amount);
+        }
+      });
+    }
+
+    // Nëse është anuluar, "e ardhura e pritshme" është vetëm gjoba që i mbajtëm (net_paid)
+    // Nëse nuk është anuluar, e ardhura e pritshme është totali i kontratës.
+    const expected_revenue = b.status === 'cancelled' ? net_paid : (Number(b.total_amount) || 0);
+
+    return {
+      ...b,
+      calculated_cost: calculated_cost,
+      net_paid: net_paid,             // <- Të ardhurat reale në arkë
+      refunded_amount: refunded,      // <- Sa para kemi kthyer
+      expected_revenue: expected_revenue // <- Të ardhurat që presim të bëjmë
+    };
+  });
+
+  const serializedBookings = JSON.parse(JSON.stringify(bookingsWithCosts));
+  const serializedBusiness = JSON.parse(JSON.stringify(business));
 
   return (
     <ReportsClient 
-      business={business} 
+      business={serializedBusiness} 
       allBookings={serializedBookings} 
       locale={locale} 
     />

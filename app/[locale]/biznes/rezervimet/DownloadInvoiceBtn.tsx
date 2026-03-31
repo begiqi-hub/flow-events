@@ -6,25 +6,21 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 
 export default function DownloadInvoiceBtn({ booking, business }: { booking: any, business: any }) {
-  
   const handleDownloadPDF = () => {
-    // 1. Krijojmë një dokument të ri PDF (Formati A4)
     const doc = new jsPDF();
     
-    // 2. KOKA E FATURËS (Të dhënat e Biznesit)
     doc.setFontSize(22);
-    doc.setTextColor(15, 23, 42); // Ngjyrë e zezë elegante
+    doc.setTextColor(15, 23, 42); 
     doc.text("FATURË / KONTRATË", 14, 22);
     
     doc.setFontSize(12);
-    doc.setTextColor(100, 116, 139); // Ngjyrë gri
+    doc.setTextColor(100, 116, 139); 
     doc.text(business?.name || "Biznesi Im", 14, 32);
     doc.setFontSize(10);
     doc.text(`NUI: ${business?.nui || "N/A"}`, 14, 38);
     doc.text(`Telefoni: ${business?.phone || "N/A"}`, 14, 44);
     doc.text(`Email: ${business?.email || "N/A"}`, 14, 50);
 
-    // 3. TË DHËNAT E KLIENTIT DHE EVENTIT
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
     doc.text("Faturuar për:", 120, 32);
@@ -37,24 +33,16 @@ export default function DownloadInvoiceBtn({ booking, business }: { booking: any
     doc.text(`Salla: ${booking?.halls?.name || "N/A"}`, 120, 62);
     doc.text(`Pjesëmarrës: ${booking?.participants || 0} persona`, 120, 68);
 
-    // 4. VIZA NDARËSE
     doc.setDrawColor(226, 232, 240);
     doc.line(14, 75, 196, 75);
 
-    // 5. TABELA E SHPENZIMEVE (Ushqimi + Ekstrat)
     const tableData = [];
-    
-    // Rreshti i Ushqimit (nëse ka menu të zgjedhur)
-    // Shënim: Këtu mund ta lidhim me Menu-në reale nëse ia kalojmë si prop, 
-    // por për momentin po e llogarisim si "Shërbim Bazë"
     tableData.push([
       "Menu / Shërbimi Bazë (për person)", 
       `${booking.participants} pax`, 
-      "Shih Totali", // Çmimi për person mund të shtohet nëse e tërheqim nga DB
-      `${Number(booking.total_amount).toFixed(2)} €` // Këtu kemi totalin e përgjithshëm
+      "Shih Totali",
+      `${Number(booking.total_amount).toFixed(2)} €`
     ]);
-
-    // Këtu në të ardhmen mund të bëjmë .map() për Ekstrat reale të këtij rezervimi!
 
     autoTable(doc, {
       startY: 85,
@@ -66,8 +54,7 @@ export default function DownloadInvoiceBtn({ booking, business }: { booking: any
       columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
     });
 
-    // 6. TOTALI PËRFUNDIMTAR
-    // @ts-ignore - sepse autotable shton lastAutoTable në doc
+    // @ts-ignore
     const finalY = doc.lastAutoTable.finalY || 100;
     
     doc.setFontSize(14);
@@ -75,16 +62,14 @@ export default function DownloadInvoiceBtn({ booking, business }: { booking: any
     doc.text("TOTALI PËR PAGESË:", 120, finalY + 15);
     
     doc.setFontSize(16);
-    doc.setTextColor(16, 185, 129); // E gjelbër (Emerald 500)
+    doc.setTextColor(16, 185, 129);
     doc.text(`${Number(booking.total_amount).toFixed(2)} €`, 175, finalY + 15, { align: 'left' });
 
-    // 7. FOOTER (Kushtet)
     doc.setFontSize(9);
     doc.setTextColor(148, 163, 184);
     doc.text("Faleminderit që zgjodhët shërbimet tona!", 14, 280);
     doc.text("Kjo faturë është e vlefshme pa vulë dhe firmë, e gjeneruar nga sistemi elektronik.", 14, 285);
 
-    // 8. SHKARKO PDF-në
     doc.save(`Fatura_${booking.clients?.name?.replace(/\s+/g, '_')}_${format(new Date(), 'ddMMyyyy')}.pdf`);
   };
 

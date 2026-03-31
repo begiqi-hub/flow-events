@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../../lib/prisma";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from "date-fns";
-import CalendarClient from "./CalendarClient"; // Lidhja me skedarin e ri
+import CalendarClient from "./CalendarClient"; 
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,9 +20,20 @@ export default async function CalendarPage({
   const session = await getServerSession();
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  const business = await prisma.businesses.findUnique({
+  let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
   });
+
+  if (!business) {
+    const staffUser = await prisma.users.findUnique({
+      where: { email: session.user.email }
+    });
+    if (staffUser && staffUser.business_id) {
+      business = await prisma.businesses.findUnique({
+        where: { id: staffUser.business_id }
+      });
+    }
+  }
 
   if (!business) redirect(`/${locale}/login`);
 
@@ -33,10 +44,11 @@ export default async function CalendarPage({
   const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 1 });
   const endDate = endOfWeek(lastDayOfMonth, { weekStartsOn: 1 });
 
-  // Tërheqim rezervimet bashkë me Ekstrat
+  // SHTUAM KUSHTIN: status: { notIn: ['cancelled', 'completed', 'draft'] }
   const bookings = await prisma.bookings.findMany({
     where: { 
       business_id: business.id,
+      status: { notIn: ['cancelled', 'completed', 'draft'] },
       event_date: {
         gte: startDate,
         lte: endDate
@@ -51,7 +63,6 @@ export default async function CalendarPage({
     }
   });
 
-  // Pastrimi nga gabimi i Decimal
   const safeBookings = JSON.parse(JSON.stringify(bookings));
   const safeBusiness = JSON.parse(JSON.stringify(business));
 
@@ -60,7 +71,7 @@ export default async function CalendarPage({
       bookings={safeBookings} 
       business={safeBusiness} 
       locale={locale} 
-      currentDateStr={currentDate.toISOString()} // Kalojmë datën e saktë këtu
+      currentDateStr={currentDate.toISOString()} 
     />
   );
 }

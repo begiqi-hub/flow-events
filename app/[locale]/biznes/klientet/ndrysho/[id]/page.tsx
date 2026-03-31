@@ -7,14 +7,17 @@ import {
   CalendarCheck, Clock, CheckCircle2, AlertTriangle, PartyPopper, ChevronRight 
 } from "lucide-react";
 import Link from "next/link";
-import { updateClientAction, getClientAction } from "./actions";
+import { updateClientAction, getClientAction } from "../../actions"; // Vëmendje te PATH!
 import { format } from "date-fns";
-import { sq } from "date-fns/locale";
+import { sq, enUS } from "date-fns/locale";
+import { useTranslations } from "next-intl"; 
 
 export default function EditClientPage({ params }: { params: Promise<{ locale: string, id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const { locale, id } = resolvedParams;
+  
+  const t = useTranslations("EditClient");
   
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -24,7 +27,6 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
     name: "", phone: "", email: "", personal_id: "", gender: "", city: ""
   });
   
-  // SHTUAM HISTORIKUN KËTU
   const [clientBookings, setClientBookings] = useState<any[]>([]);
 
   useEffect(() => {
@@ -40,17 +42,16 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
           city: data.city || ""
         });
         
-        // PRESIM HISTORIKUN NGA ACTION
         if(data.bookings) {
           setClientBookings(data.bookings);
         }
       } else {
-        setToast({ show: true, message: "Ky Klient nuk u gjet!", type: "error" });
+        setToast({ show: true, message: t("notFound"), type: "error" });
       }
       setFetching(false);
     }
     loadData();
-  }, [id]);
+  }, [id, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +64,11 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
         setToast({ show: true, message: res.error, type: "error" });
         setLoading(false);
       } else {
-        setToast({ show: true, message: "Të dhënat e klientit u përditësuan!", type: "success" });
+        setToast({ show: true, message: t("successUpdate"), type: "success" });
         setTimeout(() => { router.push(`/${locale}/biznes/klientet`); }, 1500);
       }
     } catch (error) {
-      setToast({ show: true, message: "Mungon interneti ose serveri nuk përgjigjet.", type: "error" });
+      setToast({ show: true, message: t("networkError"), type: "error" });
       setLoading(false);
     }
   };
@@ -76,138 +77,132 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
     switch(status) {
       case 'confirmed':
       case 'completed':
-        return <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100"><CheckCircle2 size={10}/> Realizuar</span>;
+        return <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100"><CheckCircle2 size={10}/> {t("statusConfirmed")}</span>;
       case 'cancelled':
-        return <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100"><AlertTriangle size={10}/> Anuluar</span>;
+        return <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100"><AlertTriangle size={10}/> {t("statusCancelled")}</span>;
       default:
-        return <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-100"><Clock size={10}/> Në Pritje</span>;
+        return <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-100"><Clock size={10}/> {t("statusPending")}</span>;
     }
   };
+
+  const currentLocaleObj = locale === 'sq' ? sq : enUS;
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
       
-      {/* POPUP I GABIMIT/SUKSESIT */}
       {toast.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center relative animate-in zoom-in-95 duration-300">
              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {toast.type === "success" ? "Sukses!" : "Kujdes!"}
+              {toast.type === "success" ? t("successTitle") : t("warningTitle")}
             </h3>
             <p className="text-gray-500 text-sm mb-8">{toast.message}</p>
             <button 
               onClick={() => setToast({ ...toast, show: false })}
               className={`w-full text-white font-bold py-4 px-6 rounded-2xl ${toast.type === "success" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#FF5C39] hover:bg-[#e84e2d]"}`}
             >
-              Mbyll
+              {t("closeBtn")}
             </button>
           </div>
         </div>
       )}
 
-      {/* KOKA E FAQES */}
       <div className="mb-8">
         <Link href={`/${locale}/biznes/klientet`} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-2 transition-colors">
-          <ArrowLeft size={16} className="mr-1" /> Kthehu te Klientët
+          <ArrowLeft size={16} className="mr-1" /> {t("backBtn")}
         </Link>
         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-           Profili i Klientit
+           {t("pageTitle")}
         </h1>
-        <p className="text-gray-500 mt-2 text-sm">Menaxho të dhënat dhe shiko historikun e plotë të eventeve të tij.</p>
+        <p className="text-gray-500 mt-2 text-sm">{t("pageSubtitle")}</p>
       </div>
 
       <div className={`grid grid-cols-1 lg:grid-cols-12 gap-8 transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
-        {/* ======================================= */}
-        {/* SHTYLLA E MAJTË (TË DHËNAT PËR EDITIM) */}
-        {/* ======================================= */}
         <div className="lg:col-span-4 space-y-6">
           <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col gap-6">
-            <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-4">Të dhënat Personale</h3>
+            <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-4">{t("personalDataTitle")}</h3>
             
             <div className="flex flex-col gap-5">
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  <Users size={14} /> Emri dhe Mbiemri
+                  <Users size={14} /> {t("nameLabel")}
                 </label>
                 <input type="text" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-bold text-gray-900" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  <FileDigit size={14} /> Numri Personal (ID)
+                  <FileDigit size={14} /> {t("idLabel")}
                 </label>
                 <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.personal_id} onChange={(e) => setFormData({...formData, personal_id: e.target.value})} />
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  <Phone size={14} /> Telefoni
+                  <Phone size={14} /> {t("phoneLabel")}
                 </label>
                 <input type="text" required className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  <MapPin size={14} /> Qyteti
+                  <MapPin size={14} /> {t("cityLabel")}
                 </label>
                 <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} />
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  <Mail size={14} /> Email
+                  <Mail size={14} /> {t("emailLabel")}
                 </label>
                 <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-gray-50 font-medium text-gray-900" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
               </div>
             </div>
 
             <button type="submit" disabled={loading || fetching} className="w-full mt-4 bg-[#0F172A] text-white font-bold py-4 rounded-xl hover:bg-black disabled:bg-gray-400 transition-all flex items-center justify-center gap-2 shadow-sm">
-              <Save size={18} /> {loading ? "Po Ruhet..." : "Përditëso"}
+              <Save size={18} /> {loading ? t("savingBtn") : t("saveBtn")}
             </button>
           </form>
         </div>
 
-        {/* ======================================= */}
-        {/* SHTYLLA E DJATHTË (HISTORIKU I EVENTEVE) */}
-        {/* ======================================= */}
         <div className="lg:col-span-8">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 min-h-full">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-8">
-              <CalendarCheck className="text-blue-500"/> Historiku i Rezervimeve
+              <CalendarCheck className="text-gray-900"/> {t("historyTitle")}
             </h3>
 
             {clientBookings.length > 0 ? (
               <div className="space-y-4">
                 {clientBookings.map((booking: any) => (
-                  <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group gap-4">
+                  <div key={booking.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-gray-300 hover:shadow-md transition-all group gap-4">
                     
                     <div className="flex items-center gap-4">
-                      <div className="bg-blue-50 w-12 h-12 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
+                      <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center text-gray-700 shrink-0">
                         <PartyPopper size={20} />
                       </div>
                       <div>
                         <h4 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                           {booking.event_type || 'Event'} 
+                           {booking.event_type || t("eventFallback")} 
                            {renderStatus(booking.status)}
                         </h4>
                         <p className="text-xs text-gray-500 mt-1 font-semibold flex items-center gap-1.5">
-                           <CalendarCheck size={12}/> {format(new Date(booking.event_date), 'dd MMM yyyy', { locale: sq })} 
+                           <CalendarCheck size={12}/> {format(new Date(booking.event_date), 'dd MMM yyyy', { locale: currentLocaleObj })} 
                            <span className="text-gray-300">•</span> 
-                           <MapPin size={12}/> {booking.halls?.name || 'Salla'}
+                           <MapPin size={12}/> {booking.halls?.name || t("hallFallback")}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between w-full sm:w-auto sm:gap-8">
                       <div className="text-left sm:text-right">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Totali Faturës</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{t("totalInvoice")}</p>
                         <p className="font-black text-gray-900 text-lg">{Number(booking.total_amount).toFixed(2)} €</p>
                       </div>
                       <Link 
                         href={`/${locale}/biznes/rezervimet/ndrysho/${booking.id}`}
-                        className="p-2.5 bg-gray-50 hover:bg-blue-500 hover:text-white text-gray-400 rounded-xl transition-colors shrink-0"
-                        title="Shiko Rezervimin"
+                        className="p-2.5 bg-gray-50 hover:bg-gray-900 hover:text-white text-gray-400 rounded-xl transition-colors shrink-0"
+                        title={t("viewBooking")}
                       >
                         <ChevronRight size={20} />
                       </Link>
@@ -221,8 +216,8 @@ export default function EditClientPage({ params }: { params: Promise<{ locale: s
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
                   <CalendarCheck size={40} />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Nuk ka asnjë event</h3>
-                <p className="text-gray-500 text-sm max-w-sm">Ky klient nuk ka realizuar ende asnjë rezervim. Historiku do të shfaqet këtu automatikisht.</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t("noEventTitle")}</h3>
+                <p className="text-gray-500 text-sm max-w-sm">{t("noEventDesc")}</p>
               </div>
             )}
           </div>

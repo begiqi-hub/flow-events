@@ -3,8 +3,11 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Users, Phone, Mail, Pencil, TrendingUp, CalendarCheck, MapPin, Search, Building, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl"; // <--- SHTUAR PËR GJUHËT
 
 export default function KlientetClient({ clients, locale }: { clients: any[], locale: string }) {
+  const t = useTranslations("KlientetClient"); // <--- THËRRASIM PËRKTHIMET
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all"); 
   
@@ -45,10 +48,10 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
             <Users className="text-gray-400" size={32} />
-            Databaza e Klientëve
+            {t("pageTitle")}
           </h1>
           <p className="text-gray-500 mt-2 text-sm font-medium">
-            Menaxho kontaktet, adresat dhe shiko historikun e eventeve.
+            {t("pageSubtitle")}
           </p>
         </div>
 
@@ -57,7 +60,7 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
               type="text" 
-              placeholder="Kërko me Emër, Tel, ose ID..." 
+              placeholder={t("searchPlaceholder")} 
               className="w-full bg-white border border-gray-200 pl-10 pr-4 py-3 rounded-2xl outline-none focus:border-gray-900 focus:ring-1 text-sm font-medium shadow-sm transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -69,9 +72,9 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
-            <option value="all">Të Gjithë</option>
-            <option value="individual">Individë</option>
-            <option value="business">Biznese</option>
+            <option value="all">{t("filterAll")}</option>
+            <option value="individual">{t("filterIndividual")}</option>
+            <option value="business">{t("filterBusiness")}</option>
           </select>
         </div>
       </div>
@@ -82,10 +85,10 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Të dhënat e Klientit</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Kontakti & Lokacioni</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Historiku (CRM)</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Veprime</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">{t("tableHeaderClientInfo")}</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">{t("tableHeaderContactLoc")}</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">{t("tableHeaderHistoryCRM")}</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">{t("tableHeaderActions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -110,7 +113,7 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
                           <p className="text-sm font-black text-gray-900 mb-1">{client.name}</p>
                           <div className="flex items-center gap-2">
                             <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${isBusiness ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                              {isBusiness ? 'Biznes' : 'Individ'}
+                              {isBusiness ? t("businessLabel") : t("individualLabel")}
                             </span>
                             {visibleID && (
                               <span className="text-xs text-gray-500 font-medium">ID: {visibleID}</span>
@@ -139,10 +142,10 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
                     <td className="py-4 px-6">
                       <div className="flex flex-col gap-1.5">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md w-max border border-emerald-100/50">
-                          <TrendingUp size={12} /> {totalSpent.toFixed(2)} € shpenzuar
+                          <TrendingUp size={12} /> {totalSpent.toFixed(2)} {t("spentLabel")}
                         </span>
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md w-max">
-                          <CalendarCheck size={12} /> {totalBookings} Evente
+                          <CalendarCheck size={12} /> {totalBookings} {t("eventsLabel")}
                         </span>
                       </div>
                     </td>
@@ -153,7 +156,7 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
                           href={`/${locale}/biznes/klientet/ndrysho/${client.id}`}
                           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-50 hover:bg-gray-900 border border-gray-200 hover:border-gray-900 text-gray-700 hover:text-white rounded-xl transition-all shadow-sm text-sm font-bold"
                         >
-                          <Pencil size={16} /> Detajet
+                          <Pencil size={16} /> {t("btnDetails")}
                         </Link>
                       </div>
                     </td>
@@ -165,8 +168,8 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
                       <Search size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">Nuk u gjet asnjë klient</h3>
-                    <p className="text-gray-500 text-sm">Provoni të kërkoni me një emër ose numër tjetër.</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{t("noClientTitle")}</h3>
+                    <p className="text-gray-500 text-sm">{t("noClientDesc")}</p>
                   </td>
                 </tr>
               )}
@@ -179,7 +182,7 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
         {totalPages > 1 && (
           <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
             <span className="text-sm font-medium text-gray-500">
-              Po shfaqen <span className="font-bold text-gray-900">{indexOfFirstItem + 1}</span> deri në <span className="font-bold text-gray-900">{Math.min(indexOfLastItem, filteredClients.length)}</span> nga <span className="font-bold text-gray-900">{filteredClients.length}</span> klientë
+              {t("showing")} <span className="font-bold text-gray-900">{indexOfFirstItem + 1}</span> {t("upTo")} <span className="font-bold text-gray-900">{Math.min(indexOfLastItem, filteredClients.length)}</span> {t("from")} <span className="font-bold text-gray-900">{filteredClients.length}</span> {t("clientsCount")}
             </span>
             
             <div className="flex items-center gap-2">
@@ -188,11 +191,11 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
                 disabled={currentPage === 1}
                 className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1 text-sm font-bold"
               >
-                <ChevronLeft size={16} /> Prapa
+                <ChevronLeft size={16} /> {t("btnBack")}
               </button>
               
               <div className="flex items-center gap-1 px-2">
-                <span className="text-sm font-bold text-gray-900">Faqja {currentPage} / {totalPages}</span>
+                <span className="text-sm font-bold text-gray-900">{t("pageText")} {currentPage} / {totalPages}</span>
               </div>
 
               <button 
@@ -200,7 +203,7 @@ export default function KlientetClient({ clients, locale }: { clients: any[], lo
                 disabled={currentPage === totalPages}
                 className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1 text-sm font-bold"
               >
-                Përpara <ChevronRight size={16} />
+                {t("btnForward")} <ChevronRight size={16} />
               </button>
             </div>
           </div>

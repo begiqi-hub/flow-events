@@ -1,50 +1,67 @@
-import { prisma } from "../../../lib/prisma";
-import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
+import { prisma } from "../../../lib/prisma"; 
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // Hoqëm activityId që të mos bllokojë databazën
-    const { name, nui, phone, city, email, password } = body; 
+    const { name, email, password, phone, nui, city, activityId } = body;
 
-    const trialEnds = new Date();
-    trialEnds.setDate(trialEnds.getDate() + 14);
-
-    // 1. Krijojmë User-in
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await prisma.user.create({
-      data: {
-        name: name,
-        email: email,
-        password: hashedPassword,
-        role: "business_owner",
-      },
-    });
-
-    // 2. Krijojmë Biznesin (Pa activityId për momentin)
-    await prisma.businesses.create({
-      data: {
-        name,
-        nui,
-        email,
-        phone,
-        city,
-        status: "trial",
-        trialEndsAt: trialEnds,
-      },
-    });
-
-    return NextResponse.json({ success: true, message: "Regjistrimi u krye!" });
-  } catch (error) {
-    console.error("Gabim në regjistrim:", error);
-    
-    // Fshijmë userin nëse biznesi dështon, që të mos mbeten llogari "gjysmë"
-    const body = await req.json().catch(() => ({}));
-    if (body.email) {
-      await prisma.user.deleteMany({ where: { email: body.email } });
+    // 1. Kontrollojmë nëse emaili ekziston
+    const existingUser = await prisma.users.findUnique({ where: { email } });
+    if (existingUser) {
+      return NextResponse.json({ error: "Ky email është i regjistruar tashmë!" }, { status: 400 });
     }
-    
-    return NextResponse.json({ error: "Ky email ose NUI ekziston tashmë!" }, { status: 400 });
+
+    // 2. KONTROLLI I RI: Kontrollojmë nëse ky NUI (Numër Biznesi) ekziston
+    if (nui) {
+      const existingBusiness = await prisma.businesses.findUnique({
+        where: { nui: nui }
+      });
+      if (existingBusiness) {
+        return NextResponse.json({ 
+          error: "Ky Numër Biznesi (NUI) është i regjistruar një herë në sistemin tonë!" 
+        }, { status: 400 });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Krijimi me Transaction
+    const result = await prisma.$transaction(async (tx) => {
+      
+      const newBusiness = await tx.businesses.create({
+        data: {
+          name: name,
+          email: email,
+          phone: phone,
+          nui: nui || null,
+          city: city || null,
+          status: "trial",
+          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const newUser = await tx.users.create({
+        data: {
+          full_name: name, 
+          email: email,
+          password: hashedPassword,
+          role: "admin", 
+          business_id: newBusiness.id,
+          status: "active",
+        },
+      });
+
+      return { newBusiness, newUser };
+    });
+
+    return NextResponse.json({ success: true }, { status: 201 });
+
+  } catch (error: any) {
+    console.error("❌ GABIM KRITIK NË REGJISTRIM:", error);
+    return NextResponse.json({ 
+      error: "Gabim teknik: " + (error.message || "Provoni përsëri") 
+    }, { status: 500 });
   }
 }

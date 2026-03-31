@@ -1,9 +1,8 @@
 import createMiddleware from 'next-intl/middleware';
 
 export default createMiddleware({
-  // Lista e gjuhëve tuaja
-  locales: ['sq', 'en', 'mk', 'cg'],
-  // Gjuha që hapet by default
+  // Shtuam 'el' (Greqisht)
+  locales: ['sq', 'en', 'mk', 'cg', 'el'],
   defaultLocale: 'sq'
 });
 

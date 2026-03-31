@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang={locale}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}>
         
         {/* Trupi i pastër: Këtu do të hapet Paneli i Biznesit pa u penguar nga asgjë */}
         {children}

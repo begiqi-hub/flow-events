@@ -1,9 +1,10 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../lib/prisma"; // Sigurohu që ky path është i saktë për ty
 import Link from "next/link";
 import { 
-  Plus, Calendar as CalendarIcon, Building2, Wallet, ArrowRight, Clock 
+  Plus, Calendar as CalendarIcon, Building2, Wallet, ArrowRight, 
+  Clock, CheckCircle2, Sparkles, Utensils, Landmark, ShieldAlert 
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -22,13 +23,82 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   if (!business) redirect(`/${locale}/login`);
 
-  // 1. STATISTIKAT KRYESORE
-  // Numri i Sallave
+  // LLOGARITJA E DITËVE TË PROVËS (Për Banerin)
+  const trialEndDate = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
+  const today = new Date();
+  let daysRemaining = 0;
+  if (trialEndDate) {
+    const diffTime = trialEndDate.getTime() - today.getTime();
+    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+  const isTrial = business.status === 'trial';
+
+  // =======================================================================
+  // 1. LOGJIKA E WIZARD-IT TË KONFIGURIMIT (ONBOARDING)
+  // =======================================================================
+  
+  const realHalls = await prisma.halls.count({
+    where: { business_id: business.id, name: { not: "Salla VIP (Demo)" } }
+  });
+  
+  const realMenus = await prisma.menus.count({
+    where: { business_id: business.id, name: { not: "Menu Tradicionale (Demo)" } }
+  });
+
+  const realExtras = await prisma.extras.count({
+    where: { business_id: business.id, name: { not: "Dekorim Lulesh (Demo)" } }
+  });
+
+  // RADHITJA DHE IKONAT E REJA
+  const tasks = [
+    { 
+      id: 'hall', 
+      title: "Shto Sallën e Parë", 
+      icon: Building2,
+      isCompleted: realHalls > 0, 
+      link: `/${locale}/biznes/sallat` 
+    },
+    { 
+      id: 'menu', 
+      title: "Krijo një Menu", 
+      icon: Utensils,
+      isCompleted: realMenus > 0, 
+      link: `/${locale}/biznes/menut` 
+    },
+    { 
+      id: 'extra', 
+      title: "Shto Shërbime Ekstra", 
+      icon: Sparkles,
+      isCompleted: realExtras > 0, 
+      link: `/${locale}/biznes/ekstra` 
+    },
+    { 
+      id: 'bank', 
+      title: "Llogaria Bankare (IBAN)", 
+      icon: Landmark,
+      isCompleted: !!business.iban || !!business.bank_name, 
+      link: `/${locale}/biznes/banka` 
+    },
+    { 
+      id: 'policy', 
+      title: "Politika e Anulimit", 
+      icon: ShieldAlert,
+      isCompleted: (business.cancel_penalty ?? 0) > 0, 
+      link: `/${locale}/biznes/konfigurimet/politika` 
+    },
+  ];
+
+  const completedTasks = tasks.filter(t => t.isCompleted).length;
+  const progressPercent = Math.round((completedTasks / tasks.length) * 100);
+
+  // =======================================================================
+  // 2. STATISTIKAT KRYESORE TË DASHBOARD-IT
+  // =======================================================================
+  
   const activeHallsCount = await prisma.halls.count({
     where: { business_id: business.id }
   });
 
-  // Të gjitha Rezervimet (Përjashto të anuluarat)
   const allBookings = await prisma.bookings.findMany({
     where: { 
       business_id: business.id,
@@ -39,14 +109,13 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   const totalBookingsCount = allBookings.length;
   const totalRevenue = allBookings.reduce((sum: number, b: any) => sum + Number(b.total_amount), 0);
 
-  // 2. EVENTET NË VIJIM
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Fillo nga fillimi i ditës së sotme
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0); 
 
   const upcomingBookings = await prisma.bookings.findMany({
     where: {
       business_id: business.id,
-      event_date: { gte: today },
+      event_date: { gte: todayMidnight },
       status: { notIn: ['cancelled', 'draft'] }
     },
     include: {
@@ -54,10 +123,9 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
       halls: true,
     },
     orderBy: { event_date: 'asc' },
-    take: 5 // Marrim vetëm 5 të parat për tabelën
+    take: 5 
   });
 
-  // Funksion për ngjyrat e statusit
   const renderStatus = (status: string) => {
     switch(status) {
       case 'confirmed':
@@ -73,28 +141,89 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
       
-      {/* BANERI I PROVËS (TRIAL) */}
-      <div className="bg-[#FFF8E6] border border-[#FFE7B3] rounded-2xl p-4 sm:p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-white p-2.5 rounded-full shadow-sm text-amber-500">
-            <Clock size={24} />
+      {/* BANERI I PROVËS (TRIAL) - Tani shfaqet VETËM nëse statusi është Trial */}
+      {isTrial && (
+        <div className="bg-[#FFF8E6] border border-[#FFE7B3] rounded-2xl p-4 sm:p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-2.5 rounded-full shadow-sm text-amber-500">
+              <Clock size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg">Koha e Provës</h3>
+              <p className="text-gray-600 text-sm mt-0.5">
+                Ju kanë mbetur edhe <span className="font-bold text-gray-900">{daysRemaining > 0 ? daysRemaining : 0} ditë</span> nga prova juaj falas.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-gray-900 text-lg">Koha e Provës</h3>
-            <p className="text-gray-600 text-sm mt-0.5">
-              Ju kanë mbetur edhe <span className="font-bold text-gray-900">13 ditë</span> nga prova juaj falas.
-            </p>
+          <Link 
+            href={`/${locale}/biznes/abonimi`}
+            className="bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold py-3 px-6 rounded-xl transition-colors whitespace-nowrap shadow-sm"
+          >
+            Abonohu Tani
+          </Link>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* WIZARD-I I KONFIGURIMIT (Me Ikona) */}
+      {/* ========================================================= */}
+      {progressPercent < 100 && (
+        <div className="bg-white border border-indigo-100 rounded-[2rem] p-6 md:p-8 mb-8 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <div>
+              <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
+                <Sparkles className="text-indigo-500" size={24} /> 
+                Mirësevini! Konfiguroni biznesin tuaj
+              </h2>
+              <p className="text-gray-500 text-sm mt-1 font-medium">Plotësoni këto hapa për të nisur punën me kapacitet të plotë.</p>
+            </div>
+            <div className="flex items-center gap-4 w-full md:w-1/3">
+              <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                <div 
+                  className="bg-indigo-500 h-full rounded-full transition-all duration-1000 ease-out" 
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              <span className="text-indigo-600 font-black text-sm">{progressPercent}%</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+            {tasks.map(task => {
+              const Icon = task.icon;
+              return (
+                <Link 
+                  key={task.id} 
+                  href={task.link} 
+                  className={`flex flex-col items-start p-4 rounded-2xl border transition-all group ${
+                    task.isCompleted 
+                      ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                      : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-white hover:border-indigo-200 hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-3">
+                    <div className={`p-2 rounded-xl ${task.isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-gray-400 group-hover:text-indigo-500 shadow-sm'}`}>
+                      <Icon size={18} />
+                    </div>
+                    {task.isCompleted ? (
+                      <CheckCircle2 size={20} className="text-emerald-500" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-200 group-hover:border-indigo-200 transition-colors"></div>
+                    )}
+                  </div>
+                  <span className={`text-xs font-bold leading-tight ${task.isCompleted ? 'text-emerald-700' : 'text-gray-700'}`}>
+                    {task.title}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
         </div>
-        <button className="bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold py-3 px-6 rounded-xl transition-colors whitespace-nowrap shadow-sm">
-          Abonohu Tani
-        </button>
-      </div>
+      )}
 
       {/* 4 KARTAT E STATISTIKAVE */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         
-        {/* KARTA 1: SHTO REZERVIM */}
         <Link 
           href={`/${locale}/biznes/rezervimet/shto`}
           className="bg-[#0F172A] rounded-3xl p-6 flex flex-col justify-between group hover:scale-[1.02] transition-transform shadow-lg relative overflow-hidden h-[140px]"
@@ -111,7 +240,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
           </div>
         </Link>
 
-        {/* KARTA 2: GJITHSEJ REZERVIME */}
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between h-[140px]">
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Gjithsej Rezervime</p>
@@ -122,7 +250,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        {/* KARTA 3: SALLA AKTIVE */}
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between h-[140px]">
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Salla Aktive</p>
@@ -133,12 +260,10 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        {/* KARTA 4: TË ARDHURA */}
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between h-[140px]">
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Të Ardhura</p>
             <p className="text-3xl lg:text-4xl font-black text-gray-900 truncate max-w-[150px]" title={`${totalRevenue.toFixed(2)} €`}>
-              {/* Formatojmë numrin që të duket si në foto: 27.486,15 */}
               {totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
             </p>
           </div>
@@ -176,7 +301,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
               {upcomingBookings.length > 0 ? upcomingBookings.map((booking: any) => (
                 <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="py-4 px-2 text-sm font-bold text-gray-900">
-                    {/* Formati: 8.3.2026 */}
                     {format(new Date(booking.event_date), 'd.M.yyyy')}
                   </td>
                   <td className="py-4 px-2 text-sm font-medium text-gray-600">
