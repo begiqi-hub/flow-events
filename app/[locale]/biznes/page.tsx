@@ -20,7 +20,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   if (!business) redirect(`/${locale}/login`);
 
-  // LLOGARITJA E DITËVE TË PROVËS (Për Banerin)
+  // LLOGARITJA E DITËVE TË PROVËS
   const trialEndDate = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
   const today = new Date();
   let daysRemaining = 0;
@@ -98,30 +98,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-4 md:pt-8">
-        
-        {/* BANERI I PROVËS (TRIAL) */}
-        {isTrial && (
-          <div className="bg-[#FFF8E6] border border-[#FFE7B3] rounded-2xl p-4 sm:p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-white p-2.5 rounded-full shadow-sm text-amber-500">
-                <Clock size={24} />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">Koha e Provës</h3>
-                <p className="text-gray-600 text-sm mt-0.5">
-                  Ju kanë mbetur edhe <span className="font-bold text-gray-900">{daysRemaining > 0 ? daysRemaining : 0} ditë</span> nga prova juaj falas.
-                </p>
-              </div>
-            </div>
-            <Link 
-              href={`/${locale}/biznes/abonimi`}
-              className="bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold py-3 px-6 rounded-xl transition-colors whitespace-nowrap shadow-sm"
-            >
-              Abonohu Tani
-            </Link>
-          </div>
-        )}
-
+      
         {/* WIZARD-I I KONFIGURIMIT */}
         {progressPercent < 100 && (
           <div className="bg-white border border-indigo-100 rounded-[2rem] p-6 md:p-8 shadow-sm">
