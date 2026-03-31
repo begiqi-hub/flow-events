@@ -17,20 +17,25 @@ export const metadata: Metadata = {
   description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
 };
 
-export default function RootLayout({
+// Shtojmë 'async' dhe ndryshojmë mënyrën si pranohen params
+export default async function RootLayout({
   children,
-  params: { locale },
-}: Readonly<{
+  params,
+}: {
   children: React.ReactNode;
-  params: { locale: string };
-}>) {
+  params: Promise<{ locale: string }>;
+}) {
+  // Presim (await) parametrat për të marrë gjuhën (locale)
+  const { locale } = await params;
+
   return (
     <html lang={locale}>
-      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}>
-        
-        {/* Trupi i pastër: Këtu do të hapet Paneli i Biznesit pa u penguar nga asgjë */}
+      <body 
+        suppressHydrationWarning 
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}
+      >
+        {/* Trupi i pastër: Paneli i Biznesit */}
         {children}
-
       </body>
     </html>
   );

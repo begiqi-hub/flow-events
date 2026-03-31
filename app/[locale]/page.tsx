@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { prisma } from "../../lib/prisma"; // Sigurohu që ky path është i saktë për ty
+import { prisma } from "../../lib/prisma"; 
 import Link from "next/link";
 import { 
   Plus, Calendar as CalendarIcon, Building2, Wallet, ArrowRight, 
@@ -11,7 +11,11 @@ import { format } from "date-fns";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function BusinessDashboard({ params }: { params: Promise<{ locale: string }> }) {
+export default async function BusinessDashboard({ 
+  params 
+}: { 
+  params: Promise<{ locale: string }> 
+}) {
   const { locale } = await params;
   const session = await getServerSession();
   
@@ -23,7 +27,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   if (!business) redirect(`/${locale}/login`);
 
-  // LLOGARITJA E DITËVE TË PROVËS (Për Banerin)
+  // LLOGARITJA E DITËVE TË PROVËS
   const trialEndDate = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
   const today = new Date();
   let daysRemaining = 0;
@@ -33,10 +37,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   }
   const isTrial = business.status === 'trial';
 
-  // =======================================================================
-  // 1. LOGJIKA E WIZARD-IT TË KONFIGURIMIT (ONBOARDING)
-  // =======================================================================
-  
+  // 1. LOGJIKA E WIZARD-IT TË KONFIGURIMIT
   const realHalls = await prisma.halls.count({
     where: { business_id: business.id, name: { not: "Salla VIP (Demo)" } }
   });
@@ -49,61 +50,21 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
     where: { business_id: business.id, name: { not: "Dekorim Lulesh (Demo)" } }
   });
 
-  // RADHITJA DHE IKONAT E REJA
   const tasks = [
-    { 
-      id: 'hall', 
-      title: "Shto Sallën e Parë", 
-      icon: Building2,
-      isCompleted: realHalls > 0, 
-      link: `/${locale}/biznes/sallat` 
-    },
-    { 
-      id: 'menu', 
-      title: "Krijo një Menu", 
-      icon: Utensils,
-      isCompleted: realMenus > 0, 
-      link: `/${locale}/biznes/menut` 
-    },
-    { 
-      id: 'extra', 
-      title: "Shto Shërbime Ekstra", 
-      icon: Sparkles,
-      isCompleted: realExtras > 0, 
-      link: `/${locale}/biznes/ekstra` 
-    },
-    { 
-      id: 'bank', 
-      title: "Llogaria Bankare (IBAN)", 
-      icon: Landmark,
-      isCompleted: !!business.iban || !!business.bank_name, 
-      link: `/${locale}/biznes/banka` 
-    },
-    { 
-      id: 'policy', 
-      title: "Politika e Anulimit", 
-      icon: ShieldAlert,
-      isCompleted: (business.cancel_penalty ?? 0) > 0, 
-      link: `/${locale}/biznes/konfigurimet/politika` 
-    },
+    { id: 'hall', title: "Shto Sallën e Parë", icon: Building2, isCompleted: realHalls > 0, link: `/${locale}/biznes/sallat` },
+    { id: 'menu', title: "Krijo një Menu", icon: Utensils, isCompleted: realMenus > 0, link: `/${locale}/biznes/menut` },
+    { id: 'extra', title: "Shto Shërbime Ekstra", icon: Sparkles, isCompleted: realExtras > 0, link: `/${locale}/biznes/ekstra` },
+    { id: 'bank', title: "Llogaria Bankare (IBAN)", icon: Landmark, isCompleted: !!business.iban || !!business.bank_name, link: `/${locale}/biznes/banka` },
+    { id: 'policy', title: "Politika e Anulimit", icon: ShieldAlert, isCompleted: (business.cancel_penalty ?? 0) > 0, link: `/${locale}/biznes/konfigurimet/politika` },
   ];
 
   const completedTasks = tasks.filter(t => t.isCompleted).length;
   const progressPercent = Math.round((completedTasks / tasks.length) * 100);
 
-  // =======================================================================
-  // 2. STATISTIKAT KRYESORE TË DASHBOARD-IT
-  // =======================================================================
-  
-  const activeHallsCount = await prisma.halls.count({
-    where: { business_id: business.id }
-  });
-
+  // 2. STATISTIKAT KRYESORE
+  const activeHallsCount = await prisma.halls.count({ where: { business_id: business.id } });
   const allBookings = await prisma.bookings.findMany({
-    where: { 
-      business_id: business.id,
-      status: { notIn: ['cancelled', 'draft'] }
-    }
+    where: { business_id: business.id, status: { notIn: ['cancelled', 'draft'] } }
   });
 
   const totalBookingsCount = allBookings.length;
@@ -118,10 +79,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
       event_date: { gte: todayMidnight },
       status: { notIn: ['cancelled', 'draft'] }
     },
-    include: {
-      clients: true,
-      halls: true,
-    },
+    include: { clients: true, halls: true },
     orderBy: { event_date: 'asc' },
     take: 5 
   });
@@ -140,8 +98,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
-      
-      {/* BANERI I PROVËS (TRIAL) - Tani shfaqet VETËM nëse statusi është Trial */}
+      {/* BANERI I PROVËS */}
       {isTrial && (
         <div className="bg-[#FFF8E6] border border-[#FFE7B3] rounded-2xl p-4 sm:p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -164,9 +121,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* WIZARD-I I KONFIGURIMIT (Me Ikona) */}
-      {/* ========================================================= */}
+      {/* WIZARD-I I KONFIGURIMIT */}
       {progressPercent < 100 && (
         <div className="bg-white border border-indigo-100 rounded-[2rem] p-6 md:p-8 mb-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -221,9 +176,8 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {/* 4 KARTAT E STATISTIKAVE */}
+      {/* STATISTIKAT */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        
         <Link 
           href={`/${locale}/biznes/rezervimet/shto`}
           className="bg-[#0F172A] rounded-3xl p-6 flex flex-col justify-between group hover:scale-[1.02] transition-transform shadow-lg relative overflow-hidden h-[140px]"
@@ -263,7 +217,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between h-[140px]">
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Të Ardhura</p>
-            <p className="text-3xl lg:text-4xl font-black text-gray-900 truncate max-w-[150px]" title={`${totalRevenue.toFixed(2)} €`}>
+            <p className="text-3xl lg:text-4xl font-black text-gray-900 truncate max-w-[150px]">
               {totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
             </p>
           </div>
@@ -271,12 +225,10 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
             <Wallet size={24} />
           </div>
         </div>
-
       </div>
 
       {/* TABELA: EVENTET NË VIJIM */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 overflow-hidden">
-        
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Eventet në vijim</h2>
@@ -291,7 +243,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="py-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider w-[150px]">Data</th>
+                <th className="py-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Data</th>
                 <th className="py-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Klienti</th>
                 <th className="py-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Salla</th>
                 <th className="py-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Statusi</th>
@@ -303,29 +255,19 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
                   <td className="py-4 px-2 text-sm font-bold text-gray-900">
                     {format(new Date(booking.event_date), 'd.M.yyyy')}
                   </td>
-                  <td className="py-4 px-2 text-sm font-medium text-gray-600">
-                    {booking.clients?.name || "Klient i panjohur"}
-                  </td>
-                  <td className="py-4 px-2 text-sm font-medium text-gray-600">
-                    {booking.halls?.name || "N/A"}
-                  </td>
-                  <td className="py-4 px-2 text-right">
-                    {renderStatus(booking.status)}
-                  </td>
+                  <td className="py-4 px-2 text-sm font-medium text-gray-600">{booking.clients?.name || "Klient i panjohur"}</td>
+                  <td className="py-4 px-2 text-sm font-medium text-gray-600">{booking.halls?.name || "N/A"}</td>
+                  <td className="py-4 px-2 text-right">{renderStatus(booking.status)}</td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center">
-                    <p className="text-gray-500 font-medium">Nuk keni evente të planifikuara për të ardhmen.</p>
-                  </td>
+                  <td colSpan={4} className="py-12 text-center text-gray-500 font-medium">Nuk keni evente të planifikuara.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-
       </div>
-
     </div>
   );
 }
