@@ -16,11 +16,11 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
   const [editingUser, setEditingUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // Shteti i ri për Modalin e Limiteve
   const [limitModal, setLimitModal] = useState<{title: string, message: string} | null>(null);
 
   const [formData, setFormData] = useState({ full_name: "", email: "", password: "", role: "manager" });
-  const [editData, setEditData] = useState({ full_name: "", password: "", role: "", status: "" });
+  // SHTUAM 'email' TEK STATE I EDITIMIT
+  const [editData, setEditData] = useState({ full_name: "", email: "", password: "", role: "", status: "" });
   
   const staff = business?.users || [];
 
@@ -42,16 +42,13 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
     
     const res = await addStaffAction(business.id, formData);
     
-    // 1. KONTROLLI NËSE KEMI ARRITUR LIMITIN (UPSELL)
     if (res?.isLimitError) {
-      setIsAddModalOpen(false); // Mbyllim modallin e shtimit
+      setIsAddModalOpen(false); 
       setLimitModal({ title: res.limitTitle || "Limit i arritur", message: res.error || "" });
     } 
-    // 2. GABIM TJETËR NORMALE
     else if (res?.error) {
       showToast(res.error, "error");
     } 
-    // 3. SUKSES!
     else {
       setIsAddModalOpen(false);
       showToast(t("toastAddSuccess"), "success");
@@ -66,6 +63,7 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
     setEditingUser(user);
     setEditData({
       full_name: user.full_name,
+      email: user.email, // <--- E MBUSHIM ME EMAIL-IN AKTUAL KUR HAPET MODALI
       password: "", 
       role: user.role,
       status: user.status || "active"
@@ -111,30 +109,23 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* MODALI I UPSELL-IT (KUR ARRIHET LIMITI I PAKETËS)          */}
-      {/* ========================================================== */}
+      {/* MODALI I UPSELL-IT */}
       {limitModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] max-w-md w-full p-10 shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
-            
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-40 pointer-events-none">
               <Crown size={180} />
             </div>
-
             <div className="relative z-10">
               <div className="mx-auto w-24 h-24 bg-indigo-50 text-indigo-600 flex items-center justify-center rounded-[2rem] mb-6 shadow-inner border border-indigo-100">
                   <Crown size={40} className="drop-shadow-sm" />
               </div>
-              
               <h3 className="text-[1.7rem] leading-tight font-black text-gray-900 mb-3 tracking-tight">
                 {limitModal.title}
               </h3>
-              
               <p className="text-gray-500 font-medium leading-relaxed mb-8 text-sm">
                 {limitModal.message}
               </p>
-              
               <div className="flex flex-col gap-3">
                  <button 
                   onClick={() => router.push(`/${locale}/biznes/abonimi`)} 
@@ -143,7 +134,6 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
                     <Zap size={18} className="text-amber-400 group-hover:scale-110 transition-transform" /> 
                     Shiko Paketat e Reja
                  </button>
-                 
                  <button 
                   onClick={() => setLimitModal(null)} 
                   className="w-full py-4 bg-gray-50 text-gray-500 hover:text-gray-900 rounded-2xl font-bold hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200 text-sm"
@@ -152,7 +142,6 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
                  </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
@@ -211,13 +200,19 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
               <h2 className="text-2xl font-extrabold text-gray-900 flex items-center gap-2.5">
                 <Edit className="text-blue-500" size={24}/> {t("modalEditTitle")}
               </h2>
-              <p className="text-sm font-medium text-gray-500 mt-1.5">{editingUser.email}</p>
             </div>
-            <form onSubmit={handleEditSubmit} className="space-y-5" autoComplete="off">
+            <form onSubmit={handleEditSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">{t("fullNameLabel")}</label>
                 <input type="text" required value={editData.full_name} onChange={(e) => setEditData({...editData, full_name: e.target.value})} className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-gray-900 focus:border-blue-500 focus:ring-1" />
               </div>
+              
+              {/* SHTUAM FUSHËN E EMAILIT KËTU */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">{t("emailLabel")}</label>
+                <input type="email" required value={editData.email} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-gray-900 focus:border-blue-500 focus:ring-1" />
+              </div>
+
               <div>
                 <label className="block text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">{t("newPasswordLabel")}</label>
                 <input type="password" autoComplete="new-password" placeholder={t("newPasswordPlaceholder")} value={editData.password} onChange={(e) => setEditData({...editData, password: e.target.value})} className="w-full bg-gray-50/50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-gray-900 focus:border-blue-500 focus:ring-1" />
@@ -322,7 +317,6 @@ export default function PerdoruesitClient({ business, locale }: { business: any,
                       )}
                     </td>
                     <td className="py-4 px-6 text-right">
-                      {/* BUTONI MENAXHO QË HAP MODALIN E EDITIMIT */}
                       <button 
                         onClick={() => openEditModal(user)}
                         className="text-[13px] font-bold text-blue-600 hover:text-blue-800 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg"

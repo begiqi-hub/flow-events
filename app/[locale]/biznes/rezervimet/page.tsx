@@ -21,6 +21,7 @@ export default async function RezervimetPage({
   const session = await getServerSession();
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
+  // Blloku 1: Kërkojmë nëse është Pronari (FSHIMË audit_logs NGA KËTU)
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email },
     include: {
@@ -28,13 +29,16 @@ export default async function RezervimetPage({
         include: {
           clients: true,
           halls: true,
-          payments: true, 
+          creator: true,
+          payments: { include: { users: true } }, 
           booking_extras: { include: { extras: true } }
         },
+        orderBy: { event_date: "asc" }
       }
     }
   });
 
+  // Blloku 2: Nëse s'është pronari, atëherë është Stafi (FSHIMË audit_logs NGA KËTU)
   if (!business) {
     const staffUser = await prisma.users.findUnique({
       where: { email: session.user.email }
@@ -47,9 +51,11 @@ export default async function RezervimetPage({
             include: {
               clients: true,
               halls: true,
-              payments: true, 
+              creator: true,
+              payments: { include: { users: true } }, 
               booking_extras: { include: { extras: true } }
             },
+            orderBy: { event_date: "asc" }
           }
         }
       });
@@ -58,15 +64,26 @@ export default async function RezervimetPage({
 
   if (!business) redirect(`/${locale}/login`);
 
+  // Marrim të gjitha menutë e këtij biznesi
   const allMenus = await prisma.menus.findMany({
     where: { business_id: business.id }
   });
 
-  // BASHKIMI I MENUSË DHE LLOGARITJA E SAKTË E PAGESAVE ME REFUNDS
+  // MAGJIA KËTU: Marrim të gjithë Historikun për rezervimet e këtij biznesi veçmas
+  const allAuditLogs = await prisma.audit_logs.findMany({
+    where: { business_id: business.id, entity: "bookings" },
+    include: { users: true },
+    orderBy: { created_at: 'desc' }
+  });
+
+  // BASHKIMI I MENUSË, PAGESAVE DHE HISTORIKUT (Audit Logs)
   let bookingsWithMenus = business.bookings.map((booking: any) => {
     const matchedMenu = allMenus.find(m => m.id === booking.menu_id) || null;
     
-    // ZGJIDHJA PËR DOUBLE PAYMENT (Math e pastër)
+    // Gjejmë vetëm ditarin që i përket këtij rezervimi specifik
+    const bookingLogs = allAuditLogs.filter(log => log.entity_id === booking.id);
+    
+    // ZGJIDHJA PËR DOUBLE PAYMENT
     let safePaid = 0;
     booking.payments?.forEach((p: any) => {
       if (p.type === 'refund') {
@@ -79,8 +96,8 @@ export default async function RezervimetPage({
     return {
       ...booking,
       menus: matchedMenu,
-      // Shtojmë një fushë ndihmëse që komponenti klient (BookingsClient) ta përdorë:
-      safe_total_paid: safePaid 
+      safe_total_paid: safePaid,
+      audit_logs: bookingLogs // 👈 I bashkëngjisim ditarin këtu në fund!
     };
   });
 

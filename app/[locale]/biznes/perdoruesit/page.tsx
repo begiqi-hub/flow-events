@@ -15,6 +15,9 @@ export default async function PerdoruesitPage({ params }: { params: Promise<{ lo
     where: { email: session.user.email },
     include: {
       users: {
+        where: {
+          role: { not: 'superadmin' } // Fsheh superadminin nga lista
+        },
         orderBy: { created_at: 'desc' }
       }
     }
@@ -29,6 +32,9 @@ export default async function PerdoruesitPage({ params }: { params: Promise<{ lo
         where: { id: staffUser.business_id },
         include: {
           users: {
+            where: {
+              role: { not: 'superadmin' } // Fsheh superadminin edhe për stafin
+            },
             orderBy: { created_at: 'desc' }
           }
         }

@@ -80,7 +80,6 @@ export default function FaturaClient({ booking, locale }: { booking: any, locale
     }
   };
 
-  // FUNKSIONI PËR WHATSAPP (I PASTRUAR NGA EMOJIT)
   const handleWhatsAppShare = () => {
     if (!client?.phone) {
       alert("Klienti nuk ka numër telefoni të regjistruar!");
@@ -136,92 +135,95 @@ ${business.name}`;
         }
       `}} />
 
-      {/* HEADER I BUTONAVE */}
-      <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm no-print">
-        <Link href={`/${locale}/biznes/rezervimet`} className="text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-2 text-sm">
+      {/* HEADER I BUTONAVE - Responsive */}
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm no-print gap-4">
+        <Link href={`/${locale}/biznes/rezervimet`} className="text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-2 text-sm w-full sm:w-auto">
           <ArrowLeft size={16} /> {t("backBtn")}
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <button 
             onClick={handleWhatsAppShare}
-            className="bg-[#25D366] hover:bg-[#20bd5a] text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
+            className="flex-1 sm:flex-none justify-center bg-[#25D366] hover:bg-[#20bd5a] text-white px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
           >
-            <MessageCircle size={18} /> Dërgo në WhatsApp
+            <MessageCircle size={18} /> WhatsApp
           </button>
           <button 
             onClick={handlePrint}
-            className="bg-gray-900 hover:bg-black text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
+            className="flex-1 sm:flex-none justify-center bg-gray-900 hover:bg-black text-white px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
           >
             <Printer size={16} /> {t("printBtn")}
           </button>
         </div>
       </div>
 
-      <div id="invoice-printable-area" className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col print:border-none print:shadow-none print:p-0 relative overflow-hidden">
+      <div id="invoice-printable-area" className="bg-white p-5 sm:p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col print:border-none print:shadow-none print:p-0 relative overflow-hidden">
         
         {/* VULA E ANULIMIT NËSE ËSHTË I ANULUAR */}
         {booking.status === 'cancelled' && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 opacity-10 pointer-events-none select-none z-0">
-            <span className="text-[120px] font-black text-red-600 uppercase tracking-widest border-8 border-red-600 px-8 py-2 rounded-2xl">E ANULUAR</span>
+            <span className="text-[80px] sm:text-[120px] font-black text-red-600 uppercase tracking-widest border-8 border-red-600 px-8 py-2 rounded-2xl">E ANULUAR</span>
           </div>
         )}
 
-        <div className="flex justify-between items-start border-b border-gray-100 pb-5 mb-5 shrink-0 relative z-10">
+        {/* LOGO & TITLE - Responsive */}
+        <div className="flex flex-col sm:flex-row justify-between items-start border-b border-gray-100 pb-5 mb-5 shrink-0 relative z-10 gap-5 sm:gap-0">
           <div className="flex flex-row gap-4 items-center">
             {business.logo_url ? (
-              <img src={business.logo_url} alt="Logo" className="h-14 w-auto object-contain" />
+              <img src={business.logo_url} alt="Logo" className="h-12 sm:h-14 w-auto object-contain" />
             ) : (
-              <div className="w-14 h-14 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center shrink-0">
                 <Building2 size={24} />
               </div>
             )}
             <div>
-              <h1 className="text-[22px] font-black text-gray-900 uppercase tracking-tight">{business.name}</h1>
-              <p className="text-[13px] font-medium text-gray-500 mt-0.5">NUI: <span className="text-gray-800">{business.nui || t("notAssigned")}</span></p>
-              <p className="text-[13px] font-medium text-gray-500">{business.address}, {business.city}</p>
-              <p className="text-[13px] font-medium text-gray-500">Tel: {business.phone}</p>
+              <h1 className="text-[18px] sm:text-[22px] font-black text-gray-900 uppercase tracking-tight">{business.name}</h1>
+              <p className="text-[12px] sm:text-[13px] font-medium text-gray-500 mt-0.5">NUI: <span className="text-gray-800">{business.nui || t("notAssigned")}</span></p>
+              <p className="text-[12px] sm:text-[13px] font-medium text-gray-500">{business.address}, {business.city}</p>
+              <p className="text-[12px] sm:text-[13px] font-medium text-gray-500">Tel: {business.phone}</p>
             </div>
           </div>
           
-          <div className="text-right">
-            <h2 className={`text-[24px] font-black uppercase tracking-widest mb-1.5 ${booking.status === 'cancelled' ? 'text-red-200' : 'text-gray-200'}`}>
+          <div className="text-left sm:text-right w-full sm:w-auto bg-gray-50 sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none">
+            <h2 className={`text-[20px] sm:text-[24px] font-black uppercase tracking-widest mb-1 ${booking.status === 'cancelled' ? 'text-red-300 sm:text-red-200' : 'text-gray-300 sm:text-gray-200'}`}>
               {booking.status === 'cancelled' ? 'ANULIM' : t("invoiceTitle")}
             </h2>
-            <p className="text-[15px] font-bold text-gray-900">Nr: {invoiceNumber}</p>
-            <p className="text-[13px] font-medium text-gray-500 mt-0.5">{t("issuedDate")} {formatDateNumbers(new Date().toISOString())}</p>
+            <p className="text-[14px] sm:text-[15px] font-bold text-gray-900">Nr: {invoiceNumber}</p>
+            <p className="text-[12px] sm:text-[13px] font-medium text-gray-500 mt-0.5">{t("issuedDate")} {formatDateNumbers(new Date().toISOString())}</p>
           </div>
         </div>
 
-        <div className="flex flex-row justify-between gap-8 mb-6 shrink-0 relative z-10">
-          <div className="flex-1">
-            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-100 pb-1">{t("billedTo")}</h3>
-            <p className="text-[16px] font-bold text-gray-900 mb-0.5">{client?.name || t("unknownClient")}</p>
-            <p className="text-[13px] font-medium text-gray-600">Tel: {client?.phone}</p>
-            {client?.email && <p className="text-[13px] font-medium text-gray-600">Email: {client.email}</p>}
-            {client?.client_type === 'business' && <p className="text-[13px] font-medium text-gray-600">NUI: {client.business_num}</p>}
+        {/* DETAILS - Responsive */}
+        <div className="flex flex-col md:flex-row justify-between gap-6 mb-6 shrink-0 relative z-10">
+          <div className="flex-1 bg-gray-50 md:bg-transparent p-3 md:p-0 rounded-lg md:rounded-none">
+            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-200 md:border-gray-100 pb-1">{t("billedTo")}</h3>
+            <p className="text-[15px] sm:text-[16px] font-bold text-gray-900 mb-0.5">{client?.name || t("unknownClient")}</p>
+            <p className="text-[12px] sm:text-[13px] font-medium text-gray-600">Tel: {client?.phone}</p>
+            {client?.email && <p className="text-[12px] sm:text-[13px] font-medium text-gray-600">Email: {client.email}</p>}
+            {client?.client_type === 'business' && <p className="text-[12px] sm:text-[13px] font-medium text-gray-600">NUI: {client.business_num}</p>}
           </div>
 
-          <div className="flex-1">
-            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-100 pb-1">{t("eventDetails")}</h3>
-            <div className="grid grid-cols-2 gap-y-2 text-[13px]">
+          <div className="flex-1 bg-gray-50 md:bg-transparent p-3 md:p-0 rounded-lg md:rounded-none">
+            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-200 md:border-gray-100 pb-1">{t("eventDetails")}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2.5 sm:gap-y-2 text-[12px] sm:text-[13px]">
               <div className="flex items-center gap-2 text-gray-800 font-medium">
-                <MapPin size={14} className="text-gray-400"/> {booking.halls?.name || t("notAssigned")}
+                <MapPin size={14} className="text-gray-400 shrink-0"/> <span className="truncate">{booking.halls?.name || t("notAssigned")}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-800 font-medium">
-                <Users size={14} className="text-gray-400"/> {participants} {t("persons")}
+                <Users size={14} className="text-gray-400 shrink-0"/> {participants} {t("persons")}
               </div>
               <div className="flex items-center gap-2 text-gray-800 font-medium">
-                <Calendar size={14} className="text-gray-400"/> {formatDateNumbers(booking.event_date)}
+                <Calendar size={14} className="text-gray-400 shrink-0"/> {formatDateNumbers(booking.event_date)}
               </div>
               <div className="flex items-center gap-2 text-gray-800 font-medium">
-                <Clock size={14} className="text-gray-400"/> {new Date(booking.start_time).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}
+                <Clock size={14} className="text-gray-400 shrink-0"/> {new Date(booking.start_time).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mb-6 relative z-10">
-          <table className="w-full text-left border-collapse">
+        {/* TABLE - Responsive with Horizontal Scroll */}
+        <div className="mb-6 relative z-10 w-full overflow-x-auto custom-scrollbar pb-2 print:overflow-visible print:pb-0">
+          <table className="w-full min-w-[600px] text-left border-collapse print:min-w-full">
             <thead>
               <tr className="border-y-2 border-gray-200">
                 <th className="py-2 px-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[40%]">{t("colDescription")}</th>
@@ -333,7 +335,7 @@ ${business.name}`;
           </table>
         </div>
 
-        <div className="break-inside-avoid mt-8 shrink-0 relative z-10">
+        <div className="break-inside-avoid mt-6 sm:mt-8 shrink-0 relative z-10">
           
           {booking.status !== 'cancelled' && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 print:bg-gray-50/80">
@@ -344,36 +346,37 @@ ${business.name}`;
             </div>
           )}
 
-          <div className="flex justify-between items-end border-b border-gray-100 pb-6 px-2 mt-12">
+          {/* SIGNATURES - Responsive */}
+          <div className="flex flex-col sm:flex-row justify-between items-center border-b border-gray-100 pb-6 px-2 mt-8 sm:mt-12 gap-8 sm:gap-0">
             
-            <div className="text-center w-1/3 relative">
+            <div className="text-center w-full sm:w-1/3 relative">
               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-8">{t("signBusiness")}</p>
               {business.signature_url && (
                 <img src={business.signature_url} alt="Firma" className="absolute bottom-6 left-1/2 -translate-x-1/2 h-12 object-contain z-10 pointer-events-none" />
               )}
-              <div className="border-b-2 border-gray-300 mb-2 relative z-0"></div>
+              <div className="border-b-2 border-gray-300 mb-2 relative z-0 w-3/4 mx-auto sm:w-full"></div>
               <p className="text-[12px] font-bold text-gray-900 mt-1">{business.responsible_person || business.name}</p>
             </div>
             
-            <div className="text-center w-1/3 flex items-center justify-center">
+            <div className="text-center w-full sm:w-1/3 flex items-center justify-center">
               {business.stamp_url ? (
-                <img src={business.stamp_url} alt="Vula" className="w-20 h-20 object-contain opacity-90" />
+                <img src={business.stamp_url} alt="Vula" className="w-16 h-16 sm:w-20 sm:h-20 object-contain opacity-90" />
               ) : null}
             </div>
 
-            <div className="text-center w-1/3 relative">
+            <div className="text-center w-full sm:w-1/3 relative">
               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-8">{t("signClient")}</p>
               {booking.client_signature_url && (
                 <img src={booking.client_signature_url} alt="Firma Klientit" className="absolute bottom-6 left-1/2 -translate-x-1/2 h-12 object-contain z-10 pointer-events-none" />
               )}
-              <div className="border-b-2 border-gray-300 mb-2 relative z-0"></div>
+              <div className="border-b-2 border-gray-300 mb-2 relative z-0 w-3/4 mx-auto sm:w-full"></div>
               <p className="text-[12px] font-bold text-gray-900 mt-1">{client?.name}</p>
             </div>
 
           </div>
 
           <div className="pt-4 text-center">
-            <p className="text-[10px] font-medium text-gray-500 bg-gray-50 inline-block px-3 py-1.5 rounded border border-gray-100 print:border-none print:bg-transparent">
+            <p className="text-[9px] sm:text-[10px] font-medium text-gray-500 bg-gray-50 inline-block px-3 py-1.5 rounded border border-gray-100 print:border-none print:bg-transparent">
               {t("bankInfoText")} <strong className="text-gray-800">{business.bank_name || t("notAssigned")}</strong> <span className="mx-2 text-gray-300">|</span> IBAN: <strong className="text-gray-800">{business.iban || t("notAssigned")}</strong>
             </p>
           </div>

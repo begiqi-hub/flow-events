@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { prisma } from "../../../lib/prisma"; // <--- Ndryshuar nga 4 pika në 3 pika
+import { prisma } from "../../../lib/prisma"; 
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from "date-fns";
 import RecepsioniClient from "./RecepsioniClient";
 
@@ -18,15 +18,26 @@ export default async function RecepsioniPage(props: {
     redirect(`/${locale}/login`);
   }
 
+  // 1. PËRGATITIM NDRYSHORET PËR EMËR DHE ROL
+  let userRole = "Administrator"; 
+  let userName = "";
+
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
   });
+
+  if (business) {
+    userName = business.name; // Nëse është pronari, shfaq emrin e biznesit
+  }
 
   if (!business) {
     const staffUser = await prisma.users.findUnique({
       where: { email: session.user.email }
     });
     if (staffUser && staffUser.business_id) {
+      userName = staffUser.full_name; // Kapim emrin real të përdoruesit
+      userRole = staffUser.role === 'reception' ? 'Recepsioni' : (staffUser.role === 'manager' ? 'Menaxher' : 'Administrator');
+      
       business = await prisma.businesses.findUnique({
         where: { id: staffUser.business_id }
       });
@@ -69,6 +80,8 @@ export default async function RecepsioniPage(props: {
       business={safeBusiness} 
       locale={locale} 
       currentDateStr={currentDate.toISOString()} 
+      userName={userName} // <--- Ia dërgojmë emrin e saktë Client-it
+      userRole={userRole} // <--- Ia dërgojmë rolin e saktë Client-it
     />
   );
 }

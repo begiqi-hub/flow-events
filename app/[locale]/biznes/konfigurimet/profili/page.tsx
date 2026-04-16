@@ -11,6 +11,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
+  let userRole = "admin";
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email },
     include: {
@@ -23,6 +24,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
       where: { email: session.user.email }
     });
     if (staffUser && staffUser.business_id) {
+      userRole = staffUser.role; // Këtu kapim rolin e saktë (psh. 'reception')
       business = await prisma.businesses.findUnique({
         where: { id: staffUser.business_id },
         include: {
@@ -36,5 +38,5 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
 
   const safeBusiness = JSON.parse(JSON.stringify(business));
 
-  return <ProfileClient business={safeBusiness} locale={locale} />;
+  return <ProfileClient business={safeBusiness} locale={locale} userRole={userRole} />;
 }

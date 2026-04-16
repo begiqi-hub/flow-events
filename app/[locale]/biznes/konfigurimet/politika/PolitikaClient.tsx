@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldAlert, Save, Clock, Percent, Info, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldAlert, Save, Clock, Percent, Info, Sparkles, CheckCircle2, AlertCircle, FileText } from "lucide-react";
 import { updatePolicyAction } from "./actions";
 import { useTranslations } from "next-intl";
 
@@ -17,6 +17,7 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
     ...business, 
     cancel_penalty: business?.cancel_penalty || 0,
     cancel_days: business?.cancel_days || 0,
+    contract_template: business?.contract_template || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,9 +33,6 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
       return;
     }
 
-    // ==============================================================
-    // LOGJIKA E ONBOARDING (SETUP WIZARD) & KTHIMI
-    // ==============================================================
     const searchParams = new URLSearchParams(window.location.search);
     const isOnboarding = searchParams.get('onboarding') === 'true';
 
@@ -42,19 +40,20 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
       setToast({ show: true, message: "Urime! Konfigurimi i biznesit u përfundua 100%.", type: "tour" });
       setTimeout(() => {
         router.push(`/${locale}/biznes`);
-      }, 2500); // 2.5 sekonda kohë që të lexojë mesazhin e suksesit
+      }, 2500);
     } else {
+      // NDRYSHIMI KËTU: Shfaqim suksesin dhe thjesht e fshehim pas 2.5 sekondash (nuk i ndërrojmë faqe)
       setToast({ show: true, message: t("toastSuccessSave"), type: "success" });
+      setLoading(false);
       setTimeout(() => {
-        router.push(`/${locale}/biznes/konfigurimet`); // E kthejmë te lista e konfigurimeve
-      }, 1500);
+        setToast({ show: false, message: "", type: "success" });
+      }, 2500);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in duration-500 relative font-sans">
       
-      {/* TOAST DHE TOUR MODAL I PËRDITËSUAR (Në mes të ekranit si tek tjerat) */}
       {toast.show && (
         <div className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 animate-in fade-in duration-300`}>
           <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center relative animate-in zoom-in-95 duration-300">
@@ -90,10 +89,42 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
 
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{t("pageTitle")}</h1>
-        <p className="text-gray-500 mt-2 text-sm font-medium">{t("pageSubtitle")}</p>
+        <p className="text-gray-500 mt-2 text-sm font-medium">{t("pageSubtitle")} (Kontrata & Anulimi)</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* SEKSIONI 1: KUSHTET E KONTRATËS */}
+        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-gray-50 bg-gray-50/50 flex items-center gap-3">
+             <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl"><FileText size={20}/></div>
+             <h2 className="text-xl font-bold text-gray-900">Kushtet e Kontratës</h2>
+          </div>
+
+          <div className="p-8">
+            <p className="text-sm font-medium text-gray-500 mb-6 leading-relaxed">
+              Këtu mund të shkruani rregullat dhe kushtet e brendshme të biznesit tuaj. Këto do të shfaqen automatikisht në Nenin 5 të çdo kontrate rezervimi që printoni ose i dërgoni klientit.
+            </p>
+
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Teksti i Rregullores</label>
+            <textarea 
+              rows={8}
+              className="w-full border border-gray-200 p-5 rounded-2xl outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium text-gray-800 leading-relaxed resize-none transition-all" 
+              placeholder="psh: 1. Ndalohet sjellja e pijeve nga jashtë...&#10;2. Dekorimet lejohen vetëm..."
+              value={formData.contract_template} 
+              onChange={(e) => setFormData({...formData, contract_template: e.target.value})} 
+            />
+            
+            <div className="mt-4 p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex gap-4">
+              <Info className="text-indigo-500 shrink-0 mt-0.5" size={18} />
+              <p className="text-xs text-indigo-800 leading-relaxed font-medium">
+                Nëse e lini këtë fushë bosh, sistemi do të përdorë 3 rregulla standarde automatikisht (Rreth ushqimit nga jashtë, dëmtimeve dhe dekorimeve).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* SEKSIONI 2: POLITIKA E ANULIMIT */}
         <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-8 border-b border-gray-50 bg-gray-50/50 flex items-center gap-3">
              <div className="p-2.5 bg-red-100 text-red-600 rounded-xl"><ShieldAlert size={20}/></div>
@@ -109,7 +140,7 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
                   <input 
                     type="number" 
                     min="0"
-                    className="w-full border border-gray-200 pl-11 pr-4 py-4 rounded-2xl outline-none focus:border-gray-900 font-bold text-gray-900" 
+                    className="w-full border border-gray-200 pl-11 pr-4 py-4 rounded-2xl outline-none focus:border-gray-900 font-bold text-gray-900 transition-all" 
                     value={formData.cancel_days} 
                     onChange={(e) => setFormData({...formData, cancel_days: Number(e.target.value)})} 
                   />
@@ -125,7 +156,7 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
                     type="number" 
                     min="0"
                     max="100"
-                    className="w-full border border-gray-200 pl-11 pr-4 py-4 rounded-2xl outline-none focus:border-gray-900 font-bold text-gray-900" 
+                    className="w-full border border-gray-200 pl-11 pr-4 py-4 rounded-2xl outline-none focus:border-gray-900 font-bold text-gray-900 transition-all" 
                     value={formData.cancel_penalty} 
                     onChange={(e) => setFormData({...formData, cancel_penalty: Number(e.target.value)})} 
                   />
@@ -148,6 +179,7 @@ export default function PolitikaClient({ business, locale }: { business: any, lo
              </button>
           </div>
         </div>
+        
       </form>
     </div>
   );

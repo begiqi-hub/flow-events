@@ -15,7 +15,8 @@ async function getBusiness() {
   return business;
 }
 
-export async function createTicketAction(subject: string, message: string) {
+// Shtuam parametrin 'image_url' (që mund të jetë string ose null)
+export async function createTicketAction(subject: string, message: string, image_url?: string | null) {
   try {
     const business = await getBusiness();
     if (!business) return { error: "Biznesi nuk u gjet" };
@@ -27,7 +28,8 @@ export async function createTicketAction(subject: string, message: string) {
         messages: {
           create: {
             sender_type: "business",
-            message
+            message,
+            image_url: image_url || null // <--- Ruajmë foton nëse ekziston
           }
         }
       }
@@ -39,7 +41,8 @@ export async function createTicketAction(subject: string, message: string) {
   }
 }
 
-export async function sendMessageAction(ticketId: string, message: string) {
+// Shtuam parametrin 'image_url'
+export async function sendMessageAction(ticketId: string, message: string, image_url?: string | null) {
   try {
     const business = await getBusiness();
     if (!business) return { error: "Biznesi nuk u gjet" };
@@ -48,7 +51,8 @@ export async function sendMessageAction(ticketId: string, message: string) {
       data: {
         ticket_id: ticketId,
         sender_type: "business",
-        message
+        message,
+        image_url: image_url || null // <--- Ruajmë foton nëse ekziston
       }
     });
     

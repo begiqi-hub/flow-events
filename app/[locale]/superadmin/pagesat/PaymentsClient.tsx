@@ -230,7 +230,7 @@ export default function PaymentsClient({
            </div>
 
            <div className="mt-20 text-center border-t border-gray-100 pt-10 text-gray-400 text-sm font-bold italic">
-             Kjo faturë është gjeneruar automatikisht nga sistemi Flow Events.
+             Kjo faturë është gjeneruar automatikisht nga sistemi HALLEVO.
            </div>
         </div>
       </div>

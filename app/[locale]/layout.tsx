@@ -1,5 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// 1. IMPORTUAM PROVIDER-IN E GJUHËS DHE FUNKSIONIN PËR TË MARRË MESAZHET
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages } from 'next-intl/server';
 import "../globals.css";
 
 const geistSans = Geist({
@@ -13,11 +16,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flow Events | Menaxhimi i Eventeve",
+  title: "HALLEVO | Menaxhimi i Eventeve",
   description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
+  manifest: "/manifest.json", 
 };
 
-// Shtojmë 'async' dhe ndryshojmë mënyrën si pranohen params
+export const viewport: Viewport = {
+  themeColor: "#4f46e5", 
+};
+
 export default async function RootLayout({
   children,
   params,
@@ -25,8 +32,10 @@ export default async function RootLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  // Presim (await) parametrat për të marrë gjuhën (locale)
   const { locale } = await params;
+
+  // 2. MARRIM TË GJITHA PËRKTHIMET (JSON) NGA SERVERI
+  const messages = await getMessages();
 
   return (
     <html lang={locale}>
@@ -34,8 +43,10 @@ export default async function RootLayout({
         suppressHydrationWarning 
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}
       >
-        {/* Trupi i pastër: Paneli i Biznesit */}
-        {children}
+        {/* 3. MBËSHTJELLIM APLIKACIONIN QË TË GJITHË KOMPONENTËT TË KANË AKSES TE GJUHA */}
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

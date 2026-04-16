@@ -14,6 +14,7 @@ export async function updatePolicyAction(data: any) {
       data: {
         cancel_days: Number(data.cancel_days),
         cancel_penalty: Number(data.cancel_penalty),
+        contract_template: data.contract_template || null, // SHTUAR KËTU
       }
     });
 

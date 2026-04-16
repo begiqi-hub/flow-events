@@ -1,54 +1,59 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Cookie, X } from "lucide-react";
 
-export default function CookieBanner() {
-  const [isVisible, setIsVisible] = useState(false);
+export default function CookieBanner({ 
+  title, text, customizeBtn, rejectBtn, acceptBtn 
+}: { 
+  title: string, text: string, customizeBtn: string, rejectBtn: string, acceptBtn: string 
+}) {
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem("cookie-consent");
+    const consent = localStorage.getItem("cookieConsent");
     if (!consent) {
-      setIsVisible(true);
+      setShow(true);
     }
   }, []);
 
-  const acceptCookies = () => {
-    localStorage.setItem("cookie-consent", "accepted");
-    setIsVisible(false);
+  const handleAccept = () => {
+    localStorage.setItem("cookieConsent", "accepted");
+    setShow(false);
   };
 
-  if (!isVisible) return null;
+  const handleReject = () => {
+    localStorage.setItem("cookieConsent", "rejected");
+    setShow(false);
+  };
+
+  if (!show) return null;
 
   return (
-    <div className="fixed bottom-6 left-6 right-6 z-[200] animate-in slide-in-from-bottom-10 duration-700">
-      <div className="max-w-4xl mx-auto bg-[#0F172A] text-white p-6 rounded-[2rem] shadow-2xl border border-white/10 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="bg-indigo-500/20 p-3 rounded-2xl text-indigo-400">
-            <Cookie size={28} />
-          </div>
-          <div>
-            <h4 className="font-bold text-lg">Privatësia juaj ka rëndësi</h4>
-            <p className="text-gray-400 text-sm max-w-xl">
-              Ne përdorim cookies për të përmirësuar përvojën tuaj dhe për të siguruar që platforma Flow AI funksionon në mënyrë optimale.
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button 
-            onClick={acceptCookies}
-            className="flex-1 md:flex-none bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-8 rounded-2xl transition-all whitespace-nowrap"
-          >
-            Pranoj të gjitha
-          </button>
-          <button 
-            onClick={() => setIsVisible(false)}
-            className="p-3 text-gray-400 hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
+    <div className="fixed bottom-4 left-4 right-4 sm:right-auto sm:w-[450px] bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-gray-100 z-[100] p-6 animate-in slide-in-from-bottom-8 duration-500">
+      <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
+      <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+        {text}
+      </p>
+      
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+        <button 
+          onClick={() => {}} // Këtu mund të hapet një modal tjetër në të ardhmen
+          className="w-full sm:w-1/3 py-2.5 px-4 rounded-lg border-2 border-gray-200 text-[#2563eb] font-bold hover:bg-gray-50 transition-colors text-sm text-center"
+        >
+          {customizeBtn}
+        </button>
+        <button 
+          onClick={handleReject}
+          className="w-full sm:w-1/3 py-2.5 px-4 rounded-lg border-2 border-gray-200 text-[#2563eb] font-bold hover:bg-gray-50 transition-colors text-sm text-center"
+        >
+          {rejectBtn}
+        </button>
+        <button 
+          onClick={handleAccept}
+          className="w-full sm:w-1/3 py-2.5 px-4 rounded-lg bg-[#2563eb] border-2 border-[#2563eb] text-white font-bold hover:bg-blue-700 transition-colors text-sm text-center"
+        >
+          {acceptBtn}
+        </button>
       </div>
     </div>
   );

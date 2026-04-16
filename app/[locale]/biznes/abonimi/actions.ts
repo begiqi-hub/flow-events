@@ -7,10 +7,24 @@ export async function createPaymentIntent(data: {
   businessId: string;
   amount: number;
   locale: string;
-  packageId?: string; // SHTUAM KËTË PËR TË MARRË ID-NË
+  packageId?: string; 
 }) {
   try {
-    const invoiceNum = `INV-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    // 1. Fjalori i prefikseve për çdo gjuhë që suporton sistemi
+    const prefixes: Record<string, string> = {
+      sq: "FAT", // Shqip (Faturë)
+      en: "INV", // Anglisht (Invoice)
+      mk: "FAK", // Maqedonisht (Фактура / Faktura)
+      cg: "FAK", // Malazezisht (Faktura)
+      el: "TIM", // Greqisht (Τιμολόγιο / Timologio)
+      // Mund të shtosh gjuhë të tjera këtu në të ardhmen (psh. de: "REC" për Rechnung)
+    };
+
+    // 2. Marrim prefiksin sipas 'locale'. Nëse gjuha nuk ekziston në listë, përdorim 'INV' si Default.
+    const prefix = prefixes[data.locale] || "INV";
+    
+    // 3. Gjenerojmë numrin me prefiksin dinamik
+    const invoiceNum = `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     const newPayment = await prisma.sa_payments.create({
       data: {
@@ -19,7 +33,6 @@ export async function createPaymentIntent(data: {
         status: "pending", 
         invoice_number: invoiceNum, 
         payment_method: "bank",
-        // TRUKU MAGJIK: Ruajmë ID-në e Paketës këtu që ta gjejë Superadmini!
         description: data.packageId || "Abonim i thjeshtë", 
       }
     });

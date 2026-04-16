@@ -5,7 +5,7 @@ import { prisma } from "../../../../../lib/prisma";
 import { revalidatePath } from "next/cache";
 
 // ==========================================
-// 0. FUNKSIONET NDIHMËSE (PA TIMEZONES!)
+// 0. FUNKSIONET NDIHMËSE
 // ==========================================
 function normalizeDate(dateStr: string) {
   if (dateStr.includes('.')) {
@@ -36,8 +36,14 @@ function timeToMinutes(timeStr: string) {
   return (h * 60) + m;
 }
 
+// Funksion i ri për të marrë orën e saktë nga data e DB pa u ngatërruar me Timezone
+function dbTimeToMinutes(dbDateObj: Date) {
+  const timeString = dbDateObj.toISOString().split('T')[1].substring(0, 5); // Merr "HH:mm" nga baza
+  return timeToMinutes(timeString);
+}
+
 // ==========================================
-// 1. KONTROLLI I ORARIT (MATEMATIKË E PASTËR)
+// 1. KONTROLLI I ORARIT (MATEMATIKË E SAKTËZUAR)
 // ==========================================
 export async function checkAvailabilityAction(hallId: string, dateStr: string, startTime: string, endTime: string) {
   try {
@@ -45,6 +51,7 @@ export async function checkAvailabilityAction(hallId: string, dateStr: string, s
     const reqStartMin = timeToMinutes(startTime);
     let reqEndMin = timeToMinutes(endTime);
 
+    // Nëse mbaron pas mesnate (psh. fillon në 20:00, mbaron në 02:00)
     if (reqEndMin <= reqStartMin) reqEndMin += 1440; 
 
     const bookings = await prisma.bookings.findMany({
@@ -62,17 +69,19 @@ export async function checkAvailabilityAction(hallId: string, dateStr: string, s
       const dbDate = b.event_date.toISOString().split('T')[0];
 
       if (dbDate === reqDate) {
-        const bStartMin = (b.start_time.getUTCHours() * 60) + b.start_time.getUTCMinutes();
-        let bEndMin = (b.end_time.getUTCHours() * 60) + b.end_time.getUTCMinutes();
+        // Tani krahasojmë mollë me mollë (pa ngatërrime Timezone)
+        const bStartMin = dbTimeToMinutes(b.start_time);
+        let bEndMin = dbTimeToMinutes(b.end_time);
 
         if (bEndMin <= bStartMin) bEndMin += 1440;
 
+        // FORMULA E SAKTË E OVERLAP-it
         if (reqStartMin < bEndMin && reqEndMin > bStartMin) {
           
           if (b.status === 'quotation') {
             hasQuotation = true;
           } else {
-            const h = String(Math.floor(bStartMin / 60)).padStart(2, '0');
+            const h = String(Math.floor(bStartMin / 60) % 24).padStart(2, '0');
             const m = String(bStartMin % 60).padStart(2, '0');
             return { available: false, message: `⛔️ Salla është e zënë! Një event fillon në orën ${h}:${m}.` };
           }
@@ -113,7 +122,7 @@ export async function saveReservationAction(data: any) {
 
     const eventDateObj = new Date(`${reqDate}T12:00:00.000Z`);
     
-    const startH = String(Math.floor(reqStartMin / 60)).padStart(2, '0');
+    const startH = String(Math.floor(reqStartMin / 60) % 24).padStart(2, '0');
     const startM = String(reqStartMin % 60).padStart(2, '0');
     const startTimeObj = new Date(`${reqDate}T${startH}:${startM}:00.000Z`);
 
@@ -209,11 +218,11 @@ export async function saveReservationAction(data: any) {
           
           total_amount: finalTotal,
           payment_status: calculatedPaymentStatus,
-          discount_amount: discountAmount, // <--- ZBRITJA E SHTUAR
+          discount_amount: discountAmount, 
           
-          setup_type: data.setup_type || "banket", // <--- SETUP SHTUAR
-          billing_model: data.billing_model || "per_person", // <--- MODELI SHTUAR
-          hall_rent: hallRentValue, // <--- QIRAJA SHTUAR
+          setup_type: data.setup_type || "banket", 
+          billing_model: data.billing_model || "per_person", 
+          hall_rent: hallRentValue, 
           
           menu_id: data.billing_model === 'flat_rent' ? null : (data.menu_id || null),
           event_type: data.event_type || null,
@@ -236,7 +245,7 @@ export async function saveReservationAction(data: any) {
             booking_id: booking.id, 
             amount: calculatedPaymentStatus === 'paid' ? finalTotal : deposit, 
             method: data.payment_method || "cash", 
-            type: "payment", // Sigurohemi që regjistrohet si pagesë, jo si refund
+            type: "payment",
             recorded_by: user.id 
           }
         });

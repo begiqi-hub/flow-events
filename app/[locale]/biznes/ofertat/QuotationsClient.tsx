@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { 
   Calendar as CalendarIcon, Clock, MapPin, CheckCircle2, 
-  FileText, X, Sparkles, Phone, Banknote, Building, CreditCard as CardIcon, Plus, Users, Utensils, PartyPopper, MessageCircle
+  FileText, X, Sparkles, Phone, Banknote, Building, CreditCard as CardIcon, Plus, Users, Utensils, PartyPopper, MessageCircle, Edit
 } from "lucide-react";
 import { convertQuotationToBooking } from "./actions";
 import { useRouter } from "next/navigation";
@@ -233,6 +233,16 @@ ${business.name}`;
                         <MessageCircle size={18} />
                       </button>
 
+                      {/* BUTONI PËR TË NDRYSHUAR/EDITUAR OFERTËN */}
+                      <Link 
+                        href={`/${locale}/biznes/rezervimet/ndrysho/${quote.id}`}
+                        className="p-2.5 text-blue-600 hover:bg-blue-100 transition-colors bg-blue-50 border border-blue-100 rounded-lg shadow-sm"
+                        title="Ndrysho Ofertën"
+                      >
+                        <Edit size={18} />
+                      </Link>
+
+                      {/* BUTONI I PRINTIMIT TË OFERTËS */}
                       <Link 
                         href={`/${locale}/biznes/ofertat/${quote.id}/printo`}
                         className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm"

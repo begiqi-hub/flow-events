@@ -7,7 +7,7 @@ export async function getSettings() {
   let settings = await prisma.system_settings.findUnique({ where: { id: 1 } });
   if (!settings) {
     settings = await prisma.system_settings.create({
-      data: { id: 1, platform_name: "Flow Events" }
+      data: { id: 1, platform_name: "HALLEVO" }
     });
   }
   return settings;

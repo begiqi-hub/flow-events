@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation"; // <-- SHTUAR KËTU
 import { 
   Check, X, Clock, Banknote, ShieldCheck, Mail, Instagram,
   Layers, Users, UtensilsCrossed, Info, FileText,
@@ -10,22 +11,67 @@ import { createPaymentIntent } from "./actions";
 import { format, addMonths, addYears, differenceInDays } from "date-fns";
 import { sq } from "date-fns/locale";
 import { useReactToPrint } from "react-to-print";
+import { useTranslations } from "next-intl";
+
+import { initializePaddle, Paddle } from '@paddle/paddle-js';
 
 export default function AbonimiClient({ 
   business, packages, locale, systemSettings, bankAccount 
 }: { 
   business: any, packages: any[], locale: string, systemSettings: any, bankAccount: any 
 }) {
+  const t = useTranslations("AbonimiClient");
+  const router = useRouter(); // <-- SHTUAR KËTU
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [selectedPkg, setSelectedPkg] = useState<any>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [generatedRef, setGeneratedRef] = useState("");
   
-  // Kontrolli nëse ka plan
+  const [paddle, setPaddle] = useState<Paddle | null>(null);
+  const [paddleError, setPaddleError] = useState<string | null>(null);
+
   const isTrial = business.status === 'trial' || !business.status;
   const [showPricing, setShowPricing] = useState(isTrial);
 
-  // LLOGARITJA E DITËVE TË MBETURA
+  const paymentGateway = systemSettings?.payment_gateway || 'both';
+
+  useEffect(() => {
+    // 1. Force the token, even if .env is failing
+    const tokenToUse = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "test_25f28a0f1d30c5d1bee41791130";
+    
+    console.log("Duke inicializuar Paddle me token:", tokenToUse);
+
+    if (!tokenToUse || tokenToUse === "VENDOS_TOKENIN_KËTU") {
+        setPaddleError("Mungon Client Token i Paddle!");
+        return;
+    }
+
+    initializePaddle({
+      environment: "sandbox", // Force sandbox for now
+      token: tokenToUse,
+      // <-- SHTUAR KËTU: Dëgjon kur mbyllet pagesa me sukses dhe bën ridrejtimin
+      eventCallback: function(data) {
+        if (data.name === "checkout.completed") {
+          console.log("Pagesa u krye me sukses! Po mbyllim dritaren dhe ridrejtojmë...");
+          router.push(`/${locale}/biznes`); // Të dërgon te faqja kryesore e biznesit
+        }
+      }
+    }).then(
+      (paddleInstance: Paddle | undefined) => {
+        if (paddleInstance) {
+          console.log("Paddle u inicializua me sukses!");
+          setPaddle(paddleInstance);
+        } else {
+            console.error("Paddle ktheu undefined");
+            setPaddleError("Paddle nuk u ngarkua.");
+        }
+      }
+    ).catch(err => {
+        console.error("Gabim fatal gjatë inicializimit të Paddle:", err);
+        setPaddleError(err.message);
+    });
+  }, [locale, router]); // U shtuan dependencat këtu
+
   let daysLeft = 0;
   let expiryDate = "Nuk ka datë";
   if (business.trialEndsAt && business.status === 'active') {
@@ -46,26 +92,80 @@ export default function AbonimiClient({
     `
   });
 
-  const handleSelectPackage = async (pkg: any) => {
-    if (loadingId !== null) return;
-    setLoadingId(pkg.id); 
+  const openPackageModal = (pkg: any) => {
+    setSelectedPkg(pkg);
+    setGeneratedRef(""); 
+  };
+
+  const handleConfirm = async () => {
+    if (loadingId !== null || !selectedPkg) return;
+    setLoadingId(selectedPkg.id); 
     
-    const amount = billingCycle === 'monthly' ? pkg.monthly_price : pkg.yearly_price;
+    const amount = billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price;
 
     const res = await createPaymentIntent({
       businessId: business.id,
       amount: amount,
       locale: locale,
-      packageId: pkg.id 
+      packageId: selectedPkg.id 
     });
 
     if (res.success && res.referenceCode) {
       setGeneratedRef(res.referenceCode); 
-      setSelectedPkg(pkg); 
     } else {
       alert(res.error || "Ndodhi një gabim!");
     }
     setLoadingId(null);
+  };
+
+  const handlePaddlePayment = () => {
+    if (paddleError) {
+        alert("Gabim sistemi: " + paddleError);
+        return;
+    }
+    if (!paddle || !selectedPkg) {
+        alert("Paddle nuk është gati ende. Ju lutem prisni pak sekonda.");
+        return;
+    }
+    setLoadingId('paddle');
+
+    const pkgName = selectedPkg.name.toLowerCase();
+    let priceId = "";
+
+    if (pkgName.includes("starter") || pkgName.includes("baza")) {
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY!;
+    } else if (pkgName.includes("business") || pkgName.includes("pro")) {
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY!;
+    } else if (pkgName.includes("elite") || pkgName.includes("premium")) {
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_YEARLY!;
+    }
+
+    console.log("Po dergojme te Paddle Price ID:", priceId);
+
+    if (!priceId || priceId === "undefined") {
+       alert("Gabim: Nuk u gjet ID e çmimit për këtë paketë. Kontrolloni .env file.");
+       setLoadingId(null);
+       return;
+    }
+
+    try {
+        paddle.Checkout.open({
+            items: [{ priceId: priceId, quantity: 1 }],
+            customer: {
+                email: business.email || "adnanbegiqi@gmail.com", // Përdorim emailin e biznesit nëse ekziston
+            },
+            customData: {
+                businessId: business.id.toString(), 
+                packageId: selectedPkg.id.toString(),
+                billingCycle: billingCycle
+            }
+        });
+    } catch (err: any) {
+        console.error("Gabim gjatë hapjes së checkout:", err);
+        alert("Ndodhi një gabim gjatë hapjes së dritares së pagesës: " + err.message);
+    }
+
+    setLoadingId(null); 
   };
 
   const startDate = new Date();
@@ -84,14 +184,10 @@ export default function AbonimiClient({
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500 font-sans">
       
-      {/* ========================================================= */}
-      {/* DASHBOARD I DETAJUAR I ABONIMIT (PAMJA E RE)              */}
-      {/* ========================================================= */}
+      {/* DASHBOARD I DETAJUAR I ABONIMIT */}
       {!showPricing && (
         <div className="mb-12 max-w-4xl mx-auto">
           <div className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-xl relative overflow-hidden">
-            
-            {/* Dekorim në background */}
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-50 pointer-events-none">
               <ShieldCheck size={250} />
             </div>
@@ -123,9 +219,7 @@ export default function AbonimiClient({
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Skadon më:</p>
                   <p className="font-black text-lg text-gray-900 mb-1">{expiryDate}</p>
                   {business.status === 'active' && daysLeft > 0 && (
-                    <p className="text-xs font-bold text-emerald-600">
-                      Mbeten edhe {daysLeft} ditë
-                    </p>
+                    <p className="text-xs font-bold text-emerald-600">Mbeten edhe {daysLeft} ditë</p>
                   )}
                   {business.status === 'active' && daysLeft <= 0 && (
                     <p className="text-xs font-bold text-red-500">I skaduar</p>
@@ -133,7 +227,6 @@ export default function AbonimiClient({
                 </div>
               </div>
 
-              {/* Të drejtat e paketës (Limitet) */}
               <div className="mb-10">
                 <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6">Të përfshira në këtë pako:</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -168,10 +261,7 @@ export default function AbonimiClient({
               </div>
 
               <div className="flex justify-end border-t border-gray-100 pt-8">
-                <button 
-                  onClick={() => setShowPricing(true)}
-                  className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg flex items-center gap-2"
-                >
+                <button onClick={() => setShowPricing(true)} className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg flex items-center gap-2">
                   Ndrysho Paketën <ArrowRight size={18} />
                 </button>
               </div>
@@ -180,16 +270,11 @@ export default function AbonimiClient({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* SEKSIONI I PAKETAVE (ZGJEDHJA)                            */}
-      {/* ========================================================= */}
+      {/* SEKSIONI I PAKETAVE */}
       {showPricing && (
         <div>
           {!isTrial && (
-            <button 
-              onClick={() => setShowPricing(false)}
-              className="mb-10 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors"
-            >
+            <button onClick={() => setShowPricing(false)} className="mb-10 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors">
               ← Kthehu te Detajet e Abonimit
             </button>
           )}
@@ -199,15 +284,11 @@ export default function AbonimiClient({
             <p className="text-gray-500 mt-2 text-lg font-medium mb-10">Zgjidhni paketën ideale për rritjen tuaj.</p>
             
             <div className="flex bg-gray-100/70 p-1 rounded-full w-fit mx-auto shadow-inner border border-gray-200">
-               <button 
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${billingCycle === 'monthly' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800'}`}>
+               <button onClick={() => setBillingCycle('monthly')} className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${billingCycle === 'monthly' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800'}`}>
                    <CreditCard size={16}/> Pagesë Mujore
                </button>
                <div className="relative">
-                 <button 
-                  onClick={() => setBillingCycle('yearly')}
-                  className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${billingCycle === 'yearly' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800'}`}>
+                 <button onClick={() => setBillingCycle('yearly')} className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${billingCycle === 'yearly' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-gray-500 hover:text-gray-800'}`}>
                      <Calendar size={16}/> Pagesë Vjetore
                  </button>
                  <span className="absolute -top-3.5 -right-3.5 bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow border border-emerald-200">
@@ -221,16 +302,12 @@ export default function AbonimiClient({
             {packages.map((pkg) => {
               const isCurrent = business.packageId === pkg.id;
               const price = billingCycle === 'monthly' ? pkg.monthly_price : pkg.yearly_price;
-              const isLoading = loadingId === pkg.id; 
               
               const monthlyTotalForYear = pkg.monthly_price * 12;
               const savings = monthlyTotalForYear - pkg.yearly_price;
               
               return (
-                <div 
-                  key={pkg.id} 
-                  className="bg-white rounded-[2.5rem] p-10 flex flex-col border border-gray-100 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-gray-200"
-                >
+                <div key={pkg.id} className="bg-white rounded-[2.5rem] p-10 flex flex-col border border-gray-100 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-gray-200">
                   <div className="mb-10">
                     <h3 className="text-2xl font-black text-[#0f172a] mb-2">{pkg.name}</h3>
                     <div className="flex items-baseline gap-1 mb-3">
@@ -288,15 +365,15 @@ export default function AbonimiClient({
                   </div>
 
                   <button 
-                    onClick={() => handleSelectPackage(pkg)}
-                    disabled={isCurrent || loadingId !== null}
+                    onClick={() => openPackageModal(pkg)}
+                    disabled={isCurrent}
                     className={`w-full py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 ${
                       isCurrent 
                       ? 'bg-gray-100 text-gray-400 cursor-default' 
                       : 'bg-[#0f172a] text-white hover:bg-[#1e293b] shadow-lg disabled:opacity-50'
                     }`}
                   >
-                    {isLoading ? "Duke procesuar..." : isCurrent ? "Plani juaj Aktual" : "Zgjidh Paketën →"} 
+                    {isCurrent ? "Plani juaj Aktual" : "Zgjidh Paketën →"} 
                   </button>
                 </div>
               );
@@ -305,9 +382,7 @@ export default function AbonimiClient({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL I PAGESËS DHE FATURA */}
-      {/* ========================================================= */}
+      {/* MODAL I PAGESËS */}
       {selectedPkg && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/70 backdrop-blur-md p-4 print:bg-white print:p-0">
           
@@ -319,14 +394,20 @@ export default function AbonimiClient({
                   <FileText size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900">Konfirmimi i Pagesës</h3>
-                  <p className="text-gray-500 text-sm font-medium mt-0.5">Ruani detajet për fletëpagesë</p>
+                  <h3 className="text-xl font-black text-gray-900">
+                    {generatedRef ? "Fatura & Detajet" : t("confirmModalTitle")}
+                  </h3>
+                  <p className="text-gray-500 text-sm font-medium mt-0.5">
+                    {generatedRef ? "Ruani detajet për fletëpagesë" : "Zgjidhni metodën e pagesës"}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <button onClick={() => handlePrint()} className="flex items-center gap-2 bg-[#0f172a] text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#1e293b] transition-colors shadow-md">
-                  <Download size={18} /> Printo Faturën
-                </button>
+                {generatedRef && (
+                  <button onClick={() => handlePrint()} className="flex items-center gap-2 bg-[#0f172a] text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#1e293b] transition-colors shadow-md">
+                    <Download size={18} /> Printo Faturën
+                  </button>
+                )}
                 <button onClick={() => setSelectedPkg(null)} className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                   <X size={24} />
                 </button>
@@ -335,13 +416,15 @@ export default function AbonimiClient({
 
             <div className="p-10 overflow-y-auto flex flex-col lg:flex-row gap-12 print:overflow-visible print:p-10 print:flex-col">
               
-              {/* FATURA (Ana e majtë, e printueshme) */}
+              {/* FATURA (Ana e majtë) */}
               <div className="flex-[2] bg-white print:w-full">
                   <div ref={invoiceRef} className="p-2 bg-white text-black">
                     <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
                       <div>
-                        <h1 className="text-4xl font-black text-[#0f172a] tracking-tighter mb-2">INVOICE</h1>
-                        <p className="text-gray-500 font-mono text-base font-medium">{generatedRef}</p>
+                        <h1 className="text-4xl font-black text-[#0f172a] tracking-tighter mb-2">{t("invoiceTitle")}</h1>
+                        <p className="text-gray-500 font-mono text-base font-medium">
+                           {generatedRef ? generatedRef : <span className="text-orange-500 font-bold">{t("draftInvoice")}</span>}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Data e Lëshimit</p>
@@ -409,85 +492,138 @@ export default function AbonimiClient({
                       </div>
                     </div>
 
-                    <div className="bg-indigo-50/40 rounded-2xl p-6 border border-indigo-100 break-inside-avoid print:bg-indigo-50">
-                      <h5 className="text-xs font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Banknote size={16} /> Të dhënat për Fletëpagesë
-                      </h5>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div>
-                          <p className="text-[10px] text-indigo-500 font-bold uppercase mb-1">Banka & Përfituesi</p>
-                          <p className="font-black text-base text-indigo-900 mb-0.5">{bankAccount.bank_name || "Banka nuk është vendosur"}</p>
-                          <p className="font-bold text-sm text-indigo-700">{bankAccount.account_holder || systemSettings.platform_name}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-indigo-500 font-bold uppercase mb-1">Llogaria (IBAN)</p>
-                          <p className="font-black text-lg text-indigo-900 tracking-wider font-mono">
-                            {bankAccount.iban || "Nuk ka IBAN"}
-                          </p>
-                        </div>
-                        <div className="col-span-1 sm:col-span-2 pt-3 border-t border-indigo-100/50 mt-1">
-                          <p className="text-[10px] text-indigo-500 font-bold uppercase mb-1">Përshkrimi i Pagesës (Referenca)</p>
-                          <p className="font-black text-2xl text-indigo-900 tracking-widest">{generatedRef}</p>
+                    {/* Shfaqet vetëm nëse klienti e ka KONFIRMUAR Manualisht */}
+                    {generatedRef && (
+                      <div className="bg-indigo-50/40 rounded-2xl p-6 border border-indigo-100 break-inside-avoid print:bg-indigo-50">
+                        <h5 className="text-xs font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Banknote size={16} /> Të dhënat për Fletëpagesë
+                        </h5>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <div>
+                            <p className="text-[10px] text-indigo-500 font-bold uppercase mb-1">Banka & Përfituesi</p>
+                            <p className="font-black text-base text-indigo-900 mb-0.5">{bankAccount.bank_name || "Banka nuk është vendosur"}</p>
+                            <p className="font-bold text-sm text-indigo-700">{bankAccount.account_holder || systemSettings.platform_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-indigo-500 font-bold uppercase mb-1">Llogaria (IBAN)</p>
+                            <p className="font-black text-lg text-indigo-900 tracking-wider font-mono">
+                              {bankAccount.iban || "Nuk ka IBAN"}
+                            </p>
+                          </div>
+                          <div className="col-span-1 sm:col-span-2 pt-3 border-t border-indigo-100/50 mt-1">
+                            <p className="text-[10px] text-indigo-500 font-bold uppercase mb-1">Përshkrimi i Pagesës (Referenca)</p>
+                            <p className="font-black text-2xl text-indigo-900 tracking-widest">{generatedRef}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
               </div>
 
-              {/* UDHËZIMET E PAGESËS (Ana e djathtë, Fshihet kur printon) */}
+              {/* ANA E DJATHTË - Zgjedhja ose Udhëzimet */}
               <div className="flex-1 flex flex-col justify-between bg-gray-50 rounded-3xl p-8 border border-gray-100 print:hidden">
                 
-                <div>
-                  <h5 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-2">
-                    <Info size={18} className="text-indigo-600"/> Çfarë duhet të bëni tani?
-                  </h5>
-                  
-                  <div className="space-y-8 relative border-l-2 border-indigo-100 ml-3 pl-8">
-                    <div className="relative">
-                      <div className="absolute -left-[41px] top-0 w-5 h-5 bg-indigo-600 rounded-full ring-4 ring-gray-50 shadow-md"></div>
-                      <p className="text-base font-black text-gray-900 mb-2">Kryeni Pagesën</p>
-                      <p className="text-sm text-gray-600 font-medium leading-relaxed">
-                        Përdorni të dhënat bankare në faturë për të kryer pagesën. Sigurohuni që të shkruani referencën <b className="text-indigo-600">{generatedRef}</b> në përshkrim.
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute -left-[41px] top-0 w-5 h-5 bg-white border-4 border-indigo-200 rounded-full shadow-sm"></div>
-                      <p className="text-base font-black text-gray-900 mb-2">Dërgoni Dëshminë</p>
-                      <p className="text-sm text-gray-600 font-medium leading-relaxed">
-                        Pasi të keni përfunduar pagesën, dërgoni fletëpagesën (screenshot ose foto) tek ne.
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute -left-[41px] top-0 w-5 h-5 bg-white border-4 border-gray-200 rounded-full"></div>
-                      <p className="text-base font-black text-gray-400 mb-2">Aktivizimi i Llogarisë</p>
-                      <p className="text-sm text-gray-400 font-medium leading-relaxed">
-                        Sapo të verifikohet pagesa, pakoja juaj do të aktivizohet automatikisht për periudhën e caktuar.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                {/* NËSE NUK ËSHTË KONFIRMUAR (KËTU ZGJEDH METODËN) */}
+                {!generatedRef ? (
+                  <div className="flex flex-col h-full text-center">
+                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-100">
+                        <Check size={32} className="text-indigo-600" />
+                     </div>
+                     <h5 className="text-2xl font-black text-gray-900 mb-2">Zgjidhni Metodën</h5>
+                     <p className="text-gray-500 font-medium mb-8 leading-relaxed">
+                        Si dëshironi të paguani për paketën {selectedPkg.name}?
+                     </p>
+                     
+                     <div className="flex flex-col gap-3 mt-auto">
+                       
+                       {/* BUTONI PËR KARTË KREDITI (PADDLE) */}
+                       {(paymentGateway === 'both' || paymentGateway === 'paddle') && (
+                         <button 
+                           onClick={handlePaddlePayment} 
+                           disabled={loadingId !== null} 
+                           className="w-full bg-[#0f172a] text-white py-4 rounded-2xl font-bold hover:bg-[#1e293b] transition-all shadow-lg flex items-center justify-center gap-2"
+                         >
+                           {loadingId === 'paddle' ? <Clock size={18} className="animate-spin" /> : <CreditCard size={18} />}
+                           Paguaj me Kartë
+                         </button>
+                       )}
 
-                <div className="mt-10 pt-8 border-t border-gray-200">
-                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Dërgo dëshminë këtu:</p>
-                  <div className="flex flex-col gap-3">
-                    <a 
-                      href={`mailto:${systemSettings.contact_email}?subject=Pagesa per Paketën ${selectedPkg.name}&body=Përshëndetje, bashkangjitur gjeni dëshminë e pagesës për referencën: ${generatedRef}`}
-                      className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 py-3.5 rounded-xl font-bold hover:bg-gray-100 transition-all border border-gray-200 text-sm shadow-sm"
-                    >
-                      <Mail size={18} /> Dërgo me Email
-                    </a>
-                    {systemSettings.instagram_url && (
-                      <a 
-                        href={systemSettings.instagram_url} 
-                        target="_blank"
-                        className="w-full flex items-center justify-center gap-2 bg-pink-50 text-pink-700 py-3.5 rounded-xl font-bold hover:bg-pink-100 transition-all border border-pink-100 text-sm shadow-sm"
-                      >
-                        <Instagram size={18} /> Dërgo në Instagram
-                      </a>
-                    )}
+                       {/* BUTONI PËR FATURË MANUALE */}
+                       {(paymentGateway === 'both' || paymentGateway === 'manual') && (
+                         <button 
+                           onClick={handleConfirm} 
+                           disabled={loadingId !== null} 
+                           className="w-full bg-white border-2 border-gray-200 text-gray-800 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2"
+                         >
+                           {loadingId === selectedPkg.id ? <Clock size={18} className="animate-spin text-gray-500" /> : <Banknote size={18} className="text-gray-500" />}
+                           Transfertë Bankare
+                         </button>
+                       )}
+
+                       <button 
+                         onClick={() => setSelectedPkg(null)} 
+                         className="w-full mt-2 text-gray-400 py-2 rounded-2xl font-bold hover:text-gray-600 transition-all"
+                       >
+                         {t("btnCancel")}
+                       </button>
+                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* NËSE ËSHTË KONFIRMUAR MANUALE (Udhëzimet) */
+                  <>
+                    <div>
+                      <h5 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-2">
+                        <Info size={18} className="text-indigo-600"/> {t("whatNextTitle")}
+                      </h5>
+                      
+                      <div className="space-y-8 relative border-l-2 border-indigo-100 ml-3 pl-8">
+                        <div className="relative">
+                          <div className="absolute -left-[41px] top-0 w-5 h-5 bg-indigo-600 rounded-full ring-4 ring-gray-50 shadow-md"></div>
+                          <p className="text-base font-black text-gray-900 mb-2">{t("step1Title")}</p>
+                          <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                            {t("step1Desc")} <b className="text-indigo-600">{generatedRef}</b>.
+                          </p>
+                        </div>
+                        <div className="relative">
+                          <div className="absolute -left-[41px] top-0 w-5 h-5 bg-white border-4 border-indigo-200 rounded-full shadow-sm"></div>
+                          <p className="text-base font-black text-gray-900 mb-2">{t("step2Title")}</p>
+                          <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                            {t("step2Desc")}
+                          </p>
+                        </div>
+                        <div className="relative">
+                          <div className="absolute -left-[41px] top-0 w-5 h-5 bg-white border-4 border-gray-200 rounded-full"></div>
+                          <p className="text-base font-black text-gray-400 mb-2">{t("step3Title")}</p>
+                          <p className="text-sm text-gray-400 font-medium leading-relaxed">
+                            {t("step3Desc")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-10 pt-8 border-t border-gray-200">
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">{t("sendProofTitle")}</p>
+                      <div className="flex flex-col gap-3">
+                        <a 
+                          href={`mailto:${systemSettings.contact_email}?subject=Pagesa per Paketën ${selectedPkg.name}&body=Përshëndetje, bashkangjitur gjeni dëshminë e pagesës për referencën: ${generatedRef}`}
+                          className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 py-3.5 rounded-xl font-bold hover:bg-gray-100 transition-all border border-gray-200 text-sm shadow-sm"
+                        >
+                          <Mail size={18} /> {t("btnSendEmail")}
+                        </a>
+                        {systemSettings.instagram_url && (
+                          <a 
+                            href={systemSettings.instagram_url} 
+                            target="_blank"
+                            className="w-full flex items-center justify-center gap-2 bg-pink-50 text-pink-700 py-3.5 rounded-xl font-bold hover:bg-pink-100 transition-all border border-pink-100 text-sm shadow-sm"
+                          >
+                            <Instagram size={18} /> {t("btnSendInstagram")}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
 
               </div>
 

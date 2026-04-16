@@ -32,7 +32,7 @@ export default async function HallsPage() {
     <main className="flex min-h-screen flex-col items-center py-10 bg-gray-50">
       {/* Menuja e Navigimit */}
       <nav className="w-full max-w-5xl flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-8">
-        <h1 className="text-2xl font-black text-purple-700 tracking-wider">FLOW EVENTS</h1>
+        <h1 className="text-2xl font-black text-purple-700 tracking-wider">HALLEVO</h1>
         <div className="flex gap-4">
           <Link href="/" className="font-bold text-gray-500 hover:text-blue-600 px-2 py-1 transition">Bizneset</Link>
           <Link href="/halls" className="font-bold text-purple-600 border-b-2 border-purple-600 px-2 py-1">Sallat</Link>

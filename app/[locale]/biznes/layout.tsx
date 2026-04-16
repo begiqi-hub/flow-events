@@ -5,12 +5,12 @@ import BusinessLayoutUI from "./BusinessLayoutUI";
 import { NextIntlClientProvider } from "next-intl"; 
 import { getMessages, getTranslations } from "next-intl/server";
 import FlowAssistant from "./FlowAssistant";
-import GlobalAlert from "@/components/GlobalAlert"; // <-- Sigurohu që rruga e importit është e saktë
+import GlobalAlert from "@/components/GlobalAlert";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function RootLayout({
+export default async function BiznesLayout({
   children,
   params,
 }: Readonly<{
@@ -21,13 +21,46 @@ export default async function RootLayout({
   
   const messages = await getMessages();
   const tNotif = await getTranslations("Notifications");
+  const tSidebar = await getTranslations("Sidebar"); // E lexojmë nga Serveri
+
+  // Paketuam përkthimet për t'ia dërguar Klientit gati
+  const uiTranslations = {
+    brandName: tSidebar("brandName"),
+    brandDesc: tSidebar("brandDesc"),
+    dashboard: tSidebar("dashboard"),
+    calendar: tSidebar("calendar"),
+    bookings: tSidebar("bookings"),
+    clients: tSidebar("clients"),
+    reports: tSidebar("reports"),
+    performanca: tSidebar("performanca"),
+    halls: tSidebar("halls"),
+    menus: tSidebar("menus"),
+    extras: tSidebar("extras"),
+    settings: tSidebar("settings"),
+    menuProfile: tSidebar("menuProfile"),
+    menuStaff: tSidebar("menuStaff"),
+    menuBank: tSidebar("menuBank"),
+    menuSub: tSidebar("menuSub"),
+    menuPolicy: tSidebar("menuPolicy"),
+    menuLogfile: tSidebar("menuLogfile"),
+    menuLogout: tSidebar("menuLogout"),
+    roleAdmin: tSidebar("roleAdmin"),
+    trialDays: tSidebar("trialDays"),
+    langSystem: tSidebar("langSystem"),
+    
+    notifTitle: tNotif("title"),
+    notifAllGood: tNotif("allGood"),
+    notifNoNotifs: tNotif("noNotifs"),
+  };
 
   const session = await getServerSession();
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  // 1. MARRJA E BIZNESIT
+  let userRole = "admin"; 
+  let staffName = null; 
   let business = await prisma.businesses.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    include: { bookings: { include: { creator: true } } } 
   });
 
   if (!business) {
@@ -35,15 +68,17 @@ export default async function RootLayout({
       where: { email: session.user.email }
     });
     if (staffUser && staffUser.business_id) {
+      userRole = staffUser.role; 
+      staffName = staffUser.full_name; 
       business = await prisma.businesses.findUnique({
-        where: { id: staffUser.business_id }
+        where: { id: staffUser.business_id },
+        include: { bookings: { include: { creator: true } } } 
       });
     }
   }
 
   if (!business) redirect(`/${locale}/login`);
 
-  // 2. MARRJA E NJOFTIMIT GLOBAL (SHTESA E RE)
   const activeAlert = await prisma.global_alerts.findFirst({
     where: { 
       is_active: true,
@@ -55,7 +90,6 @@ export default async function RootLayout({
     orderBy: { created_at: 'desc' }
   });
 
-  // --- LOGJIKA E NOTIFIKIMEVE (E PA NDRYSHUAR) ---
   const symbol = { "EUR": "€", "USD": "$", "GBP": "£", "CHF": "CHF", "ALL": "L" }[business.currency] || "€";
   const notifications: any[] = [];
   const todayStart = new Date();
@@ -76,27 +110,27 @@ export default async function RootLayout({
     include: { clients: true, halls: true }
   });
 
-  const todaysEvents = upcomingEventsRaw.filter(e => e.event_date >= todayStart && e.event_date <= todayEnd);
-  const tomorrowsEvents = upcomingEventsRaw.filter(e => e.event_date >= tomorrowStart && e.event_date <= tomorrowEnd);
+  const todaysEvents = upcomingEventsRaw.filter((e: any) => e.event_date >= todayStart && e.event_date <= todayEnd);
+  const tomorrowsEvents = upcomingEventsRaw.filter((e: any) => e.event_date >= tomorrowStart && e.event_date <= tomorrowEnd);
 
-  todaysEvents.forEach(ev => {
+  todaysEvents.forEach((ev: any) => {
     notifications.push({
       id: `today_${ev.id}`,
       type: "TODAY",
       title: tNotif("todayEventTitle"),
       message: tNotif("todayEventMsg", { client: ev.clients?.name || "...", hall: ev.halls?.name || "..." }),
-      link: `/biznes/rezervimet/ndrysho/${ev.id}`,
+      link: `/biznes/rezervimet?shiko=${ev.id}`,
       time: new Date(ev.start_time).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})
     });
   });
 
-  tomorrowsEvents.forEach(ev => {
+  tomorrowsEvents.forEach((ev: any) => {
     notifications.push({
       id: `tomorrow_${ev.id}`,
       type: "TOMORROW",
       title: tNotif("tomorrowEventTitle"),
       message: tNotif("tomorrowEventMsg", { client: ev.clients?.name || "...", hall: ev.halls?.name || "..." }),
-      link: `/biznes/rezervimet/ndrysho/${ev.id}`,
+      link: `/biznes/rezervimet?shiko=${ev.id}`, 
       time: new Date(ev.start_time).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})
     });
   });
@@ -114,13 +148,13 @@ export default async function RootLayout({
     include: { clients: true }
   });
 
-  missingContracts.forEach(ev => {
+  missingContracts.forEach((ev: any) => {
     notifications.push({
       id: `contract_${ev.id}`,
       type: "WARNING",
       title: tNotif("unsignedContractTitle"),
       message: tNotif("unsignedContractMsg", { client: ev.clients?.name || "..." }),
-      link: `/biznes/rezervimet/${ev.id}/kontrata`,
+      link: `/biznes/rezervimet/${ev.id}/kontrata`, 
       time: new Date(ev.event_date).toLocaleDateString('en-GB').replace(/\//g, '.')
     });
   });
@@ -134,7 +168,7 @@ export default async function RootLayout({
     include: { clients: true, payments: true }
   });
 
-  allPastBookings.forEach(ev => {
+  allPastBookings.forEach((ev: any) => {
     const total = Number(ev.total_amount) || 0;
     const paid = ev.payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
     const left = total - paid;
@@ -145,18 +179,22 @@ export default async function RootLayout({
         type: "DANGER",
         title: tNotif("unpaidDebtTitle"),
         message: tNotif("unpaidDebtMsg", { client: ev.clients?.name || "...", amount: `${symbol} ${left.toFixed(2)}` }),
-        link: `/biznes/rezervimet/ndrysho/${ev.id}`,
+        link: `/biznes/rezervimet?shiko=${ev.id}`, 
         time: new Date(ev.event_date).toLocaleDateString('en-GB').replace(/\//g, '.')
       });
     }
   });
 
-  const safeBusiness = JSON.parse(JSON.stringify(business));
+  const finalBusiness = {
+    ...business,
+    current_staff_name: staffName 
+  };
+
+  const safeBusiness = JSON.parse(JSON.stringify(finalBusiness));
   const safeNotifications = JSON.parse(JSON.stringify(notifications));
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      {/* SHFAQJA E NJOFTIMIT GLOBAL "SMART" */}
       {activeAlert && (
         <GlobalAlert 
           id={activeAlert.id}
@@ -166,9 +204,10 @@ export default async function RootLayout({
         />
       )}
 
-      <BusinessLayoutUI business={safeBusiness} notifications={safeNotifications}>
+      {/* Shtojmë uiTranslations */}
+      <BusinessLayoutUI business={safeBusiness} notifications={safeNotifications} userRole={userRole} uiTranslations={uiTranslations}>
         {children}
-        <FlowAssistant locale={locale} />
+        <FlowAssistant locale={locale} userRole={userRole} />
       </BusinessLayoutUI>
     </NextIntlClientProvider>
   );

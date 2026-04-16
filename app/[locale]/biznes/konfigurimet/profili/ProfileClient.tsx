@@ -17,21 +17,24 @@ const locationsData: Record<string, string[]> = {
   "Greece": ["Athinë", "Selanik", "Janinë", "Patra", "Larisa", "Volos", "Kretë"]
 };
 
-export default function ProfileClient({ business, locale = "sq" }: { business: any, locale?: string }) {
+export default function ProfileClient({ business, locale = "sq", userRole = "admin" }: { business: any, locale?: string, userRole?: string }) {
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("info");
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  
+  // NËSE ËSHTË RECEPSIONIST OSE MENAXHER, HAPET DIREKT TE TAB-I 'SECURITY'
+  const isLimitedUser = userRole === "reception" || userRole === "manager";
+  const [activeTab, setActiveTab] = useState(isLimitedUser ? "security" : "info");
   
   const logoInputRef = useRef<HTMLInputElement>(null);
   const stampInputRef = useRef<HTMLInputElement>(null);
   
-  // STATET PËR MODALIN E NËNSHKRIMIT TË PRONARIT
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPos = useRef({ x: 0, y: 0 });
 
   const t = useTranslations("ProfileClient"); 
+  const tSig = useTranslations("Signatures"); // Deklaruar tSig per t'i ndare perkthimet
 
   const [formData, setFormData] = useState({
     name: business?.name || "",
@@ -80,7 +83,6 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
     }
   };
 
-  // === LOGJIKA E VIZATIMIT PËR PRONARIN ===
   useEffect(() => {
     if (isSignatureModalOpen && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -97,8 +99,8 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
       ctx.scale(ratio, ratio);
       
       ctx.strokeStyle = '#0F172A'; 
-      ctx.lineWidth = 3;           
-      ctx.lineCap = 'round';       
+      ctx.lineWidth = 3;          
+      ctx.lineCap = 'round';      
       ctx.lineJoin = 'round';      
       ctx.imageSmoothingEnabled = true; 
     }
@@ -163,7 +165,6 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
     setFormData({ ...formData, signature_url: signatureImage });
     setIsSignatureModalOpen(false);
   };
-  // ==========================================
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +192,7 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 relative">
       
-      {/* MODALI I NËNSHKRIMIT TË PRONARIT */}
+      {/* MODALI I NËNSHKRIMIT */}
       {isSignatureModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
@@ -248,6 +249,7 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
         </div>
       )}
 
+      {/* TOAST NJOFTIMET */}
       {toast.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[32px] shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95 duration-300">
@@ -263,26 +265,33 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
       )}
 
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{t("pageTitle")}</h1>
-        <p className="text-gray-500 mt-2 text-sm font-medium">{t("pageSubtitle")}</p>
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          {isLimitedUser ? "Profili Personal" : t("pageTitle")}
+        </h1>
+        <p className="text-gray-500 mt-2 text-sm font-medium">
+          {isLimitedUser ? "Këtu mund të ndryshoni fjalëkalimin e llogarisë suaj." : t("pageSubtitle")}
+        </p>
       </div>
 
-      <div className="flex overflow-x-auto no-scrollbar gap-2 mb-8 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 w-fit">
-        <button onClick={() => setActiveTab('info')} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'info' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          <Briefcase size={18}/> {t("tabOfficial")}
-        </button>
-        <button onClick={() => setActiveTab('contact')} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'contact' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          <MapPin size={18}/> {t("tabContact")}
-        </button>
-        <button onClick={() => setActiveTab('security')} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          <ShieldCheck size={18}/> {t("tabSecurity")}
-        </button>
-      </div>
+      {/* TAB MENUJA */}
+      {!isLimitedUser && (
+        <div className="flex overflow-x-auto no-scrollbar gap-2 mb-8 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 w-fit">
+          <button onClick={() => setActiveTab('info')} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'info' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <Briefcase size={18}/> {t("tabOfficial")}
+          </button>
+          <button onClick={() => setActiveTab('contact')} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'contact' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <MapPin size={18}/> {t("tabContact")}
+          </button>
+          <button onClick={() => setActiveTab('security')} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <ShieldCheck size={18}/> {t("tabSecurity")}
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         
         {/* TAB 1: ZYRTARE */}
-        {activeTab === 'info' && (
+        {activeTab === 'info' && !isLimitedUser && (
           <form onSubmit={handleSubmit} className="animate-in fade-in duration-300">
             <div className="p-6 md:p-8 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
               <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl"><Building2 size={20}/></div>
@@ -392,21 +401,20 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
                 </div>
               </div>
 
-              {/* === SEKSIONI I DOKUMENTEVE LIGJORE (VULA DHE FIRMA) === */}
+              {/* SEKSIONI I PËRKTHYER I NËNSHKRIMEVE DHE VULËS */}
               <div className="md:col-span-2 mt-8 pt-8 border-t-2 border-dashed border-gray-200">
                 <div className="mb-6">
                   <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <ShieldCheck className="text-indigo-500" size={20} /> Nënshkrimet dhe Vula (Për Kontratat)
+                    <ShieldCheck className="text-indigo-500" size={20} /> {tSig("title")}
                   </h3>
                   <p className="text-sm text-gray-500 font-medium mt-1">
-                    Ngarkoni vulën tuaj dhe vizatoni firmën. Këto do të shfaqen automatikisht në fund të çdo kontrate dhe fature.
+                    {tSig("subtitle")}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* KARTA E VULËS (Mbetet Upload) */}
                   <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                    <label className="block text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Vula e Biznesit</label>
+                    <label className="block text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">{tSig("businessSeal")}</label>
                     <div className="flex flex-col gap-4">
                       <div className="h-32 rounded-xl border-2 border-dashed border-indigo-200 flex items-center justify-center bg-white overflow-hidden relative group">
                         {formData.stamp_url ? (
@@ -419,7 +427,7 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
                         ) : (
                           <div className="text-center text-indigo-300 flex flex-col items-center">
                             <ImageIcon size={32} className="mb-2" />
-                            <span className="text-xs font-bold">PNG pa sfond</span>
+                            <span className="text-xs font-bold">{tSig("pngNoBg")}</span>
                           </div>
                         )}
                       </div>
@@ -429,14 +437,13 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
                         type="button" onClick={() => stampInputRef.current?.click()}
                         className="w-full flex items-center justify-center gap-2 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
                       >
-                        <Upload size={16} /> Ngarko Vulën
+                        <Upload size={16} /> {tSig("uploadSeal")}
                       </button>
                     </div>
                   </div>
 
-                  {/* KARTA E FIRMËS (Tani me Vizatim) */}
                   <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                    <label className="block text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Nënshkrimi (Firma e Pronarit)</label>
+                    <label className="block text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">{tSig("ownerSignature")}</label>
                     <div className="flex flex-col gap-4">
                       <div className="h-32 rounded-xl border-2 border-dashed border-indigo-200 flex items-center justify-center bg-white overflow-hidden relative group">
                         {formData.signature_url ? (
@@ -449,7 +456,7 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
                         ) : (
                           <div className="text-center text-indigo-300 flex flex-col items-center">
                             <PenTool size={32} className="mb-2" />
-                            <span className="text-xs font-bold">Firma Elektronike</span>
+                            <span className="text-xs font-bold">{tSig("eSignature")}</span>
                           </div>
                         )}
                       </div>
@@ -458,26 +465,25 @@ export default function ProfileClient({ business, locale = "sq" }: { business: a
                         type="button" onClick={() => setIsSignatureModalOpen(true)}
                         className="w-full flex items-center justify-center gap-2 bg-indigo-100 border border-indigo-200 hover:bg-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
                       >
-                        <PenTool size={16} /> Vizato Nënshkrimin
+                        <PenTool size={16} /> {tSig("drawSignature")}
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-              {/* === FUNDI I DOKUMENTEVE LIGJORE === */}
 
             </div>
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-3xl">
               <button type="submit" disabled={loading} className="w-full sm:w-auto bg-[#0F172A] hover:bg-black text-white font-bold py-4 px-10 rounded-xl disabled:bg-gray-400 transition-all flex items-center justify-center gap-2 shadow-sm">
-                <Save size={20} /> {loading ? (t("savingBtn") || "Po ruhet...") : (t("saveDataBtn") || "Ruaj Të Dhënat")}
+                <Save size={20} /> {loading ? (tSig("savingBtn") || "Po ruhet...") : (tSig("saveDataBtn") || "Ruaj Të Dhënat")}
               </button>
             </div>
           </form>
         )}
 
         {/* TAB 2: KONTAKTI */}
-        {activeTab === 'contact' && (
+        {activeTab === 'contact' && !isLimitedUser && (
           <form onSubmit={handleSubmit} className="animate-in fade-in duration-300">
             <div className="p-6 md:p-8 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
               <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl"><MapPin size={20}/></div>

@@ -2,291 +2,298 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "../../../lib/prisma";
 
-const containsAny = (text: string, words: string[]) => {
-  return words.some(word => text.includes(word));
+import sqMessages from "../../../messages/sq.json";
+import enMessages from "../../../messages/en.json";
+
+function format(str: string, vars: any) {
+  if (!str) return "";
+  return str.replace(/{(\w+)}/g, (_, k) => vars[k] || "");
+}
+
+const contains = (text: string, words: string[]) => {
+  return words.some(word => text.toLowerCase().includes(word.toLowerCase()));
 };
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ reply: "Duhet të jeni të kyçur për të përdorur asistentin." }, { status: 401 });
-    }
+    if (!session?.user?.email) return NextResponse.json({ reply: "Unauthorized" }, { status: 401 });
 
-    const business = await prisma.businesses.findUnique({
-      where: { email: session.user.email }
-    });
+    let userRole = "admin";
+    let business = await prisma.businesses.findUnique({ where: { email: session.user.email } });
 
     if (!business) {
-      return NextResponse.json({ reply: "Nuk u gjet biznesi juaj." }, { status: 404 });
+      const staffUser = await prisma.users.findUnique({ where: { email: session.user.email } });
+      if (staffUser && staffUser.business_id) {
+        userRole = staffUser.role;
+        business = await prisma.businesses.findUnique({ where: { id: staffUser.business_id } });
+      }
     }
 
-    const { messages } = await req.json();
-    const lastMessage = messages?.[messages.length - 1]?.content?.toLowerCase() || "";
+    if (!business) return NextResponse.json({ reply: "Business not found" }, { status: 404 });
+
+    const { messages, locale } = await req.json();
+    const lastMessage = messages?.[messages.length - 1]?.content || "";
+    const cleanMessage = lastMessage.toLowerCase().trim();
+    
+    // Sigurohemi që po marrim saktësisht bllokun FlowAI nga JSON
+    const allMessages: any = locale === "en" ? enMessages : sqMessages;
+    const t = allMessages.FlowAI || {};
 
     let reply = "";
     let actionLink = "";
     let actionText = "";
 
-    // =======================================================================
-    // 1. DETEKTORI INTELIGJENT I DATAVE
-    // =======================================================================
-    const dateRegex = /(\d{1,2})[\s\-/\.]*([a-zçë]+)/i;
-    const dateMatch = lastMessage.match(dateRegex);
-
-    let targetDate = null;
-    let targetDay = null;
-    let targetMonthName = "";
-
-    if (dateMatch) {
-      const day = parseInt(dateMatch[1]);
-      const monthStr = dateMatch[2];
-      let monthIndex = -1;
-
-      if (monthStr.startsWith("jan")) { monthIndex = 0; targetMonthName = "Janar"; }
-      else if (monthStr.startsWith("shk")) { monthIndex = 1; targetMonthName = "Shkurt"; }
-      else if (monthStr.startsWith("mar")) { monthIndex = 2; targetMonthName = "Mars"; }
-      else if (monthStr.startsWith("pri")) { monthIndex = 3; targetMonthName = "Prill"; }
-      else if (monthStr.startsWith("maj")) { monthIndex = 4; targetMonthName = "Maj"; }
-      else if (monthStr.startsWith("qer")) { monthIndex = 5; targetMonthName = "Qershor"; }
-      else if (monthStr.startsWith("kor")) { monthIndex = 6; targetMonthName = "Korrik"; }
-      else if (monthStr.startsWith("gush")) { monthIndex = 7; targetMonthName = "Gusht"; }
-      else if (monthStr.startsWith("sht")) { monthIndex = 8; targetMonthName = "Shtator"; }
-      else if (monthStr.startsWith("tet")) { monthIndex = 9; targetMonthName = "Tetor"; }
-      else if (monthStr.startsWith("nen") || monthStr.startsWith("nën")) { monthIndex = 10; targetMonthName = "Nëntor"; }
-      else if (monthStr.startsWith("dhj")) { monthIndex = 11; targetMonthName = "Dhjetor"; }
-
-      if (monthIndex !== -1 && day >= 1 && day <= 31) {
-        targetDay = day;
-        targetDate = new Date(new Date().getFullYear(), monthIndex, day);
-      }
-    }
-
-    // =======================================================================
-    // 2. LLOGJIKA E TRURIT
-    // =======================================================================
-
-    // SKENARI 1: U gjet një datë specifike (Psh. "5 prill")
-    if (targetDate && targetDay) {
-      const nextDay = new Date(targetDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      const eventsOnDate = await prisma.bookings.findMany({
-        where: {
-          business_id: business.id,
-          event_date: { gte: targetDate, lt: nextDay },
-          status: { notIn: ['cancelled', 'draft'] }
-        },
-        include: { clients: true, halls: true }
-      });
-
-      if (eventsOnDate.length > 0) {
-        reply = `Me datë **${targetDay} ${targetMonthName}** nuk jeni plotësisht të lirë. Keni ${eventsOnDate.length} evente: 📅`;
-        eventsOnDate.forEach((e: any) => {
-          reply += `\n📍 ${e.clients?.name || 'Klient'} - ${e.halls?.name || 'Sallë'} (${e.participants} veta)`;
-        });
-        reply += `\n\nA mund t'ju ndihmoj me ndonjë datë tjetër, apo dëshironi të hapni kalendarin?`;
-        actionLink = "kalendari";
-        actionText = "Hap Kalendarin";
-      } else {
-        reply = `Super lajm! 🎉 Me datë **${targetDay} ${targetMonthName}** jeni plotësisht i lirë. Asnjë sallë nuk është e rezervuar.\n\nA dëshironi ta bllokojmë këtë datë tani?`;
-        actionLink = "rezervimet/shto";
-        actionText = `Bëj rezervim për ${targetDay} ${targetMonthName}`;
-      }
-
-    // SKENARI 2: Pyetje rreth Limiteve / "Pse nuk më lejon?"
-    } else if (containsAny(lastMessage, ["nuk me lejon", "sme lejon", "s'me lejon", "nuk po mund", "bllokuar", "limit", "s'po me le", "spo me lejon"])) {
-      reply = "Nëse sistemi nuk ju lejon të shtoni më shumë salla, menu, shërbime apo përdorues, kjo zakonisht ndodh sepse keni arritur **limitin e paketës suaj aktuale**. 🛑\n\nMos u shqetësoni! Për të hequr këto limite dhe për të shfrytëzuar potencialin e plotë të sistemit, ju ftoj të shikoni paketat tona më të mëdha.";
-      actionLink = "abonimi";
-      actionText = "Shiko Paketat (Upgrade)";
-
-    // SKENARI 3: Abonimet dhe Paketat
-    } else if (containsAny(lastMessage, ["abonohem", "abonimi", "abonim", "pako", "paket", "paketë", "ndryshoj pako", "upgrade", "blej"])) {
-      reply = "Për të menaxhuar abonimin tuaj, për të kaluar në një paketë më të madhe, ose për të parë ditët e mbetura, vizitoni panelin e Abonimeve. 🚀\n\nAty mund të zgjidhni planin që i përshtatet më së miri rritjes së biznesit tuaj!";
-      actionLink = "abonimi";
-      actionText = "Menaxho Abonimin";
-
-    // SKENARI 4: UDHËZUESI I SISTEMIT (Si të bëj...?)
-    } else if (containsAny(lastMessage, ["si të", "si te", "qysh", "si mund", "udhezim", "udhëzim", "si ta", "si behet", "si bëhet"])) {
-      
-      if (containsAny(lastMessage, ["rezervim", "event", "dasem"])) {
-        reply = "Për të shtuar një rezervim të ri:\n1. Shkoni tek 'Rezervimet'.\n2. Klikoni 'Shto Rezervim'.\n3. Plotësoni datën, sallën dhe menunë.\n4. Klikoni 'Ruaj'.\n\nMund të shkoni direkt aty duke klikuar butonin më poshtë: 👇";
-        actionLink = "rezervimet/shto";
-        actionText = "Hap Formularin e Rezervimit";
-      
-      // SHIKONI KËTU: U shtua udhëzimi për Ofertat
-      } else if (containsAny(lastMessage, ["ofert", "oferte", "oferta", "ofet"])) {
-        reply = "Për të krijuar një Ofertë të re (Quotation) për një klient:\n1. Shkoni tek paneli 'Ofertat'.\n2. Klikoni butonin 'Shto Ofertë' (ose ekuivalentin e tij).\n3. Plotësoni detajet e klientit, sallën e dëshiruar dhe shërbimet.\n4. Ruajeni dhe dërgojani klientit! 📄\n\nMund të shkoni direkt aty duke klikuar këtu: 👇";
-        actionLink = "ofertat";
-        actionText = "Krijo Ofertë të Re";
-
-      } else if (containsAny(lastMessage, ["perdorues", "përdorues", "staf", "punetor", "punëtor", "kamerier"])) {
-        reply = "Për të shtuar staf të ri:\n1. Shkoni tek 'Konfigurimet' > 'Stafi'.\n2. Klikoni 'Shto Përdorues'.\n3. Shënoni emrin, emailin dhe zgjidhni rolin.\n\nMund ta bëni direkt nga këtu: 👇";
-        actionLink = "perdoruesit";
-        actionText = "Shto Përdorues të Ri";
-      } else if (containsAny(lastMessage, ["menu", "cmim", "çmim", "pjat"])) {
-        reply = "Për të ndryshuar çmimin ose krijuar Menu të re:\n1. Hapni 'Konfigurimet' > 'Menutë'.\n2. Klikoni 'Shto Menu' ose ikonën e lapsit ✏️ tek një menu ekzistuese.\n\nHapni menutë duke klikuar këtu: 👇";
-        actionLink = "menut";
-        actionText = "Menaxho Menutë";
-      } else if (containsAny(lastMessage, ["ekstra", "sherbim", "shërbim", "dekor", "muzik"])) {
-        reply = "Për të shtuar shërbime (Dekorim, Muzikë, etj):\n1. Shkoni tek 'Konfigurimet' > 'Shërbime Ekstra'.\n2. Klikoni 'Shto Ekstra' dhe vendosni çmimin.";
-        actionLink = "ekstra";
-        actionText = "Menaxho Shërbimet Ekstra";
-      } else if (containsAny(lastMessage, ["sall", "hapesir"])) {
-        reply = "Për të menaxhuar Sallat:\n1. Hapni 'Konfigurimet' > 'Sallat'.\n2. Këtu mund të shtoni salla ose të ndryshoni kapacitetin e tyre.";
-        actionLink = "sallat";
-        actionText = "Menaxho Sallat";
-      } else if (containsAny(lastMessage, ["bank", "llogari", "iban", "fature"])) {
-        reply = "Për të përditësuar bankën (për faturat):\n1. Hapni profilin (lart djathtas) > 'Llogaria Bankare'.\n2. Shënoni Bankën dhe IBAN-in.";
-        actionLink = "banka";
-        actionText = "Konfiguro Bankën";
-      } else {
-        reply = "Duket se po kërkoni një udhëzim! 💡\nProvoni të më pyesni më specifikisht: 'Si të shtoj një ofertë?' ose 'Si të ndryshoj çmimin?'";
-      }
-
-    // SKENARI 5: Borxhet
-    } else if (containsAny(lastMessage, ["borxh", "papaguar", "pa paguar", "pa la", "pala", "mbet", "pambledhur", "pa marr"])) {
-      const allBookings = await prisma.bookings.findMany({
-        where: { business_id: business.id, status: { notIn: ['cancelled', 'draft'] } },
-        include: { clients: true, payments: true }
-      });
-
-      let totalDebt = 0;
-      let debtorsCount = 0;
-      let debtDetails = "";
-
-      allBookings.forEach((b: any) => {
-        const total = Number(b.total_amount) || 0;
-        const paid = b.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
-        const mbetja = total - paid;
-        
-        if (mbetja > 0 && b.clients?.name) {
-          totalDebt += mbetja;
-          debtorsCount++;
-          if (debtorsCount <= 3) { 
-            debtDetails += `\n- ${b.clients.name}: ${mbetja} ${business.currency || '€'}`;
-          }
+    const formatTime = (timeData: any) => {
+      if (!timeData) return "?";
+      if (typeof timeData === 'string' && timeData.length <= 8) return timeData;
+      try {
+        const d = new Date(timeData);
+        if (!isNaN(d.getTime())) {
+          const hh = d.getHours().toString().padStart(2, '0');
+          const mm = d.getMinutes().toString().padStart(2, '0');
+          return `${hh}:${mm}`;
         }
-      });
-
-      if (totalDebt > 0) {
-        reply = `Keni gjithsej ${totalDebt} ${business.currency || '€'} borxhe nga ${debtorsCount} klientë. 💰\nDisa prej tyre janë:${debtDetails}${debtorsCount > 3 ? `\n...dhe ${debtorsCount - 3} të tjerë.` : ''}\n\nA dëshironi t'i shikoni të detajuara?`;
-        actionLink = "rezervimet?filter=debt";
-        actionText = "Shiko Borxhet";
-      } else {
-        reply = "Lajme të shkëlqyera! 🎉 Nuk keni asnjë borxh të pambledhur në sistem.";
+        return String(timeData);
+      } catch {
+        return String(timeData);
       }
+    };
 
-    // SKENARI 6: Kalendari fiks Sot ose Nesër
-    } else if (containsAny(lastMessage, ["sot", "nesër", "neser", "sotme", "neserme", "sonte"])) {
-      const isTomorrow = lastMessage.includes("nesër") || lastMessage.includes("neser");
+    const buildEventDetails = (e: any, currency: string, role: string) => {
+      const total = Number(e.total_amount) || 0;
+      const paid = e.payments?.reduce((s: number, p: any) => s + Number(p.amount), 0) || 0;
+      const debt = total - paid;
+      
+      const finStatus = debt > 0 ? `⚠️ Mbetje: ${debt} ${currency}` : `✔️ Paguar plotësisht`;
+      const participants = e.participants ? `${e.participants} persona` : "E pacaktuar";
+      
+      const sTime = formatTime(e.start_time);
+      const eTime = formatTime(e.end_time);
+      const time = (e.start_time || e.end_time) ? `${sTime} - ${eTime}` : "E pacaktuar";
+
+      let text = `\n\n👤 **${e.clients?.name || 'Klient i panjohur'}** |  🏛️ Salla: **${e.halls?.name || '-'}**`;
+      text += `\n   • 👥 Të ftuar: ${participants}`;
+      text += `\n   • 🕒 Orari: ${time}`;
+      
+      if (role !== 'manager') {
+        text += `\n   • 💳 Financat: ${total} ${currency}  (${finStatus})`;
+      }
+      
+      return text;
+    };
+
+    // =======================================================================
+    // 1. EVENTET E SOTME / NESËR
+    // =======================================================================
+    if (contains(cleanMessage, ["sot", "neser", "nesër", "sonte", "kemi sot", "evente sot"])) {
+      const isTomorrow = contains(cleanMessage, ["neser", "nesër"]);
       const targetDate = new Date();
       if (isTomorrow) targetDate.setDate(targetDate.getDate() + 1);
-      
       targetDate.setHours(0, 0, 0, 0);
       const nextDay = new Date(targetDate);
       nextDay.setDate(nextDay.getDate() + 1);
 
       const events = await prisma.bookings.findMany({
-        where: {
-          business_id: business.id,
-          event_date: { gte: targetDate, lt: nextDay },
-          status: { notIn: ['cancelled', 'draft'] }
-        },
-        include: { clients: true, halls: true }
+        where: { business_id: business.id, event_date: { gte: targetDate, lt: nextDay }, status: { notIn: ['cancelled', 'draft'] } },
+        include: { clients: true, halls: true, payments: true }
       });
 
       if (events.length > 0) {
-        reply = `Për ${isTomorrow ? 'nesër' : 'sot'} keni ${events.length} evente të planifikuara: 📅\n`;
-        events.forEach((e: any) => {
-          reply += `\n📍 ${e.clients?.name || 'Klient i panjohur'} - ${e.halls?.name || 'Sallë'}`;
+        reply = format(t.busy_day, { date: isTomorrow ? "Nesër" : "Sot", count: events.length });
+        events.forEach(e => reply += buildEventDetails(e, business.currency || '€', userRole));
+        actionLink = "kalendari"; actionText = t.action_calendar;
+      } else {
+        reply = format(t.free_day, { date: isTomorrow ? "Nesër" : "Sot" });
+        actionLink = "rezervimet/shto"; actionText = t.add_booking_btn;
+      }
+    }
+
+    // =======================================================================
+    // 2. DATAT SPECIFIKE (Psh. 1 Prill, 5 Prill)
+    // =======================================================================
+    else if (cleanMessage.match(/(\d{1,2})[\s\-/\.]*([a-zçë]+)/i)) {
+      const dateMatch = cleanMessage.match(/(\d{1,2})[\s\-/\.]*([a-zçë]+)/i);
+      const day = parseInt(dateMatch![1]);
+      const monthStr = dateMatch![2];
+      let monthIndex = -1;
+      
+      if (monthStr.startsWith("jan")) monthIndex = 0;
+      else if (monthStr.startsWith("shk") || monthStr.startsWith("feb")) monthIndex = 1;
+      else if (monthStr.startsWith("mar")) monthIndex = 2;
+      else if (monthStr.startsWith("pri") || monthStr.startsWith("apr")) monthIndex = 3;
+      else if (monthStr.startsWith("maj") || monthStr.startsWith("may")) monthIndex = 4;
+      else if (monthStr.startsWith("qer") || monthStr.startsWith("jun")) monthIndex = 5;
+      else if (monthStr.startsWith("kor") || monthStr.startsWith("jul")) monthIndex = 6;
+      else if (monthStr.startsWith("gus") || monthStr.startsWith("aug")) monthIndex = 7;
+      else if (monthStr.startsWith("sht") || monthStr.startsWith("sep")) monthIndex = 8;
+      else if (monthStr.startsWith("tet") || monthStr.startsWith("oct")) monthIndex = 9;
+      else if (monthStr.startsWith("nen") || monthStr.startsWith("nën") || monthStr.startsWith("nov")) monthIndex = 10;
+      else if (monthStr.startsWith("dhj") || monthStr.startsWith("dec")) monthIndex = 11;
+
+      if (monthIndex !== -1) {
+        const d = new Date(new Date().getFullYear(), monthIndex, day);
+        const nextD = new Date(d); nextD.setDate(d.getDate() + 1);
+        const eventsOnDate = await prisma.bookings.findMany({
+          where: { business_id: business.id, event_date: { gte: d, lt: nextD }, status: { notIn: ['cancelled', 'draft'] } },
+          include: { clients: true, halls: true, payments: true }
         });
-        actionLink = "kalendari";
-        actionText = "Hap Kalendarin";
-      } else {
-        reply = `Për ${isTomorrow ? 'nesër' : 'sot'} jeni plotësisht të lirë! Asnjë event në kalendar. 🏖️`;
-        actionLink = "rezervimet/shto";
-        actionText = "Shto një Event";
+        if (eventsOnDate.length > 0) {
+          reply = format(t.busy_day, { date: `${day} ${monthStr}`, count: eventsOnDate.length });
+          eventsOnDate.forEach(e => reply += buildEventDetails(e, business.currency || '€', userRole));
+          actionLink = "kalendari"; actionText = t.action_calendar;
+        } else {
+          reply = format(t.free_day, { date: `${day} ${monthStr}` });
+          actionLink = "rezervimet/shto"; actionText = t.add_booking_btn;
+        }
       }
+    }
 
-    // SKENARI 7: Raportet dhe Fitimet
-    } else if (containsAny(lastMessage, ["fitim", "raport", "xhiro", "lek", "pare", "euro", "muaj", "ardhura", "fitoj"])) {
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-      const monthBookings = await prisma.bookings.findMany({
-        where: {
-          business_id: business.id,
-          event_date: { gte: firstDay, lte: lastDay },
-          status: { notIn: ['cancelled', 'draft'] }
-        },
-        include: { payments: true }
-      });
-
-      let revenue = 0;
-      monthBookings.forEach((b: any) => {
-        const paid = b.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
-        revenue += paid;
-      });
-
-      reply = `Për këtë muaj keni gjeneruar **${revenue} ${business.currency || '€'}** të ardhura nga ${monthBookings.length} evente. 📈`;
-      actionLink = "raportet";
-      actionText = "Shiko Raportin e Plotë";
-
-    // SKENARI 8: Pyetja sa Ofertat (Quotations) kemi?
-    } else if (containsAny(lastMessage, ["ofert", "oferte", "oferta", "ofet", "ofeta"]) && !containsAny(lastMessage, ["si", "qysh"])) {
-      const pendingOffers = await prisma.bookings.count({
-        where: { business_id: business.id, status: 'quotation' }
-      });
-
-      if (pendingOffers > 0) {
-        reply = `Aktualisht keni ${pendingOffers} oferta aktive në sistem. 📄`;
-        actionLink = "ofertat";
-        actionText = "Shiko Ofertat";
-      } else {
-        reply = "Nuk keni asnjë ofertë aktive për momentin. Mund të krijoni një të re kurdoherë! 📝";
+    // =======================================================================
+    // 3. STATISTIKAT DHE BORXHET
+    // =======================================================================
+    else if (contains(cleanMessage, ["borxh", "debt", "paguar", "paid", "pa la"])) {
+        const bks = await prisma.bookings.findMany({
+          where: { business_id: business.id, status: { notIn: ['cancelled', 'draft'] } },
+          include: { clients: true, payments: true }
+        });
+        let totalDebt = 0, count = 0, details = "";
+        bks.forEach((b: any) => {
+          const debt = (Number(b.total_amount) || 0) - (b.payments?.reduce((s: number, p: any) => s + Number(p.amount), 0) || 0);
+          if (debt > 0) { 
+            totalDebt += debt; 
+            count++; 
+            if (count <= 5) details += `\n- **${b.clients?.name || 'Klient'}**: ${debt} ${business.currency || '€'}`; 
+          }
+        });
+        if (totalDebt > 0) {
+          reply = format(t.has_debt, { total: totalDebt, currency: business.currency || '€', count: count, details: details });
+          actionLink = "rezervimet"; actionText = t.action_debts;
+        } else { 
+          reply = t.no_debt; 
+        }
+    }
+    else if (contains(cleanMessage, ["fitim", "profit", "lek", "pare", "revenue", "xhiro", "arkime"])) {
+        if (userRole === 'manager') {
+          reply = "Më falni, por raportet financiare dhe fitimet mujore janë konfidenciale dhe mund të aksesohen vetëm nga Administratori i biznesit. 🔒";
+        } else {
+          const now = new Date();
+          const reports = await prisma.bookings.findMany({
+            where: { business_id: business.id, event_date: { gte: new Date(now.getFullYear(), now.getMonth(), 1) }, status: { notIn: ['cancelled', 'draft'] } },
+            include: { payments: true }
+          });
+          let rev = reports.reduce((s: number, b: any) => s + (b.payments?.reduce((ss: number, p: any) => ss + Number(p.amount), 0) || 0), 0);
+          reply = format(t.revenue, { amount: rev, currency: business.currency || '€', count: reports.length });
+          actionLink = "raportet"; actionText = t.action_reports;
+        }
+    }
+    else if (contains(cleanMessage, ["ofert", "offer", "quotation"])) {
+        reply = t.add_offer_guide; 
         actionLink = "ofertat"; 
-        actionText = "Hap panelin e Ofertave";
-      }
-
-    // SKENARI 9: Pyetje e Përgjithshme për "Datë"
-    } else if (containsAny(lastMessage, ["dat", "datë", "date", "cilen", "kur", "cila", "dit", "ditë"])) {
-      reply = "Për të kontrolluar kalendarin, më duhet një datë specifike! 📅\nJu lutem më shkruani ditën dhe muajin (psh. 'A kemi të lirë me 20 Maj?').";
-      actionLink = "kalendari";
-      actionText = "Hap Kalendarin";
-
-    // SKENARI 10: Rezervim pa specifikuar datë
-    } else if (containsAny(lastMessage, ["rezerv", "shto", "blloko", "dasem", "dasm", "aheng", "lirë", "lire", "sall"])) {
-      reply = "Nëse dëshironi të shihni a është salla e lirë, thjesht më thoni datën (psh. 'A kemi të lirë me 5 Prill?').\nPërndryshe, mund të shtoni rezervimin direkt:";
-      actionLink = "rezervimet/shto";
-      actionText = "Krijo Rezervim";
-
-    // SKENARI 11: Kërkesat (Recepsioni)
-    } else if (containsAny(lastMessage, ["recepsion", "kerkes", "kërkes", "pritje"])) {
-      const pendingRequests = await prisma.bookings.count({
-        where: { business_id: business.id, status: 'pending' }
-      });
-
-      if (pendingRequests > 0) {
-        reply = `Keni ${pendingRequests} kërkesa "Në Pritje" nga recepsioni. 🔔`;
-        actionLink = "rezervimet?filter=pending";
-        actionText = "Shqyrto Kërkesat";
-      } else {
-        reply = "Nuk keni asnjë kërkesë të re nga recepsioni. ✅";
-      }
+        actionText = t.add_offer_btn;
+    }
 
     // =======================================================================
-    // FALLBACK
+    // 4. UDHËZUESIT E DETAIJUAR NË HAPA
     // =======================================================================
-    } else {
-      reply = `Nuk e kapa dot plotësisht këtë që shkruat. 🤔 Por unë jam këtu për t'ju ndihmuar!\n\nMund të më pyesni për:\n\n📅 **Kalendarin:** "A jemi të lirë me 15 Prill?"\n💰 **Financat:** "Kush na ka borxh?"\n⚙️ **Udhëzime:** "Si të shtoj një ofertë?"\n🚀 **Abonimin:** "Si të ndryshoj paketë?"\n\nSi mund t'ju ndihmoj sot?`;
+    else if (contains(cleanMessage, ["limit", "lejon", "upgrade", "abonim", "pako", "abonohem", "abonu"])) {
+        if (userRole === 'manager') {
+          reply = "Çështjet e limitit të paketës dhe abonimeve menaxhohen ekskluzivisht nga Administratori i biznesit.";
+        } else {
+          reply = t.abonim_guide; 
+          actionLink = "abonimi"; 
+          actionText = "Menaxho Abonimin";
+        }
+    }
+    else if (contains(cleanMessage, ["perdorues", "user", "staf", "punonjes"])) {
+        reply = t.add_user_guide; 
+        actionLink = "perdoruesit"; 
+        actionText = t.add_user_btn;
+    }
+    else if (contains(cleanMessage, ["menu", "cmim", "ushqim", "pije"])) {
+        reply = t.add_menu_guide; 
+        actionLink = "menut"; 
+        actionText = t.add_menu_btn;
+    }
+    else if (contains(cleanMessage, ["sall", "hapesir", "ambient"])) {
+        reply = "Për të menaxhuar sallat:\n1. Shkoni te 'Konfigurimet' në menunë e majtë.\n2. Klikoni 'Sallat'.\n3. Shtoni një sallë të re ose përditësoni kapacitetin e saj."; 
+        actionLink = "sallat"; actionText = "Menaxho Sallat";
+    }
+    else if (contains(cleanMessage, ["ekstra", "sherbim", "shtes", "dekor", "muzik"])) {
+        reply = "Për të shtuar shërbime ekstra:\n1. Shkoni te 'Konfigurimet' në menunë e majtë.\n2. Klikoni 'Ekstra'.\n3. Krijoni shërbimin e ri dhe vendosni çmimin përkatës."; 
+        actionLink = "ekstra"; actionText = "Menaxho Ekstra";
+    }
+    else if (contains(cleanMessage, ["klient", "client"])) {
+        reply = "Për të menaxhuar klientët:\n1. Shkoni tek 'Klientët' në menunë e majtë.\n2. Klikoni butonin për të shtuar një klient të ri.\n*(Këshillë: Klientët shtohen automatikisht edhe gjatë krijimit të një rezervimi)*."; 
+        actionLink = "klientet"; actionText = "Menaxho Klientët";
+    }
+    else if (contains(cleanMessage, ["blloko", "shto rezervim", "rezervo", "dua te bllokoj", "krijo rezervim", "ndryshoj rezervim", "ndrysho rezervim", "rezervimin"])) {
+        reply = t.add_booking_guide;
+        actionLink = "rezervimet"; 
+        actionText = t.action_calendar;
+    }
+    else if (contains(cleanMessage, ["pages", "paguaj", "bej pagese", "shto pagese"])) {
+        reply = "Për të regjistruar një pagesë të re:\n1. Hapni detajet e atij rezervimi ('Modifiko').\n2. Shkoni poshtë te seksioni i financave.\n3. Klikoni 'Shto Pagesë' dhe shënoni shumën e dhënë nga klienti.";
+        actionLink = "rezervimet"; actionText = "Shko te Rezervimet";
+    }
+    // Fallback vetëm nëse thotë "si te" ose "qysh" por nuk përmend asnjë nga fjalët e mësipërme (p.sh. "qysh ta bej ket gje")
+    else if (contains(cleanMessage, ["si te", "si të", "qysh", "how to"])) {
+        reply = "Këtë funksion mund ta gjeni lehtësisht duke naviguar në menunë e majtë. Nëse keni nevojë për diçka specifike (psh. Menu, Salla, Ekstra, Staf), thjesht më shkruani emrin e saj!";
+    }
+
+    // =======================================================================
+    // 5. KËRKIMI I KLIENTIT ME EMËR
+    // =======================================================================
+    else if (cleanMessage.length >= 3) {
+      const searchName = cleanMessage
+        .replace(/a ka/gi, "").replace(/rezervim/gi, "").replace(/kur e ka/gi, "")
+        .replace(/per/gi, "").replace(/për/gi, "").replace(/\?/g, "").trim();
+
+      if (searchName.length >= 3) {
+          const allActiveBookings = await prisma.bookings.findMany({
+            where: { business_id: business.id, status: { notIn: ['cancelled', 'draft'] } },
+            include: { clients: true, halls: true, payments: true }, 
+            orderBy: { event_date: 'desc' }
+          });
+
+          const clientBooking = allActiveBookings.find(b => 
+             b.clients?.name?.toLowerCase().includes(searchName)
+          );
+
+          if (clientBooking && clientBooking.clients) {
+            const d = new Date(clientBooking.event_date);
+            const formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+            
+            reply = format(t.client_found, {
+              name: clientBooking.clients.name,
+              date: formattedDate,
+              hall: clientBooking.halls?.name || "Sallë"
+            });
+            
+            reply += buildEventDetails(clientBooking, business.currency || '€', userRole);
+
+            actionLink = `rezervimet/${clientBooking.id}`;
+            actionText = t.action_view_client;
+          } else if (contains(cleanMessage, ["kur", "a ka", "kush"])) {
+            reply = format(t.client_not_found, { name: searchName });
+          }
+      }
+    }
+
+    // =======================================================================
+    // 6. FALLBACK I FUNDIT
+    // =======================================================================
+    if (!reply) {
+      reply = t.fallback;
     }
 
     return NextResponse.json({ reply, actionLink, actionText });
 
   } catch (error) {
-    console.error("Flow AI Algorithm Error:", error);
-    return NextResponse.json({ reply: "Ups! Pati një problem me serverin e të dhënave.", actionLink: "", actionText: "" });
+    console.error("AI MASTER CRITICAL ERROR:", error);
+    return NextResponse.json({ 
+      reply: "Sistemi po rifreskohet për momentin. Ju lutem provoni përsëri në pak sekonda! 🔄",
+      actionLink: "", actionText: "" 
+    }, { status: 200 });
   }
 }

@@ -139,9 +139,9 @@ export default function ReportsClient({ business, allBookings }: any) {
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
               <BarChart3 className="text-gray-400" size={32} />
-              {t("title") || "Dashboard & Raportet"}
+              {t("title")}
             </h1>
-            <p className="text-gray-500 mt-2 text-sm font-medium">{t("subtitle") || "Vështrim i thellë mbi financat e biznesit tuaj."}</p>
+            <p className="text-gray-500 mt-2 text-sm font-medium">{t("subtitle")}</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export default function ReportsClient({ business, allBookings }: any) {
               <Printer size={18} /> {t("printBtn")}
             </button>
             <button onClick={handleDownloadPDF} disabled={isDownloading} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center gap-2 whitespace-nowrap disabled:bg-indigo-400">
-              <Download size={18} /> {isDownloading ? "Po gjenerohet..." : "Shkarko PDF"}
+              <Download size={18} /> {isDownloading ? t("generatingPdf") : t("downloadPdf")}
             </button>
           </div>
         </div>
@@ -168,39 +168,39 @@ export default function ReportsClient({ business, allBookings }: any) {
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t("filterStatus")}</label>
             <select className="w-full border border-gray-200 p-3 rounded-xl outline-none focus:border-gray-900 text-sm font-bold text-gray-700" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">{t("statusAll")}</option>
-              <option value="confirmed">Të Konfirmuara</option>
-              <option value="cancelled">Të Anuluara</option>
-              <option value="postponed">Të Shtyera</option>
+              <option value="confirmed">{t("statusConfirmedPlural")}</option>
+              <option value="cancelled">{t("statusCancelledPlural")}</option>
+              <option value="postponed">{t("statusPostponedPlural")}</option>
             </select>
           </div>
         </div>
 
-        {/* KARTAT FINANCIARE ME FITIMIN E PASTËR (HEQUR TRUNCATE QË NUMRI TË MOS PRITET) */}
+        {/* KARTAT FINANCIARE ME FITIMIN E PASTËR */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
   
           <div className="bg-gray-900 rounded-3xl p-6 shadow-xl relative overflow-hidden text-white">
-            <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp size={14}/> Fitimi i Pastër</p>
+            <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp size={14}/> {t("netProfit")}</p>
             <p className="text-2xl sm:text-3xl font-black text-white leading-tight">
               {fitimiPastër.toLocaleString('de-DE', { minimumFractionDigits: 2 })} {symbol}
             </p>
           </div>
 
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Qarkullimi / Shitja</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t("grossRevenue")}</p>
             <p className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">
               {teHyraTotale.toLocaleString('de-DE', { minimumFractionDigits: 2 })} {symbol}
             </p>
           </div>
 
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
-            <p className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-2">Kostot (Menu + Ekstra)</p>
+            <p className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-2">{t("totalCosts")}</p>
             <p className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">
               {kostotTotale.toLocaleString('de-DE', { minimumFractionDigits: 2 })} {symbol}
             </p>
           </div>
 
           <div className="bg-white rounded-3xl p-6 border border-red-100 bg-red-50/30">
-            <p className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2">Borxhet / Mbetja</p>
+            <p className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2">{t("totalDebts")}</p>
             <p className="text-2xl sm:text-3xl font-black text-red-600 leading-tight">
               {mbetjeTotale.toLocaleString('de-DE', { minimumFractionDigits: 2 })} {symbol}
             </p>
@@ -213,7 +213,7 @@ export default function ReportsClient({ business, allBookings }: any) {
           <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center justify-between">
               <span>{t("monthlyProgress")} (Viti {selectedYear})</span>
-              <span className="text-[10px] text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md uppercase font-bold tracking-widest">Fitimi i Pastër</span>
+              <span className="text-[10px] text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md uppercase font-bold tracking-widest">{t("netProfit")}</span>
             </h2>
             <div className="h-48 flex items-end gap-1 sm:gap-2">
               {monthlyData.map((data, index) => {
@@ -222,7 +222,7 @@ export default function ReportsClient({ business, allBookings }: any) {
                 return (
                   <div key={index} className="flex-1 flex flex-col justify-end group relative h-full">
                     <div className="opacity-0 group-hover:opacity-100 absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-xl whitespace-nowrap z-10 pointer-events-none flex flex-col items-center">
-                      <span className="font-bold text-emerald-400">Fitimi: {data.profit.toLocaleString('de-DE')} {symbol}</span>
+                      <span className="font-bold text-emerald-400">{t("colProfit")}: {data.profit.toLocaleString('de-DE')} {symbol}</span>
                       <span className="font-medium text-gray-400">Totali: {data.revenue.toLocaleString('de-DE')} {symbol}</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-t-sm flex flex-col justify-end relative overflow-hidden" style={{ height: `${heightPercent}%`, minHeight: data.revenue > 0 ? '4px' : '0px' }}>
@@ -275,7 +275,7 @@ export default function ReportsClient({ business, allBookings }: any) {
             <p className="text-gray-500 font-medium">{business.city || t("printUnknownAddress")}</p>
           </div>
           <div className="text-right">
-            <h2 className="text-xl font-bold text-gray-900 uppercase tracking-widest mb-1">Raporti Financiar</h2>
+            <h2 className="text-xl font-bold text-gray-900 uppercase tracking-widest mb-1">{t("financialReport")}</h2>
             <p className="text-gray-500 font-bold bg-gray-100 px-3 py-1 rounded-lg inline-block">
               {t("printPeriod")} {safeFormatDate(dateFrom)} — {safeFormatDate(dateTo)}
             </p>
@@ -283,7 +283,7 @@ export default function ReportsClient({ business, allBookings }: any) {
         </div>
 
         <div className="print:hidden mb-6 flex justify-between items-center px-2">
-           <h2 className="text-xl font-bold text-gray-900">Pasqyra e Detajuar</h2>
+           <h2 className="text-xl font-bold text-gray-900">{t("detailedOverview")}</h2>
         </div>
 
         <div className="overflow-x-auto print:overflow-visible w-full">
@@ -292,9 +292,9 @@ export default function ReportsClient({ business, allBookings }: any) {
               <tr className="bg-gray-100/50 print:bg-gray-100 border-y border-gray-300">
                 <th className="py-4 px-4 text-xs font-bold text-gray-600 uppercase tracking-wider print:text-black">{t("colDate")}</th>
                 <th className="py-4 px-4 text-xs font-bold text-gray-600 uppercase tracking-wider print:text-black">{t("colClient")}</th>
-                <th className="py-4 px-4 text-xs font-bold text-gray-600 uppercase tracking-wider print:text-black">Shitja</th>
-                <th className="py-4 px-4 text-xs font-bold text-gray-600 uppercase tracking-wider print:text-black">Kostoja</th>
-                <th className="py-4 px-4 text-xs font-bold text-emerald-600 uppercase tracking-wider text-right print:text-black">Fitimi</th>
+                <th className="py-4 px-4 text-xs font-bold text-gray-600 uppercase tracking-wider print:text-black">{t("colSale")}</th>
+                <th className="py-4 px-4 text-xs font-bold text-gray-600 uppercase tracking-wider print:text-black">{t("colCost")}</th>
+                <th className="py-4 px-4 text-xs font-bold text-emerald-600 uppercase tracking-wider text-right print:text-black">{t("colProfit")}</th>
               </tr>
             </thead>
             
@@ -310,12 +310,12 @@ export default function ReportsClient({ business, allBookings }: any) {
                       <tr key={b.id} className={`hover:bg-gray-50 ${b.status === 'cancelled' ? 'opacity-60' : ''}`}>
                         <td className="py-3 px-4 text-sm font-bold text-gray-900">
                           {format(new Date(b.event_date), 'dd.MM.yyyy')}
-                          {b.status === 'cancelled' && <span className="block text-[10px] text-red-500 uppercase tracking-widest mt-0.5">Anuluar</span>}
+                          {b.status === 'cancelled' && <span className="block text-[10px] text-red-500 uppercase tracking-widest mt-0.5">{t("cancelledBadge")}</span>}
                         </td>
                         <td className="py-3 px-4 text-sm font-medium text-gray-800">{b.clients?.name || "-"}</td>
                         <td className="py-3 px-4 text-sm font-medium text-gray-700">
                           {total.toLocaleString('de-DE')} {symbol}
-                          {b.refunded_amount > 0 && <span className="block text-[10px] text-red-500 mt-0.5">- {b.refunded_amount} {symbol} Rimbursuar</span>}
+                          {b.refunded_amount > 0 && <span className="block text-[10px] text-red-500 mt-0.5">- {b.refunded_amount} {symbol} {t("refundedBadge")}</span>}
                         </td>
                         <td className="py-3 px-4 text-sm font-medium text-orange-600">{kosto.toLocaleString('de-DE')} {symbol}</td>
                         <td className="py-3 px-4 text-sm font-black text-emerald-600 text-right print:text-black">

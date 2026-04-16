@@ -29,11 +29,12 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
 
   if (!business) redirect(`/${locale}/login`);
 
-  // 1. Marrim rezervimet (E rëndësishme: Përfshijmë 'cancelled' për të llogaritur gjobat)
+  // 1. ZGJIDHJA PËRFUNDIMTARE: Përjashtojmë vetëm ato që ekzistojnë në enum
   const allBookings = await prisma.bookings.findMany({
     where: { 
       business_id: business.id,
-      status: { notIn: ['draft'] } // <--- Hequr 'cancelled'
+      // Heqim 'draft' dhe 'quotation' (Ofertat) që të mos dalin te të Hyrat
+      status: { notIn: ['draft', 'quotation'] } 
     },
     include: { 
       halls: true,
@@ -89,7 +90,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
     return {
       ...b,
       calculated_cost: calculated_cost,
-      net_paid: net_paid,             // <- Të ardhurat reale në arkë
+      net_paid: net_paid,            // <- Të ardhurat reale në arkë
       refunded_amount: refunded,      // <- Sa para kemi kthyer
       expected_revenue: expected_revenue // <- Të ardhurat që presim të bëjmë
     };
@@ -102,7 +103,6 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
     <ReportsClient 
       business={serializedBusiness} 
       allBookings={serializedBookings} 
-      locale={locale} 
     />
   );
 }

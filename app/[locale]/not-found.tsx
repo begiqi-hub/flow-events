@@ -39,7 +39,7 @@ export default function NotFound() {
       </div>
       
       <div className="mt-12 text-center text-sm font-medium text-gray-400">
-        &copy; {new Date().getFullYear()} Flow Events. Të gjitha të drejtat e rezervuara.
+        &copy; {new Date().getFullYear()} HALLEVO. Të gjitha të drejtat e rezervuara.
       </div>
 
     </div>

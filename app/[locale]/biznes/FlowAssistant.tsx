@@ -12,7 +12,7 @@ type Message = {
   actionText?: string;
 };
 
-export default function FlowAssistant({ locale }: { locale: string }) {
+export default function FlowAssistant({ locale, userRole = "admin" }: { locale: string, userRole?: string }) {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -87,18 +87,17 @@ export default function FlowAssistant({ locale }: { locale: string }) {
 
   return (
     <>
-      {/* BUTONI HAPËS */}
+      {/* 1. SHTUAM print:hidden KËTU (Tek butoni rrethor jashtë) */}
       <button 
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 z-[9998] bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all duration-300 hover:scale-110 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        className={`print:hidden fixed bottom-6 right-6 z-[9998] bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all duration-300 hover:scale-110 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
       >
         <Sparkles size={24} />
       </button>
 
-      {/* DRITARJA E CHATIT */}
-      <div className={`fixed bottom-6 right-6 z-[9999] w-[360px] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+      {/* 2. SHTUAM print:hidden KËTU (Tek dritarja e chat-it) */}
+      <div className={`print:hidden fixed bottom-6 right-6 z-[9999] w-[360px] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
         
-        {/* HEADER */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex justify-between items-center text-white shadow-sm shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm shadow-inner relative overflow-hidden">
@@ -118,7 +117,6 @@ export default function FlowAssistant({ locale }: { locale: string }) {
           </button>
         </div>
 
-        {/* CHAT AREA */}
         <div className="flex-1 p-4 bg-slate-50 overflow-y-auto min-h-[350px] max-h-[450px] space-y-5 custom-scrollbar">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
@@ -157,15 +155,17 @@ export default function FlowAssistant({ locale }: { locale: string }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* SUGGESTIONS / TAGS (Të Rikthyera) */}
         <div className="px-4 py-3 bg-white border-t border-gray-50 flex gap-2 overflow-x-auto custom-scrollbar shrink-0">
           <button onClick={() => handleSend("A kemi evente sot?")} className="shrink-0 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors shadow-sm">📅 Çfarë kemi sot?</button>
-          <button onClick={() => handleSend("A ka mbet kush pa paguar gje?")} className="shrink-0 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors shadow-sm">💰 Borxhet</button>
-          <button onClick={() => handleSend("Sa lek kemi bo kete muaj?")} className="shrink-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors shadow-sm">📊 Raporti i Muajit</button>
           <button onClick={() => handleSend("Dua te bllokoj nje date")} className="shrink-0 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors shadow-sm">✨ Shto Rezervim</button>
+          
+          <button onClick={() => handleSend("A ka mbet kush pa paguar gje?")} className="shrink-0 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors shadow-sm">💰 Borxhet</button>
+          
+          {userRole !== 'manager' && (
+             <button onClick={() => handleSend("Sa lek kemi bo kete muaj?")} className="shrink-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 text-emerald-700 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors shadow-sm">📊 Raporti i Muajit</button>
+          )}
         </div>
 
-        {/* INPUT FORM */}
         <div className="p-4 bg-white border-t border-gray-100 shrink-0">
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSend(inputText); }}

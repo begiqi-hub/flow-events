@@ -5,7 +5,6 @@ import { prisma } from "../../../../lib/prisma";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Users, PlusCircle, Pencil, Building2, User } from "lucide-react"; 
-import DeleteClientBtn from "./DeleteClientBtn";
 import SearchInput from "./SearchInput"; 
 
 export const dynamic = "force-dynamic";
@@ -128,7 +127,7 @@ export default async function ClientsPage({
                         >
                           <Pencil size={16} />
                         </Link>
-                        <DeleteClientBtn id={client.id} />
+                        {/* Butoni i fshirjes u hoq nga këtu */}
                       </div>
                     </td>
                   </tr>

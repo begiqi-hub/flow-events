@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import Link from "next/link";
 import { Building2, Landmark, ShieldAlert, Sparkles, Utensils, CheckCircle2, Clock } from "lucide-react";
 import DashboardClient from "./DashboardClient";
+import { getTranslations } from "next-intl/server"; // <--- Shtuar
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,9 +15,50 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  const business = await prisma.businesses.findUnique({
+  // =====================================
+  // LEXIMI I PËRKTHIMEVE NGA SERVERI
+  // =====================================
+  const t = await getTranslations("DashboardClient");
+  
+  const uiTranslations = {
+    totalBookings: t("totalBookings"),
+    totalBookingsDesc: t("totalBookingsDesc"),
+    thisMonthBookings: t("thisMonthBookings"),
+    thisMonthBookingsDesc: t("thisMonthBookingsDesc"),
+    expectedRevenue: t("expectedRevenue"),
+    expectedRevenueDesc: t("expectedRevenueDesc"),
+    pendingRevenue: t("pendingRevenue"),
+    pendingRevenueDesc: t("pendingRevenueDesc"),
+    quickActions: t("quickActions"),
+    newBookingBtn: t("newBookingBtn"),
+    calendarBtn: t("calendarBtn"),
+    salesChartTitle: t("salesChartTitle"),
+    eventsThisMonthTitle: t("eventsThisMonthTitle"),
+    eventConfirmed: t("eventConfirmed"),
+    eventPending: t("eventPending"),
+    eventPostponed: t("eventPostponed"),
+    noEventsMsg: t("noEventsMsg")
+  };
+
+  // =======================================================================
+  // LOGJIKA E RE PËR TË GJETUR BIZNESIN APO STAFIN
+  // =======================================================================
+  let userRole = "admin"; // <--- Deklarojmë rolin
+  let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
   });
+
+  if (!business) {
+    const staffUser = await prisma.users.findUnique({
+      where: { email: session.user.email }
+    });
+    if (staffUser && staffUser.business_id) {
+      userRole = staffUser.role; // <--- Kapim rolin e stafit (psh. manager)
+      business = await prisma.businesses.findUnique({
+        where: { id: staffUser.business_id }
+      });
+    }
+  }
 
   if (!business) redirect(`/${locale}/login`);
 
@@ -167,6 +209,8 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
         }}
         monthBookings={serializedMonthBookings}
         notifications={[]}
+        userRole={userRole}
+        uiTranslations={uiTranslations} // <--- Shtuar kjo!
       />
     </>
   );

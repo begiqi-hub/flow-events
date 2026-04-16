@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { 
   Check, ChevronRight, ChevronLeft, CalendarDays, Utensils, Users, 
   Banknote, Building2, Clock, UsersRound, AlertTriangle, Sparkles, Percent,
-  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck, PartyPopper, Search, Lock, Layers
+  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck, PartyPopper, Search, Lock, Layers, PenTool
 } from "lucide-react";
 import { useTranslations } from "next-intl"; 
 
@@ -61,7 +61,6 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
     client_phone: "", 
     client_email: "",
     
-    // U KTHYE NË PËRQINDJE (%)
     discount_percent: "", 
     
     payment_status: "pending",
@@ -152,13 +151,12 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
   const selectedHall = halls?.find((h: any) => h.id === formData.hall_id);
   
-  // Llogaritja Inteligjente e Kapacitetit sipas Setup-it
   let maxAllowedCapacity = selectedHall ? selectedHall.capacity : 0;
   if (selectedHall) {
     if (formData.setup_type === 'teater') {
-      maxAllowedCapacity = Math.floor(selectedHall.capacity * 1.3); // +30% më shumë
+      maxAllowedCapacity = Math.floor(selectedHall.capacity * 1.3); 
     } else if (formData.setup_type === 'koktej' || formData.setup_type === 'zbrazet') {
-      maxAllowedCapacity = Math.floor(selectedHall.capacity * 1.6); // +60% më shumë
+      maxAllowedCapacity = Math.floor(selectedHall.capacity * 1.6); 
     }
   }
   
@@ -178,7 +176,6 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
   
   const subTotal = totalMenuCost + extrasCost + hallPrice;
   
-  // RIKTHYER MATEMATIKA NË PËRQINDJE (%)
   const discountPercent = Number(formData.discount_percent) || 0;
   const discountAmount = (subTotal * discountPercent) / 100;
   const finalTotal = subTotal > discountAmount ? (subTotal - discountAmount) : 0;
@@ -304,11 +301,21 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                   onClick={handlePrintDocument} 
                   className="w-full bg-gray-900 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:bg-gray-800 hover:scale-[1.02]"
                 >
-                  <FileText size={20} /> Printo / Shkarko PDF
+                  <FileText size={20} /> {toast.isQuotation ? "Printo Ofertën" : "Printo Faturën"}
                 </button>
+                
+                {!toast.isQuotation && (
+                  <button 
+                    onClick={() => window.open(`/${locale}/biznes/rezervimet/${toast.bookingId}/kontrata`, '_blank')} 
+                    className="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:bg-indigo-700 hover:scale-[1.02]"
+                  >
+                    <PenTool size={20} /> Printo Kontratën
+                  </button>
+                )}
+
                 <button 
                   onClick={() => router.push(`/${locale}/biznes/${toast.isQuotation ? 'ofertat' : 'rezervimet'}`)} 
-                  className="w-full bg-emerald-500 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:bg-emerald-600 hover:scale-[1.02] shadow-emerald-200"
+                  className="w-full bg-emerald-500 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:bg-emerald-600 hover:scale-[1.02] shadow-emerald-200 mt-2"
                 >
                   Kthehu te Lista <span className="text-xl">→</span>
                 </button>
@@ -1012,7 +1019,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                     ...formData, 
                     menu_id: formData.billing_model === 'flat_rent' ? null : formData.menu_id,
                     total_amount: finalTotal.toString(), 
-                    discount_amount: discountPercent.toString(), // <--- DËRGOJMË PËRQINDJEN, JO VLERËN
+                    discount_amount: discountPercent.toString(), 
                     is_quotation: true 
                   };
                   const res = await saveReservationAction(finalData);

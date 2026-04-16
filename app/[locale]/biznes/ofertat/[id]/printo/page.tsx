@@ -21,8 +21,8 @@ export default async function OfertaPrintPage({ params }: { params: Promise<{ lo
     }
   });
 
-  // Sigurohemi që ekziston dhe që është vërtet Ofertë
-  if (!booking || booking.status !== 'quotation') {
+  // Sigurohemi që ekziston dhe që NUK është konfirmuar apo anuluar. (Pra lejojmë 'pending' dhe 'quotation')
+  if (!booking || ['confirmed', 'completed', 'cancelled'].includes(booking.status)) {
     return <div className="p-8 text-center text-red-500 font-bold">Oferta nuk u gjet ose është konfirmuar tashmë!</div>;
   }
 

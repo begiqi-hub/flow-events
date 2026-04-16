@@ -41,7 +41,7 @@ model booking_extras {
 model bookings {
   id                   String           @id @default(uuid()) @db.VarChar(36)
   business_id          String           @db.VarChar(36)
-  hall_id              String           @db.VarChar(36)
+  hall_id              String?          @db.VarChar(36)  // <--- Shto pikëpyetjen këtu (?)
   client_id            String           @db.VarChar(36)
   menu_id              String?          @db.VarChar(36)
   event_type           String?          @db.VarChar(255)
@@ -71,7 +71,7 @@ model bookings {
 
   booking_extras booking_extras[]
   businesses     businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookings_ibfk_1")
-  halls          halls            @relation(fields: [hall_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
+  halls          halls?            @relation(fields: [hall_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
   clients        clients          @relation(fields: [client_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_3")
   documents      documents[]
   payments       payments[]
@@ -349,15 +349,19 @@ model tickets {
 }
 
 model ticket_messages {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  ticket_id   String   @db.VarChar(36)
-  sender_type message_sender // Tregon nëse e shkroi "business" apo "superadmin"
-  sender_id   String?  @db.VarChar(36) // ID e userit që shkroi (nëse e kemi)
-  message     String   @db.Text
-  is_read     Boolean  @default(false)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  id          String         @id @default(uuid()) @db.VarChar(36)
+  ticket_id   String         @db.VarChar(36)
+  sender_type message_sender 
+  sender_id   String?        @db.VarChar(36) 
+  message     String         @db.Text
+  
+  // Fusha e re për fotot/screenshots në chat
+  image_url   String?        @db.LongText
+  
+  is_read     Boolean        @default(false)
+  created_at  DateTime?      @default(now()) @db.Timestamp(0)
 
-  ticket      tickets  @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  ticket      tickets        @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
 
   @@index([ticket_id], map: "idx_message_ticket_id")
 }

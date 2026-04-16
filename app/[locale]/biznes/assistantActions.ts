@@ -9,6 +9,7 @@ export async function askAssistantAction(message: string) {
     const session = await getServerSession();
     if (!session?.user?.email) return { reply: "Nuk jeni i loguar." };
 
+    let role = "admin"; 
     let business = await prisma.businesses.findUnique({
       where: { email: session.user.email }
     });
@@ -17,6 +18,7 @@ export async function askAssistantAction(message: string) {
       const staff = await prisma.users.findUnique({ where: { email: session.user.email } });
       if (staff && staff.business_id) {
         business = await prisma.businesses.findUnique({ where: { id: staff.business_id } });
+        role = staff.role; 
       }
     }
     if (!business) return { reply: "Biznesi nuk u gjet." };
@@ -49,9 +51,27 @@ export async function askAssistantAction(message: string) {
     }
 
     // ========================================================
+    // NDËRHYRJA PËR BUTONIN "SHTO REZERVIM" (Që t'i punojë adminit/menaxherit)
+    // ========================================================
+    if (text.includes("bllokoj") || text.includes("shto rezervim") || text.includes("rezervo")) {
+      return {
+        reply: "Patjetër! Klikoni butonin më poshtë për të hapur formën e rezervimit dhe për të bllokuar një datë:",
+        actionLink: "rezervimet/shto",
+        actionText: "✨ Shto Rezervim"
+      };
+    }
+
+    // ========================================================
     // 2. LOGJIKA PËR BORXHET
     // ========================================================
-    if (text.includes("borxh") || text.includes("mbetje") || text.includes("papaguar") || text.includes("pagesa")) {
+    // Shtova "pa paguar" që ta kapë butoni
+    if (text.includes("borxh") || text.includes("mbetje") || text.includes("papaguar") || text.includes("pa paguar") || text.includes("pagesa")) {
+      
+      // NDËRHYRJA: Bllokada e Menaxherit
+      if (role === 'manager') {
+        return { reply: "Më falni, por si Menaxher ju nuk keni akses në të dhënat financiare dhe borxhet e klientëve. Kjo është e rezervuar vetëm për Administratorin. 🔒" };
+      }
+
       const allBookings = await prisma.bookings.findMany({
         where: { business_id: business.id, status: { not: "cancelled" } },
         include: { payments: true }
@@ -89,6 +109,12 @@ export async function askAssistantAction(message: string) {
     // 3. LOGJIKA PËR RAPORTIN DHE QARKULLIMIN E MUAJIT AKTUAL
     // ========================================================
     if (text.includes("fitim") || text.includes("raport") || text.includes("këtë muaj") || text.includes("kete muaj") || text.includes("qarkullim")) {
+      
+      // NDËRHYRJA: Bllokada e Menaxherit
+      if (role === 'manager') {
+        return { reply: "Më falni, por raportet financiare dhe fitimet mujore janë konfidenciale dhe mund të aksesohen vetëm nga Administratori i biznesit. 🔒" };
+      }
+
       const now = new Date();
       const firstDay = startOfMonth(now);
       const lastDay = endOfMonth(now);
@@ -99,7 +125,7 @@ export async function askAssistantAction(message: string) {
           event_date: { gte: firstDay, lte: lastDay },
           status: { notIn: ["cancelled", "draft", "quotation", "pending"] } 
         },
-        include: { payments: true } // E SIGURTË! (Nuk kërkojmë menus/extras)
+        include: { payments: true } 
       });
 
       if (monthBookings.length === 0) {
