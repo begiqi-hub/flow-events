@@ -15,33 +15,37 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "HALLEVO | Menaxhimi i Eventeve",
-  description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
-  manifest: "/manifest.json",
-  openGraph: {
-    title: "HALLEVO",
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  
+  return {
+    title: "HALLEVO | Menaxhimi i Eventeve",
     description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
-    url: "https://hallevo.com",
-    siteName: "Hallevo",
-    images: [
-      {
-        url: "https://hallevo.com/og-image.png", // Linku i plotë
-        width: 1200,
-        height: 630,
-        alt: "HALLEVO - Menaxhimi i Eventeve",
-      },
-    ],
-    locale: "sq_AL",
-    type: "website",
-  },
-  twitter: {
-  card: "summary_large_image",
-  title: "HALLEVO",
-  description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
-  images: ["https://hallevo.com/og-image.png"],
-  },
-};
+    manifest: "/manifest.json",
+    openGraph: {
+      title: "HALLEVO",
+      description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
+      url: `https://hallevo.com/${locale}`,
+      siteName: "Hallevo",
+      images: [
+        {
+          url: "https://hallevo.com/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "HALLEVO - Menaxhimi i Eventeve",
+        },
+      ],
+      locale: locale === 'sq' ? 'sq_AL' : 'en_US',
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "HALLEVO",
+      description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
+      images: ["https://hallevo.com/og-image.png"],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#4f46e5", 
