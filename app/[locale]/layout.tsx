@@ -18,7 +18,29 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "HALLEVO | Menaxhimi i Eventeve",
   description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
-  manifest: "/manifest.json", 
+  manifest: "/manifest.json",
+  openGraph: {
+    title: "HALLEVO",
+    description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
+    url: "https://hallevo.com",
+    siteName: "Hallevo",
+    images: [
+      {
+        url: "/og-image.png", // Emri i fotos që do vendosësh te folderi public
+        width: 1200,
+        height: 630,
+        alt: "HALLEVO - Menaxhimi i Eventeve",
+      },
+    ],
+    locale: "sq_AL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HALLEVO",
+    description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {
