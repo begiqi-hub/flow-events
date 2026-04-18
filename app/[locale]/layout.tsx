@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "Hallevo",
     images: [
       {
-        url: "/og-image.png", // Emri i fotos që do vendosësh te folderi public
+        url: "https://hallevo.com/og-image.png", // Linku i plotë
         width: 1200,
         height: 630,
         alt: "HALLEVO - Menaxhimi i Eventeve",
@@ -36,10 +36,10 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
-    title: "HALLEVO",
-    description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
-    images: ["/og-image.png"],
+  card: "summary_large_image",
+  title: "HALLEVO",
+  description: "Sistemi kryesor për menaxhimin e sallave dhe rezervimeve",
+  images: ["https://hallevo.com/og-image.png"],
   },
 };
 
