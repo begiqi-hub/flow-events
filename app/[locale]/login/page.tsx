@@ -38,11 +38,14 @@ export default function LoginPage() {
       setLoading(false);
     } else {
       const session = await getSession();
-      if (session?.user?.role === "superadmin") {
+      
+      // KËTU ËSHTË ZGJIDHJA: U shtua dhe 'support' për ta dërguar te paneli qendror
+      if (session?.user?.role === "superadmin" || session?.user?.role === "support") {
         router.push(`/${locale}/superadmin/bizneset`);
       } else {
         router.push(`/${locale}/biznes`);
       }
+      
       router.refresh();
     }
   };

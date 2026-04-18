@@ -2,6 +2,7 @@
 
 import { prisma } from "../../../../lib/prisma";
 import { revalidatePath } from "next/cache";
+import { createAuditLog } from "../logs/actions";
 
 // Funksioni për të marrë të gjitha paketat
 export async function getPackages() {

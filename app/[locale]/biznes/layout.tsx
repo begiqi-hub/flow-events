@@ -59,13 +59,13 @@ export default async function BiznesLayout({
   let userRole = "admin"; 
   let staffName = null; 
   let business = await prisma.businesses.findUnique({
-    where: { email: session.user.email },
+    where: { email: session.user.email as string }, // <--- SHTUAR as string
     include: { bookings: { include: { creator: true } } } 
   });
 
   if (!business) {
     const staffUser = await prisma.users.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email as string } // <--- SHTUAR as string
     });
     if (staffUser && staffUser.business_id) {
       userRole = staffUser.role; 

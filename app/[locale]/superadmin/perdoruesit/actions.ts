@@ -13,7 +13,6 @@ export async function updateUserRole(userId: string, newRole: any, locale: strin
 
     const currentUser = await prisma.users.findUnique({ where: { email: session.user.email } });
     
-    // Siguresë: Nuk mund t'ia heqësh rolin vetes
     if (currentUser?.id === userId) {
       return { error: "Nuk mund t'ia ndryshosh rolin vetes!" };
     }
@@ -25,16 +24,19 @@ export async function updateUserRole(userId: string, newRole: any, locale: strin
 
     revalidatePath(`/${locale}/superadmin/perdoruesit`);
     return { success: true };
-  } catch (error) {
-    return { error: "Ndodhi një gabim gjatë përditësimit të rolit." };
+  } catch (error: any) {
+    return { error: `Gabim databaze: ${error.message}` };
   }
 }
 
-// 2. KRIJIMI I PËRDORUESIT TË RI
+// 2. KRIJIMI I PËRDORUESIT TË RI (Me Siguri Maksimale)
 export async function createNewUser(data: any, locale: string) {
   try {
     const session = await getServerSession();
     if (!session?.user?.email) return { error: "I paautorizuar" };
+
+    // Siguria 1: Kthejmë emailin në shkronja të vogla dhe pa hapësira
+    const safeEmail = data.email.toLowerCase().trim();
 
     const creator = await prisma.users.findUnique({
       where: { email: session.user.email }
@@ -42,18 +44,23 @@ export async function createNewUser(data: any, locale: string) {
 
     if (!creator) return { error: "Krijuesi nuk u gjet në sistem." };
 
-    const existingUser = await prisma.users.findUnique({ where: { email: data.email } });
-    if (existingUser) return { error: "Ky email është i regjistruar!" };
+    // Siguria 2: Kontrollojmë te Përdoruesit
+    const existingUser = await prisma.users.findUnique({ where: { email: safeEmail } });
+    if (existingUser) return { error: "Siguri: Ky email po përdoret nga një përdorues tjetër!" };
+
+    // Siguria 3: Kontrollojmë te Bizneset
+    const existingBusiness = await prisma.businesses.findUnique({ where: { email: safeEmail } });
+    if (existingBusiness) return { error: "Siguri: Ky email i përket një Biznesi të regjistruar!" };
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     await prisma.users.create({
       data: {
         full_name: data.full_name,
-        email: data.email,
+        email: safeEmail,
         password: hashedPassword,
         role: data.role,
-        business_id: creator.business_id, 
+        business_id: null,
         status: "active",
         hall_scope: "all"
       }
@@ -63,7 +70,7 @@ export async function createNewUser(data: any, locale: string) {
     return { success: true };
   } catch (error: any) {
     console.error("PRISMA ERROR:", error);
-    return { error: "Gabim teknik: Sigurohu që të gjitha fushat janë plotësuar saktë." };
+    return { error: `Gabim teknik: ${error.message.substring(0, 100)}...` }; 
   }
 }
 
@@ -86,11 +93,11 @@ export async function deleteUser(userId: string, locale: string) {
     revalidatePath(`/${locale}/superadmin/perdoruesit`);
     return { success: true };
   } catch (error) {
-    return { error: "Nuk u fshi dot. Mund të jetë i lidhur me të dhëna të tjera (psh. pagesa ose rezervime)." };
+    return { error: "Nuk u fshi dot. Mund të jetë i lidhur me të dhëna të tjera." };
   }
 }
 
-// 4. NDRYSHIMI I TË DHËNAVE (STATUSI, FJALËKALIMI, EMRI, EMAIL)
+// 4. NDRYSHIMI I TË DHËNAVE
 export async function updateUserDetails(userId: string, data: { full_name?: string, email?: string, status?: any, password?: string }, locale: string) {
   try {
     const session = await getServerSession();
@@ -102,22 +109,27 @@ export async function updateUserDetails(userId: string, data: { full_name?: stri
       return { error: "Nuk mund ta çaktivizoni llogarinë tuaj!" };
     }
 
-    // Siguresë për emailin: Kontrollojmë nëse emaili i ri është i zënë nga dikush tjetër
+    const updatePayload: any = {};
+
     if (data.email) {
-      const existingEmail = await prisma.users.findUnique({ where: { email: data.email } });
-      if (existingEmail && existingEmail.id !== userId) {
+      const safeEmail = data.email.toLowerCase().trim();
+      
+      const existingUser = await prisma.users.findUnique({ where: { email: safeEmail } });
+      if (existingUser && existingUser.id !== userId) {
         return { error: "Ky email po përdoret nga një përdorues tjetër në sistem!" };
       }
+
+      const existingBusiness = await prisma.businesses.findUnique({ where: { email: safeEmail } });
+      if (existingBusiness) {
+        return { error: "Ky email po përdoret nga një Biznes në sistem!" };
+      }
+
+      updatePayload.email = safeEmail;
     }
 
-    const updatePayload: any = {};
-    
     if (data.full_name) updatePayload.full_name = data.full_name;
-    if (data.email) updatePayload.email = data.email;
     if (data.status) updatePayload.status = data.status;
-    if (data.password) {
-      updatePayload.password = await bcrypt.hash(data.password, 10);
-    }
+    if (data.password) updatePayload.password = await bcrypt.hash(data.password, 10);
 
     await prisma.users.update({
       where: { id: userId },
@@ -126,7 +138,7 @@ export async function updateUserDetails(userId: string, data: { full_name?: stri
 
     revalidatePath(`/${locale}/superadmin/perdoruesit`);
     return { success: true };
-  } catch (error) {
-    return { error: "Dështoi përditësimi i të dhënave." };
+  } catch (error: any) {
+    return { error: `Dështoi përditësimi: ${error.message}` };
   }
 }

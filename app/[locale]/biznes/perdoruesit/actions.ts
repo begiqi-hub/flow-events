@@ -19,11 +19,23 @@ export async function addStaffAction(businessId: string, data: any) {
       };
     }
 
+    // 1. Formatojmë emailin për siguri
+    const safeEmail = data.email.toLowerCase().trim();
+
+    // 2. A ekziston ky email te Përdoruesit?
+    const existingUser = await prisma.users.findFirst({ where: { email: safeEmail } });
+    if (existingUser) return { error: "Ky email po përdoret nga një llogari tjetër në sistem!" };
+
+    // 3. A ekziston ky email te Bizneset?
+    const existingBusiness = await prisma.businesses.findFirst({ where: { email: safeEmail } });
+    if (existingBusiness) return { error: "Ky email i përket një biznesi të regjistruar!" };
+
     const hashedPassword = await bcrypt.hash(data.password, 10);
+    
     await prisma.users.create({
       data: {
         full_name: data.full_name,
-        email: data.email,
+        email: safeEmail,
         password: hashedPassword,
         role: data.role,
         status: "active",
@@ -34,7 +46,6 @@ export async function addStaffAction(businessId: string, data: any) {
     revalidatePath("/", "layout");
     return { success: true };
   } catch (error: any) {
-    if (error.code === 'P2002') return { error: "Ky email ekziston tashmë në sistem!" };
     return { error: "Pati një problem gjatë ruajtjes." };
   }
 }
@@ -46,10 +57,27 @@ export async function editStaffAction(userId: string, data: any) {
   try {
     const updateData: any = {
       full_name: data.full_name,
-      email: data.email, // <--- SHTUAM EMAIL-IN KËTU
       role: data.role,
       status: data.status,
     };
+
+    // Kontrolli i Sigurisë kur ndryshohet emaili
+    if (data.email) {
+      const safeEmail = data.email.toLowerCase().trim();
+      
+      const existingUser = await prisma.users.findFirst({ where: { email: safeEmail } });
+      if (existingUser && existingUser.id !== userId) {
+        return { error: "Ky email po përdoret nga një llogari tjetër në sistem!" };
+      }
+
+      const existingBusiness = await prisma.businesses.findFirst({ where: { email: safeEmail } });
+      if (existingBusiness) {
+        return { error: "Ky email i përket një biznesi të regjistruar!" };
+      }
+
+      updatePayload.email = safeEmail;
+      updateData.email = safeEmail;
+    }
 
     if (data.password && data.password.trim() !== "") {
       updateData.password = await bcrypt.hash(data.password, 10);
@@ -63,8 +91,6 @@ export async function editStaffAction(userId: string, data: any) {
     revalidatePath("/", "layout");
     return { success: true };
   } catch (error: any) {
-    // SHTUAM MBROJTJEN NËSE ADMINI VENDOS NJË EMAIL QË EKZISTON
-    if (error.code === 'P2002') return { error: "Ky email ekziston tashmë në sistem dhe i përket një përdoruesi tjetër!" };
     return { error: "Pati një problem gjatë ndryshimit." };
   }
 }

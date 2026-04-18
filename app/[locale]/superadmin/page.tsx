@@ -11,9 +11,13 @@ export default async function SuperadminPage(props: { params: Promise<{ locale: 
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  // Kontrollojmë nëse është vërtet Superadmin
-  const user = await prisma.users.findUnique({ where: { email: session.user.email } });
-  if (user?.role !== "superadmin") redirect(`/${locale}/biznes`); // Nëse s'është, ktheje te biznesi
+  // Përdorim findFirst për siguri dhe shtojmë supportin te kushti
+  const user = await prisma.users.findFirst({ where: { email: session.user.email } });
+  
+  // ZGJIDHJA: Lejojmë superadmin dhe support. Të tjerët i kthejmë te biznesi.
+  if (user?.role !== "superadmin" && user?.role !== "support") {
+    redirect(`/${locale}/biznes`);
+  }
 
   // 1. STATISTIKAT KRYESORE
   const totalBusinesses = await prisma.businesses.count();
@@ -27,7 +31,12 @@ export default async function SuperadminPage(props: { params: Promise<{ locale: 
     where: { status: 'active' },
     include: { package: true }
   });
-  const mrr = businessesWithPackages.reduce((sum, b) => sum + (b.package?.price || 0), 0);
+  
+  // Rregullim i vogël te llogaritja e mrr për të shmangur gabimet nëse package mungon
+  const mrr = businessesWithPackages.reduce((sum, b) => {
+    const monthlyPrice = Number(b.package?.monthly_price) || 0;
+    return sum + monthlyPrice;
+  }, 0);
 
   // 2. BIZNESET E FUNDIT TË REGJISTRUARA
   const recentBusinesses = await prisma.businesses.findMany({

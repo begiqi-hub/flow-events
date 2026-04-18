@@ -25,7 +25,7 @@ export default function FlowAssistant({ locale, userRole = "admin" }: { locale: 
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'assistant', 
-      content: "Përshëndetje! Unë jam Flow AI. 🌟\n\nJam këtu për t'ju ndihmuar me menaxhimin e biznesit. Mund të më kërkoni të bëj rezervime, të shoh raportet, borxhet, ose disponueshmërinë e datave (psh. 'Çfarë kemi me 1 prill?')." 
+      content: "Përshëndetje! Unë jam Hallevo AI. 🌟\n\nJam këtu për t'ju ndihmuar me menaxhimin e biznesit. Mund të më kërkoni të bëj rezervime, të shoh raportet, borxhet, ose disponueshmërinë e datave (psh. 'Çfarë kemi me 1 prill?')." 
     }
   ]);
 
@@ -105,10 +105,10 @@ export default function FlowAssistant({ locale, userRole = "admin" }: { locale: 
             </div>
             <div>
               <h3 className="font-bold text-sm tracking-wide flex items-center gap-2">
-                Flow AI <span className="bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider border border-white/20">Agent</span>
+                Hallevo AI <span className="bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider border border-white/20"></span>
               </h3>
               <p className="text-[11px] text-indigo-100 font-medium flex items-center gap-1.5 mt-0.5">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> Menaxheri juaj virtual
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> Asistenti juaj virtual
               </p>
             </div>
           </div>

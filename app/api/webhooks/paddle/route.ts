@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // Sigurohu që rruga drejt skedarit prisma është e saktë
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {

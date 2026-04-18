@@ -11,8 +11,13 @@ export default async function SuperadminBusinessesPage(props: { params: Promise<
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  const user = await prisma.users.findUnique({ where: { email: session.user.email } });
-  if (user?.role !== "superadmin") redirect(`/${locale}/biznes`);
+  // Përdorim findFirst për të shmangur problemet me cache-in e Prisma
+  const user = await prisma.users.findFirst({ where: { email: session.user.email } });
+  
+  // ZGJIDHJA: Lejojmë që edhe 'superadmin' edhe 'support' ta shohin këtë faqe
+  if (user?.role !== "superadmin" && user?.role !== "support") {
+    redirect(`/${locale}/biznes`);
+  }
 
   // Marrim të gjitha bizneset bashkë me paketën dhe pronarin (admin)
   const businesses = await prisma.businesses.findMany({

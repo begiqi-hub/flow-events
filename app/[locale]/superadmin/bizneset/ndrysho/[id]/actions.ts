@@ -2,6 +2,8 @@
 
 import { getServerSession } from "next-auth";
 import { prisma } from "../../../../../../lib/prisma";
+// 1. IMPORTI I DITARIT TË SPIUNAZHIT 🕵️‍♂️
+import { createAuditLog } from "../../../logs/actions";
 
 export async function updateBusinessAction(id: string, data: any) {
   try {
@@ -25,9 +27,17 @@ export async function updateBusinessAction(id: string, data: any) {
         phone: data.phone,
         status: data.status,
         trialEndsAt: trialDate,
-       //* packageId: data.packageId || null //
+        //* packageId: data.packageId || null //
       }
     });
+
+    // 2. REGJISTRIMI I VEPRIMIT NË AUDIT LOG
+    await createAuditLog(
+      session.user.email,
+      "UPDATE",
+      "BIZNESI",
+      `U përditësuan të dhënat për biznesin: ${data.name} (Statusi i ri: ${data.status})`
+    );
 
     return { success: true };
   } catch (error) {

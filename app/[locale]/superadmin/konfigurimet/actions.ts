@@ -7,7 +7,12 @@ export async function getSettings() {
   let settings = await prisma.system_settings.findUnique({ where: { id: 1 } });
   if (!settings) {
     settings = await prisma.system_settings.create({
-      data: { id: 1, platform_name: "HALLEVO" }
+      data: { 
+        id: 1, 
+        platform_name: "HALLEVO",
+        enable_card_payments: true,
+        enable_bank_transfers: true
+      }
     });
   }
   return settings;
@@ -20,21 +25,26 @@ export async function updateSettings(data: any, locale: string) {
       data: {
         platform_name: data.platform_name,
         platform_slogan: data.platform_slogan,
+        platform_logo: data.platform_logo, // <--- Ruajmë Logon
+        platform_nui: data.platform_nui,   // <--- Ruajmë NUI-n
         contact_email: data.contact_email,
         contact_phone: data.contact_phone,
         address: data.address,
-        vat_rate: parseFloat(data.vat_rate),
+        vat_rate: parseFloat(data.vat_rate || 0),
         currency: data.currency,
         facebook_url: data.facebook_url,
         instagram_url: data.instagram_url,
         website_url: data.website_url,
         maintenance_mode: data.maintenance_mode,
         allow_registration: data.allow_registration,
+        enable_card_payments: data.enable_card_payments,     // <--- Aktivizimi i Kartelave
+        enable_bank_transfers: data.enable_bank_transfers,   // <--- Aktivizimi i Transfertave
       }
     });
     revalidatePath(`/${locale}/superadmin/konfigurimet`);
     return { success: true };
   } catch (error) {
-    return { error: "Dështoi ruajtja." };
+    console.error("Settings Update Error:", error);
+    return { error: "Dështoi ruajtja e të dhënave." };
   }
 }

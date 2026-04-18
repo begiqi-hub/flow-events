@@ -37,7 +37,7 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
   const notifRef = useRef<HTMLDivElement>(null); 
 
   const logoPath = "/logo-register.svg";
-  const iconPath = "/apple-touch-icon.png"; // <--- IKONA PËR MENUNË E MBYLLUR
+  const iconPath = "/icon-512x512.png"; // <--- IKONA PËR MENUNË E MBYLLUR
 
   const currentLang = GJUHET.find(g => g.code === locale) || GJUHET[0];
 

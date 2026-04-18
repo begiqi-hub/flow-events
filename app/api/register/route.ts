@@ -12,18 +12,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Të gjitha fushat obligative duhet të plotësohen!" }, { status: 400 });
     }
 
-    // 1. Kontrollojmë nëse emaili ekziston
-    const existingUser = await prisma.users.findUnique({ where: { email } });
+    // Siguria 1: Formatojmë emailin
+    const safeEmail = email.toLowerCase().trim();
+
+    // 1. Kontrollojmë nëse emaili ekziston te PËRDORUESIT (Staf/Klientë)
+    const existingUser = await prisma.users.findUnique({ where: { email: safeEmail } });
     if (existingUser) {
-      return NextResponse.json({ error: "Ky email është i regjistruar tashmë!" }, { status: 400 });
+      return NextResponse.json({ error: "Ky email është i regjistruar tashmë në sistem!" }, { status: 400 });
     }
 
-    // 2. Kontrollojmë nëse ky NUI (Numër Biznesi) ekziston
-    const existingBusiness = await prisma.businesses.findUnique({
+    // 2. Kontrollojmë nëse emaili ekziston te BIZNESET
+    const existingBusinessEmail = await prisma.businesses.findUnique({ where: { email: safeEmail } });
+    if (existingBusinessEmail) {
+      return NextResponse.json({ error: "Ky email përdoret nga një Biznes ekzistues!" }, { status: 400 });
+    }
+
+    // 3. Kontrollojmë nëse ky NUI (Numër Biznesi) ekziston
+    const existingBusinessNui = await prisma.businesses.findUnique({
       where: { nui: nui }
     });
     
-    if (existingBusiness) {
+    if (existingBusinessNui) {
       return NextResponse.json({ 
         error: "Ky Numër Biznesi (NUI) është i regjistruar një herë në sistemin tonë!" 
       }, { status: 400 });
@@ -31,13 +40,13 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Krijimi me Transaction
+    // 4. Krijimi me Transaction
     const result = await prisma.$transaction(async (tx) => {
       
       const newBusiness = await tx.businesses.create({
         data: {
           name: name,
-          email: email,
+          email: safeEmail,
           phone: phone,
           nui: nui, 
           city: city || null,
@@ -50,7 +59,7 @@ export async function POST(req: Request) {
       const newUser = await tx.users.create({
         data: {
           full_name: name, 
-          email: email,
+          email: safeEmail,
           password: hashedPassword,
           role: "admin", 
           business_id: newBusiness.id,
@@ -64,10 +73,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true }, { status: 201 });
 
   } catch (error: any) {
-    // Ruajmë gabimin e plotë të databazës në server (për sytë e tu/logfile)
     console.error("❌ GABIM KRITIK NË REGJISTRIM:", error);
 
-    // Kapim saktësisht gabimin e Foreign Key për aktivitetin (P2003 është kodi i Prisma-s për këtë)
     if (error.code === 'P2003' || (error.message && error.message.includes('activityId'))) {
       return NextResponse.json(
         { error: "Ju lutem zgjidhni një lloj të vlefshëm aktiviteti nga lista." }, 
@@ -75,7 +82,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Për çdo gabim tjetër "të frikshëm", i japim përdoruesit një mesazh të qetë e të pastër
     return NextResponse.json({ 
       error: "Ndodhi një gabim teknik gjatë regjistrimit. Ju lutem provoni përsëri." 
     }, { status: 500 });

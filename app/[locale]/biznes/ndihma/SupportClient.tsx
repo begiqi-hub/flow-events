@@ -84,7 +84,7 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   useEffect(() => { if (activeTicketId) scrollToBottom(); }, [activeTicketId, tickets]);
 
-  // Funksioni për ngarkimin e fotos nga kompjuteri/telefoni
+  // Funksioni për ngarkimin e fotos
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -104,7 +104,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
     e.preventDefault();
     setIsSubmitting(true);
     
-    // KËTU DËRGOJMË EDHE FOTON SI PARAMETËR I 3-të
     const res = await createTicketAction(newSubject, newMessage, selectedImage);
     
     setIsSubmitting(false);
@@ -129,16 +128,15 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
     const imgToSend = selectedImage;
     
     setChatInput("");
-    setSelectedImage(null); // Pastrojmë foton nga preview
+    setSelectedImage(null); 
     
-    // KËTU DËRGOJMË EDHE FOTON SI PARAMETËR I 3-të
     const res = await sendMessageAction(activeTicketId, msg, imgToSend);
     
     if (!res.error) {
       router.refresh();
     } else {
       alert(res.error);
-      setChatInput(msg); // Nëse dështon ia kthejmë tekstin
+      setChatInput(msg); 
       setSelectedImage(imgToSend);
     }
   };
@@ -150,6 +148,13 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
       q.a.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })).filter(cat => cat.questions.length > 0);
+
+  const getTicketNumber = (id: string) => {
+    return `#${id.substring(0, 6).toUpperCase()}`;
+  };
+
+  // Merr të dhënat e tiketës aktive
+  const activeTicket = tickets.find(t => t.id === activeTicketId);
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 md:p-8 h-[calc(100vh-100px)] flex flex-col animate-in fade-in">
@@ -223,7 +228,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
                 ))}
               </div>
 
-              {/* BUTONI PËR CHAT NË FUND TË NDIHMËS */}
               <div className="mt-16 p-8 bg-blue-600 rounded-[32px] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-blue-200">
                 <div className="text-center md:text-left">
                   <h3 className="text-xl font-black mb-1">Nuk e gjetët atë që kërkoni?</h3>
@@ -252,11 +256,13 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
                 {tickets.map(t => (
                   <button key={t.id} onClick={() => { setActiveTicketId(t.id); setIsCreating(false); setSelectedImage(null); }} className={`w-full text-left p-4 rounded-2xl border transition-all ${activeTicketId === t.id ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-100' : 'bg-transparent border-transparent hover:bg-white hover:border-gray-200'}`}>
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-bold text-gray-900 truncate text-sm">{t.subject}</span>
+                      <span className="font-bold text-gray-900 truncate text-sm">
+                        <span className="text-blue-400 mr-1">{getTicketNumber(t.id)}</span>
+                        {t.subject}
+                      </span>
                       {t.status === 'closed' ? <CheckCircle2 size={14} className="text-emerald-500" /> : <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 animate-pulse"></span>}
                     </div>
                     <p className="text-xs text-gray-500 truncate">
-                      {/* Tregues nëse mesazhi i fundit ishte Foto */}
                       {t.messages[t.messages.length - 1]?.image_url ? "🖼️ Foto e dërguar" : t.messages[t.messages.length - 1]?.message}
                     </p>
                   </button>
@@ -277,7 +283,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
                       <div className="relative">
                         <textarea required placeholder="Na shpjegoni detajet..." className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl outline-none focus:border-blue-400 font-medium h-40 resize-none pb-12" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}></textarea>
                         
-                        {/* Butoni i ngarkimit të fotos në Kërkesën e re */}
                         <div className="absolute bottom-4 left-4 flex items-center gap-3">
                           <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
                           <button type="button" onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 bg-white p-2 rounded-lg border border-gray-200 shadow-sm transition-colors flex items-center gap-2">
@@ -286,7 +291,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
                         </div>
                       </div>
 
-                      {/* Parapamja (Preview) e Fotos së zgjedhur */}
                       {selectedImage && (
                         <div className="relative inline-block border-2 border-dashed border-blue-200 p-2 rounded-xl bg-blue-50">
                           <img src={selectedImage} alt="Preview" className="h-32 w-auto object-contain rounded-lg" />
@@ -299,73 +303,86 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
                       <button disabled={isSubmitting} className="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold w-full shadow-md mt-4">{isSubmitting ? "Po dërgohet..." : "Dërgo Kërkesën"}</button>
                    </form>
                 </div>
-              ) : activeTicketId ? (
+              ) : activeTicketId && activeTicket ? (
                 
                 /* CHAT-I I HAPUR */
                 <div className="flex-1 flex flex-col h-full bg-[#F4F6F8]">
                    <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center gap-3 shadow-sm z-10">
                       <button onClick={() => setActiveTicketId(null)} className="md:hidden p-2 bg-gray-50 rounded-lg"><ArrowLeft size={18}/></button>
-                      <h3 className="font-black text-gray-900 flex-1">{tickets.find(t => t.id === activeTicketId)?.subject}</h3>
+                      <h3 className="font-black text-gray-900 flex-1 flex items-center gap-2">
+                        <span className="text-blue-400">{getTicketNumber(activeTicket.id)}</span>
+                        {activeTicket.subject}
+                      </h3>
+                      {activeTicket.status === 'closed' && (
+                        <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-lg text-xs font-black flex items-center gap-1.5">
+                          <CheckCircle2 size={14} /> E Mbyllur
+                        </span>
+                      )}
                    </div>
                    
                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-                      {tickets.find(t => t.id === activeTicketId)?.messages.map((msg: any) => (
+                      {activeTicket.messages.map((msg: any) => {
+                        const imageUrl = msg.image_url || msg.file_url || msg.attachment_url;
+                        return (
                         <div key={msg.id} className={`flex flex-col ${msg.sender_type === 'business' ? 'items-end' : 'items-start'}`}>
                            <div className={`max-w-[85%] p-4 text-sm font-medium shadow-sm rounded-2xl ${msg.sender_type === 'business' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'}`}>
-                             {/* Shfaqja e Fotos në Chat (nëse ka) */}
-                             {msg.image_url && (
+                             {imageUrl && (
                                <div className="mb-3">
-                                 <img src={msg.image_url} alt="Screenshot" className="rounded-xl max-h-[300px] w-auto object-contain shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(msg.image_url, '_blank')} />
+                                 <img src={imageUrl} alt="Screenshot" className="rounded-xl max-h-[300px] w-auto object-contain shadow-sm cursor-pointer hover:opacity-90 transition-opacity border border-black/10" onClick={() => window.open(imageUrl, '_blank')} />
                                </div>
                              )}
-                             {/* Shfaqja e Tekstit */}
                              {msg.message && <p className="whitespace-pre-wrap">{msg.message}</p>}
                            </div>
                            <span className="text-[10px] text-gray-400 mt-1">{format(new Date(msg.created_at), "HH:mm")}</span>
                         </div>
-                      ))}
+                      )})}
                       <div ref={messagesEndRef} />
                    </div>
 
-                   {/* FORMA E CHAT-IT */}
-                   <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-3 relative">
-                      
-                      {/* Parapamja e Fotos para dërgimit në Chat */}
-                      {selectedImage && (
-                        <div className="absolute bottom-[80px] left-4 bg-white p-2 rounded-2xl shadow-xl border border-gray-200 animate-in slide-in-from-bottom-2">
-                          <img src={selectedImage} alt="Preview" className="h-24 w-auto object-contain rounded-xl" />
-                          <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      )}
+                   {/* FORMA E CHAT-IT E RRETHUAR ME KUSHT */}
+                   {activeTicket.status === 'open' ? (
+                     <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-3 relative">
+                        
+                        {selectedImage && (
+                          <div className="absolute bottom-[80px] left-4 bg-white p-2 rounded-2xl shadow-xl border border-gray-200 animate-in slide-in-from-bottom-2 z-20">
+                            <img src={selectedImage} alt="Preview" className="h-24 w-auto object-contain rounded-xl" />
+                            <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        )}
 
-                      <form onSubmit={handleSendMessage} className="flex gap-2 items-end bg-gray-50 p-2 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:bg-white transition-colors">
-                        
-                        {/* Butoni i kapëses për foto */}
-                        <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0">
-                          <Paperclip size={20} />
-                        </button>
-                        
-                        <textarea 
-                          placeholder="Shkruaj një mesazh..." 
-                          className="flex-1 bg-transparent border-none outline-none px-2 py-3 text-sm resize-none custom-scrollbar min-h-[44px] max-h-[120px]" 
-                          value={chatInput} 
-                          onChange={(e) => setChatInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage(e as any);
-                            }
-                          }}
-                        />
-                        
-                        <button type="submit" disabled={(!chatInput.trim() && !selectedImage) || isSubmitting} className="bg-blue-600 text-white w-11 h-11 flex items-center justify-center rounded-xl shadow-sm shrink-0 disabled:bg-gray-300 transition-colors">
-                          <Send size={18} className="ml-1" />
-                        </button>
-                      </form>
-                   </div>
+                        <form onSubmit={handleSendMessage} className="flex gap-2 items-end bg-gray-50 p-2 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:bg-white transition-colors">
+                          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0">
+                            <Paperclip size={20} />
+                          </button>
+                          
+                          <textarea 
+                            placeholder="Shkruaj një mesazh..." 
+                            className="flex-1 bg-transparent border-none outline-none px-2 py-3 text-sm resize-none custom-scrollbar min-h-[44px] max-h-[120px]" 
+                            value={chatInput} 
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage(e as any);
+                              }
+                            }}
+                          />
+                          
+                          <button type="submit" disabled={(!chatInput.trim() && !selectedImage) || isSubmitting} className="bg-blue-600 text-white w-11 h-11 flex items-center justify-center rounded-xl shadow-sm shrink-0 disabled:bg-gray-300 transition-colors">
+                            <Send size={18} className="ml-1" />
+                          </button>
+                        </form>
+                     </div>
+                   ) : (
+                     <div className="p-6 bg-gray-50 border-t border-gray-100 shrink-0 text-center">
+                        <p className="text-sm font-bold text-gray-500 flex items-center justify-center gap-2">
+                           <X size={16}/> Kjo kërkesë është mbyllur dhe nuk mund të dërgohen më mesazhe.
+                        </p>
+                     </div>
+                   )}
                 </div>
               ) : (
                 <div className="text-center text-gray-400 p-8">

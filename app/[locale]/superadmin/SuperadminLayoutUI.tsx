@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, Building2, LifeBuoy, Users, CreditCard, 
-  Settings, LogOut, Menu, X, Bell, UserCircle, ShieldCheck, 
-  FileText, Activity, BarChart3, Landmark, Megaphone, Banknote 
+  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, Banknote, FileText, ShieldCheck
 } from "lucide-react";
 
 export default function SuperadminLayoutUI({ user, locale, notifications, children }: any) {
@@ -17,7 +16,6 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
   
   const pathname = usePathname();
 
-  // Refs për mbylljen e dropdown-eve kur klikohet jashtë
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -34,26 +32,27 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Mbyll menunë kur ndryshon faqja në mobile
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // 1. Grupi i Menaxhimit
+  // ZGJIDHJA BULLETPROOF: Konvertojmë ID-në në String gjithmonë para se të përdorim startsWith
+  const ticketBadgeCount = notifications?.filter((n: any) => String(n.id).startsWith('ticket_')).length || 0;
+  const paymentBadgeCount = notifications?.filter((n: any) => String(n.id).startsWith('pay_')).length || 0;
+
   const navItems = [
     { name: "Mission Control", href: `/${locale}/superadmin`, icon: LayoutDashboard },
     { name: "Bizneset", href: `/${locale}/superadmin/bizneset`, icon: Building2 },
     { name: "Raportet Financiare", href: `/${locale}/superadmin/raportet`, icon: BarChart3 },
-    { name: "Kërkesat (Tickets)", href: `/${locale}/superadmin/ndihma`, icon: LifeBuoy, badge: notifications?.length || 0 },
+    { name: "Kërkesat (Tickets)", href: `/${locale}/superadmin/ndihma`, icon: LifeBuoy, badge: ticketBadgeCount },
     { name: "Paketat (Abonimet)", href: `/${locale}/superadmin/paketat`, icon: CreditCard },
-    { name: "Aprovimi i Pagesave", href: `/${locale}/superadmin/pagesat`, icon: Banknote },
+    { name: "Aprovimi i Pagesave", href: `/${locale}/superadmin/pagesat`, icon: Banknote, badge: paymentBadgeCount },
   ];
 
-  // 2. Grupi i Sistemit
   const systemItems = [
     { name: "Stafi i Platformës", href: `/${locale}/superadmin/perdoruesit`, icon: Users },
     { name: "Llogaritë Bankare", href: `/${locale}/superadmin/banka`, icon: Landmark },
-    { name: "Audit Logs", href: `/${locale}/superadmin/logs`, icon: FileText },
+    { name: "Audit Logs", href: `/${locale}/superadmin/logs`, icon: FileText }, 
     { name: "Konfigurimet", href: `/${locale}/superadmin/konfigurimet`, icon: Settings },
     { name: "Njoftimet Globale", href: `/${locale}/superadmin/njoftimet`, icon: Megaphone },
   ];
@@ -61,7 +60,6 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
   return (
     <div className="flex h-screen bg-[#F4F6F8] overflow-hidden font-sans w-full relative">
       
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] md:hidden transition-opacity"
@@ -69,13 +67,11 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
         />
       )}
 
-      {/* SIDEBAR */}
       <aside className={`
         fixed inset-y-0 left-0 z-[110] flex flex-col bg-[#0F172A] border-r border-slate-800 shadow-2xl transition-all duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
         md:relative md:translate-x-0 w-64 shrink-0
       `}>
-        {/* Butoni mbyllës në Mobile */}
         <button 
           onClick={() => setIsMobileMenuOpen(false)}
           className="md:hidden absolute right-4 top-6 text-slate-400 hover:text-white bg-slate-800 rounded-full p-2"
@@ -84,13 +80,10 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
         </button>
 
         <div className="h-16 md:h-20 flex items-center px-6 border-b border-slate-800/50 shrink-0">
-          <div className="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shrink-0">
-            <ShieldCheck size={24} />
-          </div>
-          <div className="ml-3 overflow-hidden whitespace-nowrap">
-            <h1 className="text-lg font-extrabold text-white tracking-tight leading-none truncate">Flow Superadmin</h1>
-            <p className="text-[10px] text-indigo-300 font-medium uppercase tracking-wider mt-0.5 truncate">Sistemi Qendror</p>
-          </div>
+          <Link href={`/${locale}/superadmin`} className="flex items-center">
+             <img src="/logo.svg" alt="Logo" className="h-7 w-auto object-contain block md:hidden" />
+             <img src="/logo.svg" alt="Logo" className="h-8 w-auto object-contain hidden md:block filter invert brightness-0" />
+          </Link>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 flex flex-col gap-1.5 px-3 custom-scrollbar">
@@ -139,10 +132,8 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
         </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col h-full relative min-w-0">
         
-        {/* TOPBAR */}
         <header className="h-16 md:h-20 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 sm:px-6 z-[60] sticky top-0 w-full shadow-sm shrink-0">
           
           <div className="flex items-center gap-3">
@@ -152,15 +143,14 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
             <div className="hidden sm:flex items-center gap-2 text-[10px] sm:text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 shrink-0">
               <Activity size={16} className="animate-pulse" /> <span className="hidden md:block">Server Status: Optimal</span>
             </div>
-            {/* Shfaqja e emrit në mobile kur menuja është mbyllur */}
-            <div className="md:hidden truncate min-w-0 ml-1">
+            <div className="md:hidden truncate min-w-0 flex items-center gap-2">
+               <img src="/icon-512x512.png" alt="Icon" className="w-6 h-6 object-contain rounded" />
                <h1 className="text-sm font-bold text-gray-900 truncate">Sistemi Qendror</h1>
             </div>
           </div>
           
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             
-            {/* Notifications */}
             <div className="relative shrink-0" ref={notifRef}>
               <button 
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -187,15 +177,14 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
 
             <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
 
-            {/* Profile */}
             <div className="relative shrink-0" ref={profileRef}>
               <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 sm:gap-3 hover:bg-gray-50 p-1 sm:p-1.5 rounded-xl border border-transparent hover:border-gray-100 transition-colors">
                 <div className="text-right hidden sm:block max-w-[120px]">
                   <p className="text-sm font-bold text-gray-900 truncate leading-none">{user?.full_name || "Superadmin"}</p>
-                  <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider mt-1 truncate">Admin</p>
+                  <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider mt-1 truncate">{user?.role === 'support' ? 'Support' : 'Admin'}</p>
                 </div>
-                <div className="bg-[#0F172A] p-1.5 sm:p-2 rounded-full text-white shadow-md">
-                  <UserCircle size={20} className="sm:w-5 sm:h-5" />
+                <div className="bg-[#0F172A] w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-md overflow-hidden border-2 border-[#0F172A]">
+                  <img src="/icon-512x512.png" alt="Profile" className="w-full h-full object-cover" />
                 </div>
               </button>
               {isProfileOpen && (
@@ -212,7 +201,6 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
           </div>
         </header>
 
-        {/* MAIN CONTENT - Shtuam Padding që mos ngjiten elementet me murin në celular */}
         <main className="flex-1 overflow-y-auto relative p-4 md:p-8">
           {children}
         </main>

@@ -16,7 +16,7 @@ export default async function PerdoruesitPage({ params }: { params: Promise<{ lo
     include: {
       users: {
         where: {
-          role: { not: 'superadmin' } // Fsheh superadminin nga lista
+          role: { notIn: ['superadmin', 'support'] } // <--- Fsheh superadminin dhe supportin
         },
         orderBy: { created_at: 'desc' }
       }
@@ -33,7 +33,7 @@ export default async function PerdoruesitPage({ params }: { params: Promise<{ lo
         include: {
           users: {
             where: {
-              role: { not: 'superadmin' } // Fsheh superadminin edhe për stafin
+              role: { notIn: ['superadmin', 'support'] } // <--- Fsheh edhe këtu
             },
             orderBy: { created_at: 'desc' }
           }

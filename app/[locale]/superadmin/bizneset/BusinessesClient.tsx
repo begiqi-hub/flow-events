@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { format } from "date-fns";
 import { sq } from "date-fns/locale";
 import { 
-  Building2, Search, Plus, Edit, Trash2, 
-  CheckCircle2, Clock, MapPin, Mail, Phone, ExternalLink, ShieldOff,
-  X, Shield, KeyRound, User, Save, Eye
+  Building2, Search, Edit,
+  CheckCircle2, Clock, Mail, Phone, ExternalLink, ShieldOff,
+  X, Shield, KeyRound, Save, Eye
 } from "lucide-react";
 import { updateBusinessInfo, resetBusinessPassword, getImpersonationToken } from "./actions";
 import { useRouter } from "next/navigation";
@@ -28,11 +27,20 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  // FILTRIMI I BIZNESEVE
   const filteredBusinesses = businesses.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (b.email && b.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                           (b.nui && b.nui.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = statusFilter === "all" || b.status === statusFilter;
+    
+    // Logjika: "all" i fsheh trialet, i shfaq vetëm kur zgjidhet "trial"
+    let matchesStatus = false;
+    if (statusFilter === "all") {
+       matchesStatus = b.status !== "trial"; 
+    } else {
+       matchesStatus = b.status === statusFilter;
+    }
+
     return matchesSearch && matchesStatus;
   });
 
@@ -69,7 +77,8 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
     setEditingBusiness(b);
     setFormData({
       name: b.name || "", nui: b.nui || "", email: b.email || "",
-      phone: b.phone || "", country: b.country || "", city: b.city || "", address: b.address || ""
+      phone: b.phone || "", country: b.country || "", city: b.city || "", address: b.address || "",
+      status: b.status || "trial" // Shtohet statusi për t'u modifikuar
     });
     setNewPassword("");
     setMessage({ type: "", text: "" });
@@ -124,15 +133,9 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
             Bizneset e Regjistruara
           </h1>
           <p className="text-gray-500 font-medium mt-1">
-            Menaxho të gjitha kompanitë që përdorin platformën (Totali: {businesses.length})
+            Menaxho të gjitha kompanitë që përdorin platformën (Aktiv & Bllokuar: {businesses.filter(b => b.status !== 'trial').length})
           </p>
         </div>
-        <Link 
-          href={`/${locale}/superadmin/bizneset/shto`} 
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md flex items-center gap-2"
-        >
-          <Plus size={18} /> Shto Biznes
-        </Link>
       </div>
 
       {/* FILTRAT */}
@@ -152,10 +155,10 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="all">Të Gjitha Statuset</option>
+          <option value="all">Të Gjitha (Pa Provat)</option>
           <option value="active">🟢 Aktive</option>
-          <option value="trial">🟠 Në Provë (Trial)</option>
           <option value="suspended">🔴 Të Bllokuara</option>
+          <option value="trial">🟠 Në Provë (Trial)</option>
         </select>
       </div>
 
@@ -221,7 +224,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                     </div>
                   </td>
 
-                  {/* STATUSI */}
+                  {/* STATUSI & DATA (Përditësuar me Skadimin) */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col items-start gap-1">
                       {b.status === 'active' ? (
@@ -237,9 +240,15 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                           <Clock size={12}/> PROVË
                         </span>
                       )}
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                        {format(new Date(b.created_at), "dd MMM yyyy", { locale: sq })}
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1" title="Data e regjistrimit">
+                        Reg: {format(new Date(b.created_at), "dd MMM yyyy", { locale: sq })}
                       </p>
+                      {/* SHFAQJA E DATËS SË SKADIMIT NËSE EKZISTON */}
+                      {b.trialEndsAt && (
+                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5" title="Data kur përfundon prova ose skadon pakoja">
+                          Skadon: {format(new Date(b.trialEndsAt), "dd MMM yyyy", { locale: sq })}
+                        </p>
+                      )}
                     </div>
                   </td>
 
@@ -253,11 +262,10 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                     </div>
                   </td>
 
-                  {/* VEPRIME */}
+                  {/* VEPRIME (Hequr fshirja) */}
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       
-                      {/* BUTONI: HYR SI KY BIZNES */}
                       <button 
                         onClick={() => handleImpersonate(b.id)}
                         className="p-2.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl transition-all border border-indigo-100 shadow-sm"
@@ -269,12 +277,9 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                       <button 
                         onClick={() => openEditModal(b)}
                         className="p-2.5 bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 rounded-xl transition-colors border border-gray-100 hover:border-indigo-100"
-                        title="Modifiko & Siguria"
+                        title="Modifiko & Statusi"
                       >
                         <Edit size={16} />
-                      </button>
-                      <button className="p-2.5 bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-xl transition-colors border border-gray-100 hover:border-red-100">
-                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -298,7 +303,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
             <div className="bg-gray-50 px-8 py-6 border-b border-gray-100 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-black text-gray-900">{editingBusiness.name}</h3>
-                <p className="text-sm font-medium text-gray-500 mt-0.5">Menaxho detajet ose reseto fjalëkalimin</p>
+                <p className="text-sm font-medium text-gray-500 mt-0.5">Menaxho detajet, statusin ose fjalëkalimin</p>
               </div>
               <button onClick={() => setEditingBusiness(null)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
                 <X size={20} />
@@ -354,6 +359,23 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                     <div>
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Qyteti</label>
                       <input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} placeholder="Psh. Prishtinë" className="w-full bg-gray-50 border border-gray-100 p-3.5 rounded-2xl outline-none focus:border-indigo-400 font-bold mt-1" />
+                    </div>
+                    
+                    {/* SHTUAR: Ndryshimi i Statusit (Aktiv/Bllokuar) */}
+                    <div className="col-span-2 mt-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                        <ShieldOff size={12}/> Menaxhimi i Llogarisë
+                      </label>
+                      <select 
+                        value={formData.status} 
+                        onChange={e => setFormData({...formData, status: e.target.value})} 
+                        className="w-full bg-gray-50 border border-gray-100 p-3.5 rounded-2xl outline-none focus:border-indigo-400 font-bold mt-1 text-gray-800"
+                      >
+                        <option value="active">🟢 Aktivizo Llogarinë (Normale)</option>
+                        <option value="suspended">🔴 Blloko (Pezullo qasjen)</option>
+                        <option value="trial">🟠 Kthe në Provë (Trial)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-2 ml-1 font-medium">Bllokimi i llogarisë pengon përdoruesin të logohet në sistem.</p>
                     </div>
                   </div>
                   <button type="submit" disabled={isSaving} className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl font-black transition-all flex justify-center items-center gap-2">

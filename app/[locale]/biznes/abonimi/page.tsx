@@ -11,18 +11,29 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  // 1. Tërheqim biznesin
+  // 1. Tërheqim biznesin dhe bashkangjisim pagesat (faturat)
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email },
-    include: { package: true }
+    include: { 
+      package: true,
+      sa_payments: {
+        orderBy: { created_at: 'desc' }
+      }
+    }
   });
 
   if (!business) {
-    const staffUser = await prisma.users.findUnique({ where: { email: session.user.email } });
+    // SIGURIA: Ndryshuam në findFirst për të mos pasur probleme me Cache
+    const staffUser = await prisma.users.findFirst({ where: { email: session.user.email } });
     if (staffUser?.business_id) {
       business = await prisma.businesses.findUnique({
         where: { id: staffUser.business_id },
-        include: { package: true }
+        include: { 
+          package: true,
+          sa_payments: {
+            orderBy: { created_at: 'desc' }
+          }
+        }
       });
     }
   }
@@ -34,6 +45,7 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
     orderBy: { monthly_price: 'asc' }
   });
 
+  // Këtu po tërhiqen automatikisht edhe NUI dhe konfigurimet e pagesave që sapo shtuam!
   const systemSettings = await prisma.system_settings.findFirst() || {};
   const bankAccount = await prisma.bank_accounts.findFirst({ where: { is_active: true } }) || {};
 

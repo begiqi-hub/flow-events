@@ -17,7 +17,9 @@ export default async function SuperadminUsersPage(props: { params: Promise<{ loc
   // Marrim VETËM stafin e platformës (Superadminët)
   const users = await prisma.users.findMany({
     where: {
-      role: 'superadmin' 
+      role: {
+        in: ['superadmin', 'support']
+      }
     },
     orderBy: { created_at: 'desc' }
   });

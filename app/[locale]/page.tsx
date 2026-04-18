@@ -16,9 +16,8 @@ const SLIDER_IMAGES = [
 ];
 
 export default function LandingPage() {
-  // Përdorim hook-et e klientit për përkthimet dhe gjuhën aktuale
   const t = useTranslations("Landing"); 
-  const locale = useLocale(); // <--- KJO ZGJIDH ERRORIN E PARË!
+  const locale = useLocale();
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -35,7 +34,7 @@ export default function LandingPage() {
       <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
           
-          {/* Logoja e Zmadhuar dhe e Klikueshme */}
+          {/* Logoja */}
           <Link href={`/${locale}`} className="flex items-center shrink-0">
             <img src="/logo.svg" alt="HALLEVO" className="h-8 sm:h-11 w-auto object-contain" />
           </Link>
@@ -54,7 +53,7 @@ export default function LandingPage() {
       {/* PJESA KRYESORE */}
       <div className="flex-grow">
         
-        {/* 1. HERO SECTION ME SLIDER TË FOTOVE */}
+        {/* 1. HERO SECTION */}
         <main className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-visible">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-br from-indigo-50/50 via-white to-orange-50/50 opacity-80 pointer-events-none rounded-b-[4rem]"></div>
 
@@ -177,12 +176,29 @@ export default function LandingPage() {
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white"><Bot size={20} /></div>
                     <div><h4 className="text-white font-bold text-sm">HALL AI Agent</h4><p className="text-emerald-400 text-xs flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Online</p></div>
                   </div>
+                  
+                  {/* KËTU ËSHTË NDRYSHIMI: Biseda tani lexon përkthimet nga JSON */}
                   <div className="space-y-4 font-medium text-sm">
-                    <div className="flex justify-end"><div className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] shadow-sm">Përshëndetje! Dua të di a keni të lirë sallën e madhe më 15 Gusht për 250 persona?</div></div>
-                    <div className="flex items-center gap-2 text-gray-500 text-xs px-2 mb-2"><Zap size={12} className="text-amber-400" /> HALL AI po kontrollon kalendarin...</div>
-                    <div className="flex justify-start"><div className="bg-gray-700/50 text-gray-200 border border-gray-600/50 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm">Përshëndetje! 👋 Po, Salla Diamant është e lirë më 15 Gusht. Për 250 persona, Menuja Jonë Standarde fillon nga 45€/personi. A dëshironi t'ju dërgoj një faturë pro-formë në WhatsApp?</div></div>
-                    <div className="flex items-center justify-center mt-6"><div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2"><CheckCircle2 size={14} /> Oferta u dërgua automatikisht</div></div>
+                    <div className="flex justify-end">
+                      <div className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] shadow-sm">
+                        {t("aiChatUser")}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-500 text-xs px-2 mb-2">
+                      <Zap size={12} className="text-amber-400" /> {t("aiChatStatus")}
+                    </div>
+                    <div className="flex justify-start">
+                      <div className="bg-gray-700/50 text-gray-200 border border-gray-600/50 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm">
+                        {t("aiChatReply")}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center mt-6">
+                      <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2">
+                        <CheckCircle2 size={14} /> {t("aiChatSent")}
+                      </div>
+                    </div>
                   </div>
+
                 </div>
                 <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-gradient-to-br from-[#FF5C39] to-orange-400 rounded-2xl -z-10 blur-xl opacity-50"></div>
               </div>
@@ -311,7 +327,7 @@ export default function LandingPage() {
 
             <div className="mt-12 text-center">
                <Link href={`/${locale}/register`} className="inline-flex items-center justify-center gap-2 bg-[#FF5C39] hover:bg-[#e84e2d] text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 text-lg">
-                  Fillo Provën 14-Ditore <ArrowRight size={20} />
+                 {t("trialBtn")} <ArrowRight size={20} />
                </Link>
             </div>
           </div>
@@ -336,7 +352,7 @@ export default function LandingPage() {
               </div>
               <div className="mb-8">
                 <label className="block text-sm font-bold text-gray-700 mb-2">{t("contactMsgLabel")}</label>
-                <textarea rows={4} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow resize-none" placeholder="Përshkruani kërkesën tuaj..."></textarea>
+                <textarea rows={4} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow resize-none" placeholder="..."></textarea>
               </div>
               <button type="button" className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
                 <Send size={18} /> {t("contactBtn")}
@@ -358,24 +374,24 @@ export default function LandingPage() {
                 <img src="/logo.svg" alt="HALLEVO" className="h-12 sm:h-16 w-auto object-contain grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all" />
               </Link>
               <p className="text-gray-500 text-sm max-w-xs font-medium leading-relaxed">
-                Sistemi më i avancuar për menaxhimin e sallave të eventeve, restoranteve dhe dasmave.
+                {t("heroDesc")}
               </p>
             </div>
 
             <div>
               <h4 className="font-bold text-gray-900 mb-4">{t("footerProduct")}</h4>
               <ul className="space-y-3">
-                <li><Link href={`/${locale}/login`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">Hyr në Sistem</Link></li>
-                <li><Link href={`/${locale}/register`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">Fillo Falas</Link></li>
+                <li><Link href={`/${locale}/login`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("loginBtn")}</Link></li>
+                <li><Link href={`/${locale}/register`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("registerBtn")}</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-bold text-gray-900 mb-4">{t("footerLegal")}</h4>
               <ul className="space-y-3">
-                <li><Link href={`/${locale}/kushtet`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("footerTerms")}</Link></li>
-                <li><Link href={`/${locale}/privatesia`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("footerPrivacy")}</Link></li>
-                <li><Link href={`/${locale}/refund`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">Politika e Rimbursimit</Link></li>
+                <li><Link href={`/${locale}/terms-and-conditions`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("footerTerms")}</Link></li>
+                <li><Link href={`/${locale}/privacy`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("footerPrivacy")}</Link></li>
+                <li><Link href={`/${locale}/refund`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">Refund Policy</Link></li>
                 <li><Link href={`/${locale}/cookies`} className="text-gray-500 hover:text-[#FF5C39] text-sm font-medium transition-colors">{t("footerCookies")}</Link></li>
               </ul>
             </div>

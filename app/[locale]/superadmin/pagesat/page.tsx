@@ -8,14 +8,13 @@ export default async function PagesatPage({ params }: { params: Promise<{ locale
 
   const payments = await prisma.sa_payments.findMany({
     include: {
-      businesses: {
-        include: {
-          package: true 
-        }
-      }
+      businesses: true // Tërheqim biznesin
     },
     orderBy: { created_at: 'desc' }
   });
+
+  // Marrim të gjitha paketat për të përkthyer ID-në që vjen te "description"
+  const packages = await prisma.package.findMany();
 
   // Marrja e të dhënave të sistemit për faturën
   const systemSettings = await prisma.system_settings.findFirst() || {};
@@ -24,6 +23,7 @@ export default async function PagesatPage({ params }: { params: Promise<{ locale
   return (
     <PaymentsClient 
       initialPayments={JSON.parse(JSON.stringify(payments))} 
+      packages={JSON.parse(JSON.stringify(packages))} // SHTUAR KËTU
       locale={locale} 
       systemSettings={JSON.parse(JSON.stringify(systemSettings))}
       bankAccount={JSON.parse(JSON.stringify(bankAccount))}

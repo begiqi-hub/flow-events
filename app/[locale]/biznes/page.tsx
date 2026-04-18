@@ -92,8 +92,8 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
     { id: 'hall', title: "Shto Sallën e Parë", icon: Building2, isCompleted: realHalls > 0, link: `/${locale}/biznes/sallat/shto?onboarding=true` },
     { id: 'menu', title: "Krijo një Menu", icon: Utensils, isCompleted: realMenus > 0, link: `/${locale}/biznes/menut/shto?onboarding=true` },
     { id: 'extra', title: "Shto Shërbime Ekstra", icon: Sparkles, isCompleted: realExtras > 0, link: `/${locale}/biznes/ekstra/shto?onboarding=true` },
-    { id: 'bank', title: "Llogaria Bankare (IBAN)", icon: Landmark, isCompleted: !!business.iban || !!business.bank_name, link: `/${locale}/biznes/banka?onboarding=true` },
-    { id: 'policy', title: "Politika e Anulimit", icon: ShieldAlert, isCompleted: (business.cancel_penalty ?? 0) > 0, link: `/${locale}/biznes/konfigurimet/politika?onboarding=true` },
+    { id: 'bank', title: "Llogaria Bankare", icon: Landmark, isCompleted: !!business.iban || !!business.bank_name, link: `/${locale}/biznes/banka?onboarding=true` },
+    { id: 'policy', title: "Politika & Kontrata", icon: ShieldAlert, isCompleted: (business.cancel_penalty ?? 0) > 0, link: `/${locale}/biznes/konfigurimet/politika?onboarding=true` },
   ];
 
   const completedTasks = tasks.filter(t => t.isCompleted).length;

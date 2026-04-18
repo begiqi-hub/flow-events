@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { sq } from "date-fns/locale";
 import { 
   LifeBuoy, Search, CheckCircle2, Clock, Send, 
-  Building2, Mail, Phone, ShieldCheck, AlertCircle, XCircle
+  Building2, Mail, Phone, ShieldCheck, AlertCircle, XCircle, Image as ImageIcon
 } from "lucide-react";
 import { replyToTicket, closeTicket } from "./actions";
 
@@ -19,16 +19,15 @@ export default function TicketsClient({ locale, tickets }: { locale: string, tic
   
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-Refresh në prapaskenë çdo 5 sekonda për të marrë mesazhet e reja
+  // Auto-Refresh në prapaskenë çdo 5 sekonda
   useEffect(() => {
     const interval = setInterval(() => {
-      router.refresh(); // Kjo merr të dhënat e reja pa ta bllokuar ekranin
-    }, 5000); // 5000 milisekonda = 5 sekonda
-
+      router.refresh();
+    }, 5000);
     return () => clearInterval(interval);
   }, [router]);
 
-  // Auto-scroll në fund të bisedës kur ndryshon ticket
+  // Auto-scroll në fund të bisedës
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeTicketId, tickets]);
@@ -59,6 +58,11 @@ export default function TicketsClient({ locale, tickets }: { locale: string, tic
     if (!activeTicketId) return;
     if (!confirm("A jeni i sigurt që doni ta mbyllni këtë kërkesë?")) return;
     await closeTicket(activeTicketId, locale);
+  };
+
+  // Gjeneron një numër të shkurtër tikete nga ID-ja (psh. #A1B2C3)
+  const getTicketNumber = (id: string) => {
+    return `#${id.substring(0, 6).toUpperCase()}`;
   };
 
   return (
@@ -104,7 +108,7 @@ export default function TicketsClient({ locale, tickets }: { locale: string, tic
               >
                 <div className="flex justify-between items-start mb-1.5">
                   <span className={`text-[10px] font-black uppercase tracking-wider ${activeTicketId === t.id ? 'text-indigo-600' : 'text-gray-500'}`}>
-                    {t.businesses?.name || "Biznes i panjohur"}
+                    <span className="text-indigo-400 mr-1">{getTicketNumber(t.id)}</span> • {t.businesses?.name || "Biznes i panjohur"}
                   </span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${t.status === 'open' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                     {t.status === 'open' ? 'E Hapur' : 'E Mbyllur'}
@@ -133,7 +137,10 @@ export default function TicketsClient({ locale, tickets }: { locale: string, tic
             {/* Chat Header */}
             <div className="h-20 border-b border-gray-100 px-6 flex items-center justify-between bg-white shrink-0 shadow-sm relative z-10">
               <div>
-                <h2 className="text-lg font-black text-gray-900 leading-tight">{activeTicket.subject}</h2>
+                <h2 className="text-lg font-black text-gray-900 leading-tight">
+                  <span className="text-indigo-400 mr-2">{getTicketNumber(activeTicket.id)}</span>
+                  {activeTicket.subject}
+                </h2>
                 <div className="flex items-center gap-3 mt-1 text-xs font-bold text-gray-500">
                   <span className="flex items-center gap-1"><Building2 size={12} className="text-indigo-400"/> {activeTicket.businesses?.name}</span>
                   <span className="flex items-center gap-1"><Mail size={12} className="text-gray-400"/> {activeTicket.businesses?.email}</span>
@@ -166,9 +173,13 @@ export default function TicketsClient({ locale, tickets }: { locale: string, tic
 
               {activeTicket.messages?.map((msg: any) => {
                 const isSuperadmin = msg.sender_type === 'superadmin';
+                
+                // Kapim fushat më të zakonshme ku mund të jetë ruajtur URL-ja e fotos në databazë
+                const imageUrl = msg.file_url || msg.image_url || msg.attachment_url;
+
                 return (
                   <div key={msg.id} className={`flex w-full ${isSuperadmin ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isSuperadmin ? 'items-end' : 'items-start'}`}>
+                    <div className={`max-w-[85%] md:max-w-[70%] flex flex-col ${isSuperadmin ? 'items-end' : 'items-start'}`}>
                       <div className="flex items-center gap-2 mb-1.5 px-1">
                         {isSuperadmin ? (
                           <>
@@ -182,12 +193,26 @@ export default function TicketsClient({ locale, tickets }: { locale: string, tic
                           </>
                         )}
                       </div>
+                      
                       <div className={`p-4 rounded-2xl shadow-sm text-sm font-medium leading-relaxed ${
                         isSuperadmin 
                           ? 'bg-indigo-600 text-white rounded-tr-sm' 
                           : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
                       }`}>
-                        {msg.message}
+                        
+                        {/* NËSE KA FOTO E SHFAQIM KËTU */}
+                        {imageUrl && (
+                          <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="block mb-3">
+                            <img 
+                              src={imageUrl} 
+                              alt="Bashkëngjitje" 
+                              className="max-w-full sm:max-w-[300px] max-h-[300px] object-cover rounded-xl border border-black/10 hover:opacity-90 transition-opacity"
+                            />
+                          </a>
+                        )}
+                        
+                        {/* Teksti i mesazhit */}
+                        {msg.message && <p>{msg.message}</p>}
                       </div>
                     </div>
                   </div>

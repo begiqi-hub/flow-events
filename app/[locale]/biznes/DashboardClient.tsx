@@ -215,65 +215,71 @@ export default function DashboardClient({ business, locale, stats, monthBookings
         </div>
       )}
             
-      {/* KARTAT E PLOTA PREMIUM NË GJERËSI TË PLOTË (FULL-WIDTH) */}
+      {/* GRIDI I KARTAVE - DIZAJN MINIMALIST & PREMIUM */}
       <div className={`grid grid-cols-1 sm:grid-cols-2 ${userRole !== 'manager' ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-6 mb-10 w-full`}>
         
-        {/* Karta 1: Shto Rezervim (E Zeze Gradient) */}
-        <Link href={`/${locale}/biznes/rezervimet/shto`} className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-7 shadow-xl shadow-slate-900/20 hover:-translate-y-1 hover:shadow-slate-900/40 transition-all group relative overflow-hidden flex flex-col justify-between min-h-[160px]">
-          <div className="absolute -right-4 -top-4 text-white/5 group-hover:scale-110 transition-transform duration-500 pointer-events-none"><CalendarIcon size={140} /></div>
-          <div className="w-14 h-14 bg-white/10 rounded-[1.25rem] flex items-center justify-center backdrop-blur-md border border-white/10 relative z-10">
-            <Plus size={26} className="text-white"/>
+        {/* Karta 1: Shto Rezervim (E zezë, elegante) */}
+        <Link href={`/${locale}/biznes/rezervimet/shto`} className="group bg-[#0A0A0A] rounded-[2rem] p-7 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[160px] border border-gray-800">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/20 to-transparent rounded-bl-full pointer-events-none"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-sm group-hover:scale-110 transition-transform">
+              <Plus size={24} className="text-white"/>
+            </div>
+            <div className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider backdrop-blur-sm border border-white/5">E Re</div>
           </div>
           <div className="relative z-10 mt-6">
-            <h3 className="text-white font-black text-xl">{uiTranslations.newBookingBtn || "Shto Rezervim"}</h3>
-            <p className="text-slate-400 text-sm mt-1 font-medium">{uiTranslations.totalBookingsDesc || "Krijo event të ri"}</p>
+            <h3 className="text-white font-bold text-xl">{uiTranslations.newBookingBtn || "Shto Rezervim"}</h3>
+            <p className="text-gray-400 text-sm mt-1">Krijo një event të ri</p>
           </div>
         </Link>
 
-        {/* Karta 2: Evente Këtë Muaj (Blu Gradient) */}
-        <Link href={`/${locale}/biznes/rezervimet?filter=this_month`} className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[2rem] p-7 shadow-xl shadow-blue-600/20 hover:-translate-y-1 hover:shadow-blue-600/40 transition-all group relative overflow-hidden flex flex-col justify-between min-h-[160px]">
-          <div className="absolute -right-2 -bottom-2 text-white/10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"><CalendarCheck size={130} /></div>
+        {/* Karta 2: Evente Këtë Muaj (E Bardhë, e Pastër) */}
+        <Link href={`/${locale}/biznes/rezervimet?filter=this_month`} className="bg-white rounded-[2rem] p-7 shadow-sm border border-gray-100 hover:border-gray-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[160px] relative overflow-hidden group">
           <div className="flex justify-between items-start relative z-10">
-            <div className="w-14 h-14 bg-white/20 rounded-[1.25rem] flex items-center justify-center border border-white/10 backdrop-blur-md shrink-0">
-              <CalendarCheck size={26} className="text-white"/>
+            <div className="w-12 h-12 bg-blue-50/80 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100/50 group-hover:bg-blue-100 transition-colors">
+              <CalendarCheck size={24} className="text-blue-600"/>
             </div>
-            <span className="text-5xl font-black text-white tracking-tighter drop-shadow-sm">{stats.month}</span>
+            <span className="text-4xl font-black text-gray-900 tracking-tighter">{stats.month}</span>
           </div>
-          <div className="relative z-10 mt-4">
-            <h3 className="text-xl font-black text-white">{uiTranslations.eventsThisMonthTitle || "Evente këtë Muaj"}</h3>
-            <span className="text-[11px] font-black text-blue-200 hover:text-white uppercase tracking-widest mt-1.5 block transition-colors">Shko te lista →</span>
+          <div className="relative z-10 mt-6">
+            <h3 className="text-lg font-bold text-gray-900">{uiTranslations.eventsThisMonthTitle || "Evente këtë Muaj"}</h3>
+            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-widest mt-1 block group-hover:text-blue-700">Shko te lista →</span>
           </div>
         </Link>
 
         {userRole !== 'manager' && (
           <>
-            {/* Karta 3: Të Hyrat (Emerald Gradient) */}
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] p-7 shadow-xl shadow-emerald-500/20 hover:-translate-y-1 hover:shadow-emerald-500/40 transition-all group relative overflow-hidden flex flex-col justify-between min-h-[160px]">
-              <div className="absolute -right-2 -bottom-2 text-white/10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"><Landmark size={130} /></div>
-              <div className="w-14 h-14 bg-white/20 rounded-[1.25rem] flex items-center justify-center border border-white/10 backdrop-blur-md shrink-0 relative z-10">
-                <Landmark size={26} className="text-white"/>
+            {/* Karta 3: Të Hyrat (E Bardhë, Jeshile) */}
+            <div className="bg-white rounded-[2rem] p-7 shadow-sm border border-gray-100 hover:border-gray-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[160px] relative overflow-hidden group">
+              <div className="flex justify-between items-start relative z-10">
+                <div className="w-12 h-12 bg-emerald-50/80 rounded-2xl flex items-center justify-center shrink-0 border border-emerald-100/50 group-hover:bg-emerald-100 transition-colors">
+                  <Landmark size={24} className="text-emerald-600"/>
+                </div>
+                <div className="bg-emerald-50 px-3 py-1 rounded-full text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Të Hyrat</div>
               </div>
-              <div className="relative z-10 mt-4">
-                <span className="text-3xl lg:text-[2.5rem] font-black text-white tracking-tight whitespace-nowrap truncate block drop-shadow-sm">
+              <div className="relative z-10 mt-6">
+                <span className="text-3xl font-black text-gray-900 tracking-tight whitespace-nowrap block">
                   {safeRevenue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-base lg:text-lg text-emerald-100 font-bold ml-1.5">{symbol}</span>
+                  <span className="text-base text-gray-400 font-bold ml-1.5">{symbol}</span>
                 </span>
-                <p className="text-[11px] font-black text-emerald-100 uppercase tracking-widest mt-2">{uiTranslations.expectedRevenue || "Të Hyrat e Muajit"}</p>
+                <p className="text-[12px] font-medium text-gray-500 mt-1">Për muajin aktual</p>
               </div>
             </div>
 
-            {/* Karta 4: Borxhet (Red Gradient) */}
-            <Link href={`/${locale}/biznes/rezervimet?filter=debt`} className="bg-gradient-to-br from-rose-500 to-red-600 rounded-[2rem] p-7 shadow-xl shadow-rose-500/20 hover:-translate-y-1 hover:shadow-rose-500/40 transition-all group relative overflow-hidden flex flex-col justify-between min-h-[160px]">
-              <div className="absolute -right-2 -bottom-2 text-white/10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"><Wallet size={130} /></div>
-              <div className="w-14 h-14 bg-white/20 rounded-[1.25rem] flex items-center justify-center border border-white/10 backdrop-blur-md shrink-0 relative z-10">
-                <Wallet size={26} className="text-white"/>
+            {/* Karta 4: Borxhet (E Bardhë, e Kuqe) */}
+            <Link href={`/${locale}/biznes/rezervimet?filter=debt`} className="bg-white rounded-[2rem] p-7 shadow-sm border border-gray-100 hover:border-gray-200 hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[160px] relative overflow-hidden group">
+              <div className="flex justify-between items-start relative z-10">
+                <div className="w-12 h-12 bg-rose-50/80 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100/50 group-hover:bg-rose-100 transition-colors">
+                  <Wallet size={24} className="text-rose-600"/>
+                </div>
+                <div className="bg-rose-50 px-3 py-1 rounded-full text-[10px] font-bold text-rose-600 uppercase tracking-wider">Borxhet</div>
               </div>
-              <div className="relative z-10 mt-4">
-                <span className="text-3xl lg:text-[2.5rem] font-black text-white tracking-tight whitespace-nowrap truncate block drop-shadow-sm">
+              <div className="relative z-10 mt-6">
+                <span className="text-3xl font-black text-gray-900 tracking-tight whitespace-nowrap block">
                   {safePending.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-base lg:text-lg text-rose-100 font-bold ml-1.5">{symbol}</span>
+                  <span className="text-base text-gray-400 font-bold ml-1.5">{symbol}</span>
                 </span>
-                <p className="text-[11px] font-black text-rose-100 uppercase tracking-widest mt-2">{uiTranslations.pendingRevenue || "Mbetjet (Borxhe)"}</p>
+                <p className="text-[12px] font-medium text-gray-500 mt-1">Mbetje e paarkëtuar</p>
               </div>
             </Link>
           </>
