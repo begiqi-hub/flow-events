@@ -210,6 +210,7 @@ export async function saveReservationAction(data: any) {
           business_id: businessId,
           hall_id: data.hall_id,
           client_id: client.id,
+          created_by: user.id, // <--- KJO ËSHTË ZGJIDHJA! Mungonte ky rresht.
           event_date: eventDateObj,
           start_time: startTimeObj,
           end_time: endTimeObj,

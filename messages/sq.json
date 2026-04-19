@@ -220,7 +220,8 @@
     "warningTitle": "Kujdes!",
     "closeBtn": "Mbyll",
     "toastNotFound": "Menuja nuk u gjet!",
-    "toastNetError": "Gabim në rrjet ose internet."
+    "toastNetError": "Gabim në rrjet ose internet.",
+    "networkError": "Ndodhi një gabim në server ose rrjet. Ju lutem provoni përsëri!"
   },
   "AddExtra": {
     "backBtn": "Kthehu te Ekstrat",

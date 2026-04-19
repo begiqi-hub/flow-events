@@ -76,21 +76,20 @@ export default async function StaffPerformancePage({
     
     totalPaymentsCollected = Number(payments._sum.amount || 0);
 
-    totalBookings = await prisma.audit_logs.count({
+    // Numërojmë direkt nga tabela e Rezervimeve!
+    totalBookings = await prisma.bookings.count({
       where: {
         business_id: business.id,
-        user_id: staffId,
-        entity: "bookings",
-        action: { contains: "Krijim" }
+        created_by: staffId, // Tani që e rregulluam actions.ts, kjo do të punojë!
+        status: { not: "draft" } // Injorojmë ato të papërfunduarat
       }
     });
 
-    cancelledBookings = await prisma.audit_logs.count({
+    cancelledBookings = await prisma.bookings.count({
       where: {
         business_id: business.id,
-        user_id: staffId,
-        entity: "bookings",
-        action: { contains: "Anulim" }
+        created_by: staffId,
+        status: "cancelled"
       }
     });
 
