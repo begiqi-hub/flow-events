@@ -210,7 +210,7 @@ export async function saveReservationAction(data: any) {
           business_id: businessId,
           hall_id: data.hall_id,
           client_id: client.id,
-          created_by: user.id, // <--- KJO ËSHTË ZGJIDHJA! Mungonte ky rresht.
+          created_by: user.id, // ID e stafit që e krijon
           event_date: eventDateObj,
           start_time: startTimeObj,
           end_time: endTimeObj,
@@ -259,6 +259,22 @@ export async function saveReservationAction(data: any) {
           await tx.bookings.updateMany({ where: { id: { in: qIds } }, data: { status: 'cancelled' } });
         }
       }
+
+      // ==========================================
+      // KODI I RI: SHTOJMË VEPRIMIN NË DITAR
+      // ==========================================
+      const clientNameLog = data.client_type === 'business' ? data.client_business_name : data.client_name;
+      await tx.audit_logs.create({
+        data: {
+          business_id: businessId,
+          user_id: user.id,
+          entity: "bookings",
+          entity_id: booking.id,
+          action: data.is_quotation ? "Krijim Oferte" : "Krijim Rezervimi",
+          after_state: JSON.stringify({ detaje: `Regjistroi një event të ri për klientin: ${clientNameLog}` })
+        }
+      });
+      // ==========================================
 
       return booking;
     });

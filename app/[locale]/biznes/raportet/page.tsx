@@ -55,10 +55,14 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
   const bookingsWithCosts = allBookings.map((b: any) => {
     const currentMenu = allMenus.find((m: any) => m.id === b.menu_id);
     
+    // --- LLOGARITJA E KOSTOS ---
     const participants = Number(b.participants) || 0;
+    
+    // 1. Kostoja e Menusë (Kosto e brendshme * Numri i personave)
     const menuInternalCost = currentMenu?.internal_cost ? Number(currentMenu.internal_cost) : 0;
     const totalMenuCost = participants * menuInternalCost;
 
+    // 2. Kostoja e Ekstravet (Kosto e brendshme * Sasia)
     let totalExtrasCost = 0;
     if (b.booking_extras && b.booking_extras.length > 0) {
       b.booking_extras.forEach((be: any) => {
@@ -67,9 +71,13 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
       });
     }
 
-    const calculated_cost = totalMenuCost + totalExtrasCost;
+    // 3. Qiraja e sallës (0 kosto sipas rregullit të biznesit)
+    const hallInternalCost = 0; 
 
-    // MATEMATIKA E RE FINANCIARE (PËR RAPORTET)
+    // KOSTOJA TOTALE PËR KËTË EVENT
+    const calculated_cost = totalMenuCost + totalExtrasCost + hallInternalCost;
+
+    // --- MATEMATIKA FINANCIARE (PËR RAPORTET) ---
     let net_paid = 0;
     let refunded = 0;
     if (b.payments) {
@@ -83,16 +91,15 @@ export default async function ReportsPage({ params }: { params: Promise<{ locale
       });
     }
 
-    // Nëse është anuluar, "e ardhura e pritshme" është vetëm gjoba që i mbajtëm (net_paid)
-    // Nëse nuk është anuluar, e ardhura e pritshme është totali i kontratës.
+    // Të ardhurat e pritshme (Nëse anulohet, mbetet vetëm sa është paguar/mbajtur si gjobë)
     const expected_revenue = b.status === 'cancelled' ? net_paid : (Number(b.total_amount) || 0);
 
     return {
       ...b,
       calculated_cost: calculated_cost,
-      net_paid: net_paid,            // <- Të ardhurat reale në arkë
-      refunded_amount: refunded,      // <- Sa para kemi kthyer
-      expected_revenue: expected_revenue // <- Të ardhurat që presim të bëjmë
+      net_paid: net_paid,                // Të ardhurat reale në arkë
+      refunded_amount: refunded,         // Sa para i kemi kthyer klientit
+      expected_revenue: expected_revenue // Të ardhurat që presim të bëjmë
     };
   });
 
