@@ -192,7 +192,9 @@
     "savingBtn": "Po ruhet...",
     "successTitle": "Sukses!",
     "toastSuccess": "Menuja u krijua me sukses!",
-    "toastError": "Gabim gjatë krijimit të menusë."
+    "toastError": "Gabim gjatë krijimit të menusë.",
+    "successMsg": "Menuja u shtua me sukses!",
+    "closeBtn": "Mbyll"
   },
   "EditMenu": {
     "backBtn": "Kthehu te Menutë",
@@ -234,7 +236,10 @@
     "saveExtraBtn": "Ruaj Shërbimin",
     "savingBtn": "Po Ruhet...",
     "toastSuccess": "Shërbimi u shtua me sukses!",
-    "toastError": "Gabim gjatë ruajtjes së shërbimit."
+    "toastError": "Gabim gjatë ruajtjes së shërbimit.",
+    "successTitle": "Sukses!",
+    "successMsg": "Shërbimi ekstra u shtua me sukses!",
+    "closeBtn": "Mbyll"
   },
     "EditExtra": {
     "backBtn": "Kthehu te Ekstrat",
