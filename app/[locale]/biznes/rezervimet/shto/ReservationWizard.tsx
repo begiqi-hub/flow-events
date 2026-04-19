@@ -634,9 +634,13 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                         placeholder={t("nameSearchPlaceholder")} 
                         value={formData.client_name} 
                         onChange={(e) => {
-                         setFormData({...formData, client_name: e.target.value});
-                         setShowSuggestions(true);
+                          setFormData({...formData, client_name: e.target.value});
+                          setShowSuggestions(true);
                         }} 
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === 'Escape') setShowSuggestions(false);
+                        }}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                       />
                       
                       {showSuggestions && formData.client_name.length > 1 && (
@@ -714,15 +718,19 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                     <div className="md:col-span-2 relative" ref={clientInputRef}>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Building size={16} className="text-gray-400" /> {t("businessNameLabel")}</label>
                       <input 
-                        type="text" 
-                        className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" 
-                        placeholder={t("businessSearchPlaceholder")} 
-                        value={formData.client_business_name} 
-                        onChange={(e) => {
-                         setFormData({...formData, client_business_name: e.target.value});
-                         setShowSuggestions(true);
-                        }} 
-                      />
+                      type="text" 
+                      className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" 
+                      placeholder={t("businessSearchPlaceholder")} 
+                      value={formData.client_business_name} 
+                      onChange={(e) => {
+                        setFormData({...formData, client_business_name: e.target.value});
+                        setShowSuggestions(true);
+                      }} 
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === 'Escape') setShowSuggestions(false);
+                      }}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    />
                       
                       {showSuggestions && formData.client_business_name.length > 1 && (
                         <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-xl rounded-xl z-50 overflow-hidden py-2 max-h-60 overflow-y-auto">

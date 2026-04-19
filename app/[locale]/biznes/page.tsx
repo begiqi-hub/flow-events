@@ -139,7 +139,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-4 md:pt-8">
+      <div className="w-full mb-6">
       
         {/* WIZARD-I I KONFIGURIMIT */}
         {progressPercent < 100 && (
