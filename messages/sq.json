@@ -790,7 +790,14 @@
     "btnNext": "Vazhdo",
     "btnLoading": "Prisni...",
     "btnSaving": "Po Ruhet...",
-    "btnSave": "Ruaj Rezervimin"
+    "btnSave": "Ruaj Rezervimin",
+    "setupTypeLabel": "Formati i Sallës",
+    "setupBanket": "Banket (Tavolina & Karrige - Dasma/Ahengje)",
+    "setupTheater": "Teatër (Vetëm Karrige - Seminare)",
+    "setupCocktail": "Koktej (Në këmbë / Shankerica)",
+    "setupClass": "Klasë (U-Shape / Trajnime)",
+    "setupEmpty": "E Zbrazët (Vetëm Skenë/Hapësirë)"
+    
   },
   "EditBookingPage": {
     "toastNotFound": "Rezervimi nuk u gjet!",

@@ -330,7 +330,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
       )}
 
       {/* SHIRITI I PROGRESIT */}
-      <div className="bg-gray-50/80 border-b border-gray-100 px-6 sm:px-12 pt-8 pb-16 rounded-t-3xl overflow-hidden">
+      <div className="bg-gray-50/80 border-b border-gray-100 px-4 sm:px-12 pt-8 pb-16 rounded-t-3xl overflow-hidden">
         <div className="relative flex justify-between w-full max-w-4xl mx-auto">
           <div className="absolute top-5 left-0 w-full h-1.5 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
           <div 
@@ -352,7 +352,8 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                 >
                   {isCompleted ? <Check size={22} strokeWidth={3.5} /> : <step.icon size={20} strokeWidth={isCurrent ? 2.5 : 2} />}
                 </div>
-                <span className={`absolute top-14 mt-1 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors duration-300
+                {/* Zgjidhja e problemit të tekstit te mbivendosur në Mobile */}
+                <span className={`absolute top-14 mt-1 text-[10px] sm:text-sm font-bold text-center w-20 sm:w-24 leading-tight transition-colors duration-300
                   ${isCompleted ? 'text-emerald-600' : isCurrent ? 'text-gray-900' : 'text-gray-400'}
                 `}>
                   {step.name}
@@ -373,54 +374,53 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               <div className="lg:col-span-2">
                 <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><PartyPopper size={16} className="text-gray-400" /> {t("eventTypeLabel")}</label>
-                <input 
-                  type="text" 
-                  list="event-types" 
-                  className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" 
-                  placeholder={t("eventTypePlaceholder")} 
+                {/* Ndryshimi i Datalist në Select për Mobile-Friendly */}
+                <select 
+                  className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold appearance-none" 
                   value={formData.event_type} 
                   onChange={(e) => setFormData({...formData, event_type: e.target.value})} 
-                />
-                <datalist id="event-types">
-                  <option value="Dasëm" />
-                  <option value="Fejesë" />
-                  <option value="Ditëlindje" />
-                  <option value="Event Korporativ / Biznes" />
-                  <option value="Konferencë / Seminar" />
-                  <option value="Aheng Familjar" />
-                  <option value="Mbrëmje e Maturës" />
-                  <option value="Syneti / Pagëzim" />
-                </datalist>
+                >
+                  <option value="" disabled>{t("eventTypePlaceholder") || "Zgjidh llojin e eventit"}</option>
+                  <option value="Dasëm">Dasëm</option>
+                  <option value="Fejesë">Fejesë</option>
+                  <option value="Ditëlindje">Ditëlindje</option>
+                  <option value="Event Korporativ / Biznes">Event Korporativ / Biznes</option>
+                  <option value="Konferencë / Seminar">Konferencë / Seminar</option>
+                  <option value="Aheng Familjar">Aheng Familjar</option>
+                  <option value="Mbrëmje e Maturës">Mbrëmje e Maturës</option>
+                  <option value="Syneti / Pagëzim">Syneti / Pagëzim</option>
+                </select>
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><UsersRound size={16} className="text-gray-400" /> {t("guestsLabel")}</label>
-                <input type="number" placeholder={t("guestsPlaceholder")} className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
+                {/* Shtuar text-gray-900 font-semibold për font më të theksuar */}
+                <input type="number" placeholder={t("guestsPlaceholder")} className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 text-gray-900 font-semibold bg-white" value={formData.participants} onChange={(e) => setFormData({...formData, participants: e.target.value})} />
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Clock size={16} className="text-gray-400" /> {t("startTimeLabel")}</label>
-                <input type="time" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.start_time} onChange={(e) => setFormData({...formData, start_time: e.target.value})} />
+                <input type="time" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 text-gray-900 font-semibold bg-white" value={formData.start_time} onChange={(e) => setFormData({...formData, start_time: e.target.value})} />
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Clock size={16} className="text-gray-400" /> {t("endTimeLabel")}</label>
-                <input type="time" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.end_time} onChange={(e) => setFormData({...formData, end_time: e.target.value})} />
+                <input type="time" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 text-gray-900 font-semibold bg-white" value={formData.end_time} onChange={(e) => setFormData({...formData, end_time: e.target.value})} />
               </div>
 
               <div className="sm:col-span-2 lg:col-span-2">
                 <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><CalendarDays size={16} className="text-gray-400" /> {t("dateLabel")}</label>
-                <input type="date" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
+                <input type="date" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 text-gray-900 font-semibold bg-white" value={formData.event_date} onChange={(e) => setFormData({...formData, event_date: e.target.value})} />
               </div>
 
               <div className="sm:col-span-2 lg:col-span-3">
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Layers size={16} className="text-gray-400" /> Formati i Sallës</label>
-                <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" value={formData.setup_type} onChange={(e) => setFormData({...formData, setup_type: e.target.value})}>
-                  <option value="banket">Banket (Tavolina & Karrige - Dasma/Ahengje)</option>
-                  <option value="teater">Teatër (Vetëm Karrige - Seminare)</option>
-                  <option value="koktej">Koktej (Në këmbë / Shankerica)</option>
-                  <option value="klase">Klasë (U-Shape / Trajnime)</option>
-                  <option value="zbrazet">E Zbrazët (Vetëm Skenë/Hapësirë)</option>
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Layers size={16} className="text-gray-400" /> {t("setupTypeLabel")}</label>
+                <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 text-gray-900 font-semibold bg-white appearance-none" value={formData.setup_type} onChange={(e) => setFormData({...formData, setup_type: e.target.value})}>
+                  <option value="banket">{t("setupBanket")}</option>
+                  <option value="teater">{t("setupTheater")}</option>
+                  <option value="koktej">{t("setupCocktail")}</option>
+                  <option value="klase">{t("setupClass")}</option>
+                  <option value="zbrazet">{t("setupEmpty")}</option>
                 </select>
               </div>
             </div>
@@ -630,7 +630,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Users size={16} className="text-gray-400" /> {t("nameLabel")}</label>
                       <input 
                         type="text" 
-                        className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" 
+                        className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" 
                         placeholder={t("nameSearchPlaceholder")} 
                         value={formData.client_name} 
                         onChange={(e) => {
@@ -668,11 +668,11 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> {t("personalIdLabel")}</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("personalIdPlaceholder")} value={formData.client_personal_id} onChange={(e) => setFormData({...formData, client_personal_id: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("personalIdPlaceholder")} value={formData.client_personal_id} onChange={(e) => setFormData({...formData, client_personal_id: e.target.value})} />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">{t("genderLabel")}</label>
-                      <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" value={formData.client_gender} onChange={(e) => setFormData({...formData, client_gender: e.target.value})}>
+                      <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold appearance-none" value={formData.client_gender} onChange={(e) => setFormData({...formData, client_gender: e.target.value})}>
                         <option value="">{t("genderSelect")}</option>
                         <option value="M">{t("genderMale")}</option>
                         <option value="F">{t("genderFemale")}</option>
@@ -680,7 +680,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> {t("cityLabel")}</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("cityPlaceholder")} value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("cityPlaceholder")} value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Phone size={16} className="text-gray-400" /> {t("phoneLabel")}</label>
@@ -702,12 +702,12 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                            </div>
                          )}
                         </div>
-                        <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
+                        <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent text-gray-900 font-semibold" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
                       </div>
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Mail size={16} className="text-gray-400" /> {t("emailLabel")}</label>
-                      <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("emailPlaceholder")} value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
+                      <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("emailPlaceholder")} value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
                     </div>
                   </div>
                 )}
@@ -719,7 +719,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Building size={16} className="text-gray-400" /> {t("businessNameLabel")}</label>
                       <input 
                       type="text" 
-                      className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" 
+                      className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" 
                       placeholder={t("businessSearchPlaceholder")} 
                       value={formData.client_business_name} 
                       onChange={(e) => {
@@ -757,19 +757,19 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
 
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FileDigit size={16} className="text-gray-400" /> {t("nuiLabel")}</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("nuiPlaceholder")} value={formData.client_business_num} onChange={(e) => setFormData({...formData, client_business_num: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("nuiPlaceholder")} value={formData.client_business_num} onChange={(e) => setFormData({...formData, client_business_num: e.target.value})} />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><UserCheck size={16} className="text-gray-400" /> {t("repLabel")}</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("repPlaceholder")} value={formData.client_representative} onChange={(e) => setFormData({...formData, client_representative: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("repPlaceholder")} value={formData.client_representative} onChange={(e) => setFormData({...formData, client_representative: e.target.value})} />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> {t("businessAddressLabel")}</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("businessAddressPlaceholder")} value={formData.client_address} onChange={(e) => setFormData({...formData, client_address: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("businessAddressPlaceholder")} value={formData.client_address} onChange={(e) => setFormData({...formData, client_address: e.target.value})} />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><MapPin size={16} className="text-gray-400" /> {t("cityLabel")}</label>
-                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("cityPlaceholder")} value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
+                      <input type="text" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("cityPlaceholder")} value={formData.client_city} onChange={(e) => setFormData({...formData, client_city: e.target.value})} />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Phone size={16} className="text-gray-400" /> {t("phoneLabel")}</label>
@@ -791,12 +791,12 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                            </div>
                          )}
                         </div>
-                        <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
+                        <input type="text" className="w-full p-3.5 outline-none rounded-r-xl bg-transparent text-gray-900 font-semibold" placeholder="44 123 456" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} />
                       </div>
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><Mail size={16} className="text-gray-400" /> {t("businessEmailLabel")}</label>
-                      <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white" placeholder={t("emailPlaceholder")} value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
+                      <input type="email" className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white text-gray-900 font-semibold" placeholder={t("emailPlaceholder")} value={formData.client_email} onChange={(e) => setFormData({...formData, client_email: e.target.value})} />
                     </div>
                   </div>
                 )}
@@ -874,7 +874,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                       <input 
                         type="number" 
                         placeholder="p.sh. 500" 
-                        className={`w-full border p-3.5 rounded-xl outline-none bg-white ${isDepositError ? 'border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-amber-500'}`} 
+                        className={`w-full border p-3.5 rounded-xl outline-none bg-white text-gray-900 font-semibold ${isDepositError ? 'border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-amber-500'}`} 
                         value={formData.deposit_amount} 
                         onChange={(e) => setFormData({...formData, deposit_amount: e.target.value})} 
                       />
@@ -887,7 +887,7 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                   {(formData.payment_status === 'deposit' || formData.payment_status === 'paid') && (
                     <div className="animate-in slide-in-from-top-2">
                       <label className="block text-sm font-bold text-gray-700 mb-2">{t("paymentMethodLabel")}</label>
-                      <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-blue-500 bg-white font-medium text-gray-700" value={formData.payment_method} onChange={(e) => setFormData({...formData, payment_method: e.target.value})}>
+                      <select className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-blue-500 bg-white font-semibold text-gray-900 appearance-none" value={formData.payment_method} onChange={(e) => setFormData({...formData, payment_method: e.target.value})}>
                         <option value="cash">{t("methodCash")}</option>
                         <option value="bank">{t("methodBank")}</option>
                         <option value="pos">{t("methodPos")}</option>
