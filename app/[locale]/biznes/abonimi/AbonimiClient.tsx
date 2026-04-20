@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   Check, X, Clock, Banknote, ShieldCheck, Mail, Instagram,
   Layers, Users, UtensilsCrossed, Info, FileText,
-  CreditCard, Calendar, Megaphone, ArrowRight, Download, Ticket, Zap, History, Printer, Copy
+  CreditCard, Calendar, Megaphone, ArrowRight, Download, Ticket, Zap, History, Printer, Copy, ShieldAlert
 } from "lucide-react";
 import { createPaymentIntent } from "./actions"; 
 import { format, addMonths, addYears, differenceInDays } from "date-fns";
@@ -16,9 +16,9 @@ import { useTranslations } from "next-intl";
 import { initializePaddle, Paddle } from '@paddle/paddle-js';
 
 export default function AbonimiClient({ 
-  business, packages, locale, systemSettings, bankAccount 
+  business, packages, locale, systemSettings, bankAccount, currentUsage 
 }: { 
-  business: any, packages: any[], locale: string, systemSettings: any, bankAccount: any 
+  business: any, packages: any[], locale: string, systemSettings: any, bankAccount: any, currentUsage: any
 }) {
   const t = useTranslations("AbonimiClient");
   const router = useRouter(); 
@@ -28,6 +28,9 @@ export default function AbonimiClient({
   const [generatedRef, setGeneratedRef] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null); 
   
+  // MODALI I RI PËR ERROR-ET E KAPACITETIT
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+
   const [historicalInvoice, setHistoricalInvoice] = useState<any>(null);
 
   const [paddle, setPaddle] = useState<Paddle | null>(null);
@@ -58,13 +61,45 @@ export default function AbonimiClient({
     }).catch(err => setPaddleError(err.message));
   }, [locale, router]); 
 
+  // ==========================================
+  // LLOGARITJA E DITËVE TË MBETURA (PËR KREDITIN)
+  // ==========================================
   let daysLeft = 0;
+  let unusedCredit = 0;
   let expiryDate = "Nuk ka datë";
+
   if (business.trialEndsAt && business.status === 'active') {
     const endObj = new Date(business.trialEndsAt);
     daysLeft = differenceInDays(endObj, new Date());
     expiryDate = format(endObj, "dd.MM.yyyy", { locale: sq });
+
+    if (daysLeft > 0 && business.package) {
+      const currentDailyRate = Number(business.package.monthly_price) / 30;
+      unusedCredit = daysLeft * currentDailyRate;
+    }
   }
+
+  // Logjika financiare brenda modalit të faturës
+  let baseAmount = 0;
+  let finalToPay = 0;
+  let discountFromCredit = 0;
+  let isUpgrade = false;
+
+  if (selectedPkg) {
+    // FIX PËR ERRORIN: E kthejmë me detyrim në Number()
+    baseAmount = Number(billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price);
+    
+    if (business.package) {
+      const oldBase = Number(billingCycle === 'monthly' ? business.package.monthly_price : business.package.yearly_price);
+      isUpgrade = baseAmount > oldBase;
+    } else {
+      isUpgrade = true; 
+    }
+
+    discountFromCredit = isUpgrade ? Math.min(unusedCredit, baseAmount) : 0;
+    finalToPay = baseAmount - discountFromCredit;
+  }
+  // ==========================================
 
   const invoiceRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -81,6 +116,23 @@ export default function AbonimiClient({
   });
 
   const openPackageModal = (pkg: any) => {
+    // ==========================================
+    // KONTROLLI I LIMITEVE ME POPUP TË BUKUR!
+    // ==========================================
+    if (pkg.halls_limit !== -1 && currentUsage.halls > pkg.halls_limit) {
+      setErrorModal(`Kjo pako lejon vetëm **${pkg.halls_limit} salla**, por ju keni **${currentUsage.halls} salla aktive**.\n\nJu lutem çaktivizoni ose fshini sallat e tepërta përpara se të ndryshoni pakon.`);
+      return;
+    }
+    if (pkg.users_limit !== -1 && currentUsage.users > pkg.users_limit) {
+      setErrorModal(`Kjo pako lejon vetëm **${pkg.users_limit} përdorues** (staf), por ju keni **${currentUsage.users} përdorues aktivë**.\n\nJu lutem fshini stafin e tepërt nga menaxhimi i stafit.`);
+      return;
+    }
+    if (pkg.menus_limit !== -1 && currentUsage.menus > pkg.menus_limit) {
+      setErrorModal(`Kjo pako lejon vetëm **${pkg.menus_limit} menu**, por ju keni **${currentUsage.menus} menu aktive**.\n\nJu lutem çaktivizoni menutë e tepërta nga menaxhimi i menuve.`);
+      return;
+    }
+    // ==========================================
+
     setSelectedPkg(pkg);
     setGeneratedRef(""); 
   };
@@ -89,9 +141,8 @@ export default function AbonimiClient({
     if (loadingId !== null || !selectedPkg) return;
     setLoadingId(selectedPkg.id); 
     
-    const amount = billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price;
     const res = await createPaymentIntent({
-      businessId: business.id, amount: amount, locale: locale, packageId: selectedPkg.id 
+      businessId: business.id, amount: finalToPay, locale: locale, packageId: selectedPkg.id 
     });
 
     if (res.success && res.referenceCode) setGeneratedRef(res.referenceCode); 
@@ -172,9 +223,41 @@ export default function AbonimiClient({
     }
   }
 
+  // Funksion për të kthyer tekstin me 'bold' në HTML
+  const formatBoldText = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index} className="text-gray-900">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500 font-sans">
       
+      {/* POPUP (MODAL) I BUKUR PËR GABIMET E KAPACITETIT */}
+      {errorModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-300 border border-gray-100">
+            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-red-100">
+              <ShieldAlert size={36} strokeWidth={2.5} />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-3">Kujdes!</h3>
+            <p className="text-gray-500 text-sm font-medium whitespace-pre-line mb-8 leading-relaxed">
+              {formatBoldText(errorModal)}
+            </p>
+            <button
+              onClick={() => setErrorModal(null)}
+              className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition-all shadow-md active:scale-95"
+            >
+              Kuptova
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* PANELI KRYESOR I ABONIMIT & HISTORIKUT TË FATURAVE */}
       {!showPricing && (
         <div className="mb-12 max-w-5xl mx-auto space-y-8">
@@ -457,18 +540,31 @@ export default function AbonimiClient({
                             <p className="text-xs text-gray-500 mt-1 font-medium">{t("descSubscription")}</p>
                           </td>
                           <td className="py-6 text-center text-sm font-medium text-gray-600 font-mono">{formattedStart} - {formattedEnd}</td>
-                          <td className="py-6 text-right font-black text-lg text-gray-900 font-mono">{billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price} €</td>
+                          <td className="py-6 text-right font-black text-lg text-gray-900 font-mono">{baseAmount.toFixed(2)} €</td>
                         </tr>
                       </tbody>
                     </table>
 
                     <div className="flex justify-end mb-12">
                       <div className="w-full sm:w-2/3">
-                        <div className="flex justify-between py-2 text-sm border-b border-gray-100"><span className="text-gray-500 font-bold uppercase tracking-wider">{t("subtotal")}</span><span className="font-bold text-gray-900 font-mono">{billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price} €</span></div>
+                        <div className="flex justify-between py-2 text-sm border-b border-gray-100">
+                           <span className="text-gray-500 font-bold uppercase tracking-wider">{t("subtotal")}</span>
+                           <span className="font-bold text-gray-900 font-mono">{baseAmount.toFixed(2)} €</span>
+                        </div>
+                        
+                        {/* KREDITI NGA PAKOJA E VJETËR */}
+                        {isUpgrade && discountFromCredit > 0 && (
+                          <div className="flex justify-between py-2 text-sm border-b border-gray-100">
+                            <span className="text-emerald-600 font-bold uppercase tracking-wider">Kredit nga pako e vjetër ({daysLeft} ditë)</span>
+                            <span className="font-bold text-emerald-600 font-mono">- {discountFromCredit.toFixed(2)} €</span>
+                          </div>
+                        )}
+
                         {showVat && <div className="flex justify-between py-2 text-sm border-b border-gray-100"><span className="text-gray-500 font-bold uppercase tracking-wider">{t("vat")} ({systemSettings.vat_rate}%)</span><span className="font-bold text-gray-900">{t("included")}</span></div>}
+                        
                         <div className="flex justify-between items-center py-4 mt-2 bg-gray-50 px-4 rounded-lg print:bg-gray-100">
                           <span className="text-gray-900 font-black uppercase text-base tracking-widest">{t("totalToPay")}</span>
-                          <span className="text-2xl font-black text-indigo-600 tracking-tight font-mono">{billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price} €</span>
+                          <span className="text-2xl font-black text-indigo-600 tracking-tight font-mono">{finalToPay.toFixed(2)} €</span>
                         </div>
                       </div>
                     </div>
@@ -514,14 +610,14 @@ export default function AbonimiClient({
                      <p className="text-gray-500 font-medium mb-8 leading-relaxed">Si dëshironi të paguani për paketën {selectedPkg.name}?</p>
                      
                      <div className="flex flex-col gap-3 mt-auto">
-                       {/* BUTONI I KARTELËS - Aktivizohet vetëm nëse është bërë 'On' nga Superadmini */}
+                       {/* BUTONI I KARTELËS */}
                        {systemSettings?.enable_card_payments !== false && (
                          <button onClick={handlePaddlePayment} disabled={loadingId !== null} className="w-full bg-[#0f172a] text-white py-4 rounded-2xl font-bold hover:bg-[#1e293b] transition-all shadow-lg flex items-center justify-center gap-2">
                            {loadingId === 'paddle' ? <Clock size={18} className="animate-spin" /> : <CreditCard size={18} />} Paguaj me Kartë
                          </button>
                        )}
 
-                       {/* BUTONI I TRANSFERTËS BANKARE - Aktivizohet vetëm nëse është bërë 'On' nga Superadmini */}
+                       {/* BUTONI I TRANSFERTËS BANKARE */}
                        {systemSettings?.enable_bank_transfers !== false && (
                          <button onClick={handleConfirm} disabled={loadingId !== null} className="w-full bg-white border-2 border-gray-200 text-gray-800 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2">
                            {loadingId === selectedPkg.id ? <Clock size={18} className="animate-spin text-gray-500" /> : <Banknote size={18} className="text-gray-500" />} Transfertë Bankare

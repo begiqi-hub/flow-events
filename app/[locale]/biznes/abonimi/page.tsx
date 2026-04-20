@@ -11,7 +11,6 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
   
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  // 1. Tërheqim biznesin dhe bashkangjisim pagesat (faturat)
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email },
     include: { 
@@ -23,7 +22,6 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
   });
 
   if (!business) {
-    // SIGURIA: Ndryshuam në findFirst për të mos pasur probleme me Cache
     const staffUser = await prisma.users.findFirst({ where: { email: session.user.email } });
     if (staffUser?.business_id) {
       business = await prisma.businesses.findUnique({
@@ -40,12 +38,24 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
 
   if (!business) redirect(`/${locale}/login`);
 
-  // 2. Tërheqim paketat, të dhënat e sistemit dhe të bankës
+  // ==========================================
+  // KODI I RI: NUMËROJMË ASETET AKTIVE (PËR KONTROLLIN E DOWNGRADE)
+  // ==========================================
+  const activeHalls = await prisma.halls.count({ where: { business_id: business.id, status: 'active' } });
+  const activeUsers = await prisma.users.count({ where: { business_id: business.id, status: 'active' } });
+  const activeMenus = await prisma.menus.count({ where: { business_id: business.id, is_active: true } });
+
+  const currentUsage = {
+    halls: activeHalls,
+    users: activeUsers,
+    menus: activeMenus
+  };
+  // ==========================================
+
   const allPackages = await prisma.package.findMany({
     orderBy: { monthly_price: 'asc' }
   });
 
-  // Këtu po tërhiqen automatikisht edhe NUI dhe konfigurimet e pagesave që sapo shtuam!
   const systemSettings = await prisma.system_settings.findFirst() || {};
   const bankAccount = await prisma.bank_accounts.findFirst({ where: { is_active: true } }) || {};
 
@@ -61,6 +71,7 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
       locale={locale} 
       systemSettings={safeSystemSettings}
       bankAccount={safeBankAccount}
+      currentUsage={currentUsage} // <--- Ia kalojmë numërimin klientit
     />
   );
 }

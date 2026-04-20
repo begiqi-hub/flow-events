@@ -388,7 +388,8 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                   <option value="Konferencë / Seminar">Konferencë / Seminar</option>
                   <option value="Aheng Familjar">Aheng Familjar</option>
                   <option value="Mbrëmje e Maturës">Mbrëmje e Maturës</option>
-                  <option value="Syneti / Pagëzim">Syneti / Pagëzim</option>
+                  <option value="Syneti">Syneti</option>
+                  <option value="Konferencë">Konferencë</option>
                 </select>
               </div>
 
