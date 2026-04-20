@@ -409,7 +409,18 @@
     "ibanLabel": "Numri i Llogarisë (IBAN)",
     "refLabel": "Referenca e Pagesës (Detyrueshme)",
     "noIban": "Nuk ka IBAN",
-    "noBank": "Banka nuk është vendosur"
+    "noBank": "Banka nuk është vendosur",
+    "errorModalTitle": "Kujdes!",
+    "errorHallsLimit1": "Kjo pako lejon vetëm **",
+    "errorHallsLimit2": " salla**, por ju keni **",
+    "errorHallsLimit3": " salla aktive**.\n\nJu lutem çaktivizoni ose fshini sallat e tepërta përpara se të ndryshoni pakon.",
+    "errorUsersLimit1": "Kjo pako lejon vetëm **",
+    "errorUsersLimit2": " përdorues** (staf), por ju keni **",
+    "errorUsersLimit3": " përdorues aktivë**.\n\nJu lutem fshini stafin e tepërt nga menaxhimi i stafit.",
+    "errorMenusLimit1": "Kjo pako lejon vetëm **",
+    "errorMenusLimit2": " menu**, por ju keni **",
+    "errorMenusLimit3": " menu aktive**.\n\nJu lutem çaktivizoni menutë e tepërta nga menaxhimi i menuve.",
+    "btnUnderstood": "Kuptova"
   },
   "UpsellModal": {
     "limitReachedTitle": "Limit i arritur!",

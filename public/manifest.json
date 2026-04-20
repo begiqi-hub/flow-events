@@ -2,7 +2,7 @@
   "name": "HALLEVO",
   "short_name": "HALLEVO",
   "description": "Sistemi i Menaxhimit të Eventeve",
-  "start_url": "/",
+  "start_url": "/?app=true",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
