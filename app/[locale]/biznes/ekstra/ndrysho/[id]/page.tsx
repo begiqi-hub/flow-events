@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Banknote, ArrowLeft, Save, Wallet, Info } from "lucide-react";
 import Link from "next/link";
-import { updateExtraAction, getExtraAction } from "./actions"; // Korrigjuar path-i
+import { updateExtraAction, getExtraAction } from "./actions";
 import { useTranslations } from "next-intl"; 
 
 export default function EditExtraPage({ params }: { params: Promise<{ locale: string, id: string }> }) {
@@ -103,11 +103,12 @@ export default function EditExtraPage({ params }: { params: Promise<{ locale: st
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
             <Sparkles size={16} className="text-gray-400" /> {t("extraNameLabel")}
           </label>
+          {/* RREGULLIMI */}
           <input 
             type="text" 
             required 
             placeholder={fetching ? "Po ngarkohet..." : t("extraNamePlaceholder")} 
-            className="w-full border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1" 
+            className="w-full bg-white border border-gray-200 p-3.5 rounded-xl outline-none focus:border-gray-900 focus:ring-1 text-gray-900 font-medium placeholder:text-gray-400" 
             value={formData.name} 
             onChange={(e) => setFormData({...formData, name: e.target.value})} 
           />
@@ -126,11 +127,12 @@ export default function EditExtraPage({ params }: { params: Promise<{ locale: st
                 </div>
               </div>
             </div>
+            {/* RREGULLIMI */}
             <input 
               type="number" 
               step="0.01" 
               placeholder="Psh: 150.00" 
-              className="w-full border border-gray-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:ring-1 bg-white" 
+              className="w-full bg-white border border-gray-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:ring-1 text-gray-900 font-medium placeholder:text-gray-400" 
               value={formData.internal_cost} 
               onChange={(e) => setFormData({...formData, internal_cost: e.target.value})} 
             />
@@ -140,12 +142,13 @@ export default function EditExtraPage({ params }: { params: Promise<{ locale: st
             <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
               <Banknote size={16} className="text-emerald-500" /> {t("priceLabel")} (Shitet)
             </label>
+            {/* RREGULLIMI */}
             <input 
               type="number" 
               step="0.01" 
               required 
               placeholder={fetching ? "Po ngarkohet..." : t("pricePlaceholder")} 
-              className="w-full border border-emerald-200 p-3 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 bg-white" 
+              className="w-full bg-white border border-emerald-200 p-3 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 text-emerald-900 font-black placeholder:text-gray-400" 
               value={formData.price} 
               onChange={(e) => setFormData({...formData, price: e.target.value})} 
             />

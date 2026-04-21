@@ -5,17 +5,17 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { 
   Building2, Users, ArrowLeft, Save, Image as ImageIcon, 
   Car, Wind, AlignLeft, CheckCircle2, AlertCircle, Sparkles,
-  Crown, Zap 
+  Crown, Zap, Check 
 } from "lucide-react";
 import Link from "next/link";
 import { saveHallAction } from "../actions"; 
+import { useTranslations } from "next-intl"; // Shtuam këtë nëse ke nevojë, ose përdor tekstet e tua
 
 export default function AddHallPage() {
   const router = useRouter();
   const params = useParams();
   const locale = (params?.locale as string) || "sq"; 
   
-  // LOGJIKA E RE E PATHYESHME PËR URL
   const searchParams = useSearchParams();
   const isOnboarding = searchParams.get("onboarding") === "true";
 
@@ -87,13 +87,9 @@ export default function AddHallPage() {
         return;
       }
 
-      // ==============================================================
-      // LOGJIKA E ONBOARDING (SETUP WIZARD)
-      // ==============================================================
       if (isOnboarding) {
         setToast({ show: true, message: "Salla u ruajt! Po kalojmë tek Menutë...", type: "tour" });
         setTimeout(() => {
-          // Kalojmë te Menutë duke i mbajtur param 'onboarding'
           router.push(`/${locale}/biznes/menut/shto?onboarding=true`); 
         }, 2000);
       } else {
@@ -110,11 +106,11 @@ export default function AddHallPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 relative">
+    <div className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 relative font-sans">
       
       {/* POPUP NORMAL I TURIT/SUKSESIT */}
       {toast.show && (
-        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-medium animate-in slide-in-from-bottom-5 fade-in duration-300 ${
+        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[110] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-medium animate-in slide-in-from-bottom-5 fade-in duration-300 ${
           toast.type === "success" ? "bg-emerald-600" : 
           toast.type === "tour" ? "bg-indigo-600 border border-indigo-400" : "bg-red-600"
         }`}>
@@ -127,7 +123,7 @@ export default function AddHallPage() {
 
       {/* MODALI I UPSELL-IT */}
       {limitModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] max-w-md w-full p-10 shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
             
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-40 pointer-events-none">
@@ -210,13 +206,29 @@ export default function AddHallPage() {
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
                 <Building2 size={16} className="text-gray-400" /> Emri i Sallës
               </label>
-              <input type="text" required placeholder="p.sh. Salla Diamant" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400 */}
+              <input 
+                type="text" 
+                required 
+                placeholder="p.sh. Salla Diamant" 
+                className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all text-gray-900 placeholder:text-gray-400" 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+              />
             </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
                 <Users size={16} className="text-gray-400" /> Kapaciteti (Maksimal)
               </label>
-              <input type="number" required placeholder="p.sh. 300" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all" value={formData.capacity} onChange={(e) => setFormData({...formData, capacity: e.target.value})} />
+              {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400 */}
+              <input 
+                type="number" 
+                required 
+                placeholder="p.sh. 300" 
+                className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all text-gray-900 placeholder:text-gray-400" 
+                value={formData.capacity} 
+                onChange={(e) => setFormData({...formData, capacity: e.target.value})} 
+              />
             </div>
           </div>
 
@@ -245,7 +257,14 @@ export default function AddHallPage() {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
               <AlignLeft size={16} className="text-gray-400" /> Përshkrimi i Sallës
             </label>
-            <textarea rows={4} placeholder="Përshkruani detajet që e bëjnë këtë sallë të veçantë..." className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 resize-none font-medium text-sm transition-all leading-relaxed" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+            {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400 */}
+            <textarea 
+              rows={4} 
+              placeholder="Përshkruani detajet që e bëjnë këtë sallë të veçantë..." 
+              className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 resize-none font-medium text-sm transition-all leading-relaxed text-gray-900 placeholder:text-gray-400" 
+              value={formData.description} 
+              onChange={(e) => setFormData({...formData, description: e.target.value})} 
+            />
           </div>
 
           <hr className="border-gray-100" />

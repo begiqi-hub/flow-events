@@ -10,7 +10,6 @@ import {
 import { createTicketAction, sendMessageAction } from "./actions";
 import { format } from "date-fns";
 
-// 1. DATA PËR HELP CENTER (Artikujt Ndihmës)
 const HELP_ARTICLES = [
   {
     id: "rezervimet",
@@ -60,7 +59,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // States për bisedat
   const [tickets, setTickets] = useState(initialTickets);
   const [isCreating, setIsCreating] = useState(false);
   const [newSubject, setNewSubject] = useState("");
@@ -68,7 +66,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [chatInput, setChatInput] = useState("");
   
-  // States për Imazhet (Screenshots)
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,7 +81,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   useEffect(() => { if (activeTicketId) scrollToBottom(); }, [activeTicketId, tickets]);
 
-  // Funksioni për ngarkimin e fotos
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -153,7 +149,6 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
     return `#${id.substring(0, 6).toUpperCase()}`;
   };
 
-  // Merr të dhënat e tiketës aktive
   const activeTicket = tickets.find(t => t.id === activeTicketId);
 
   return (
@@ -193,10 +188,11 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
             <div className="max-w-3xl mx-auto w-full">
               <div className="relative mb-10">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={24} />
+                {/* RREGULLIMI KËTU PËR SEARCH */}
                 <input 
                   type="text" 
                   placeholder="Kërkoni për një problem (psh: pagesat, kontrata, salla)..."
-                  className="w-full bg-gray-50 border-2 border-gray-100 p-5 pl-14 rounded-3xl outline-none focus:border-blue-400 transition-all text-lg font-medium shadow-sm"
+                  className="w-full bg-white border-2 border-gray-200 p-5 pl-14 rounded-3xl outline-none focus:border-blue-400 transition-all text-lg font-medium text-gray-900 placeholder:text-gray-400 shadow-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -278,14 +274,28 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
                 <div className="flex-1 max-w-2xl mx-auto w-full p-10 overflow-y-auto custom-scrollbar">
                    <h2 className="text-2xl font-black text-gray-900 mb-6">Hap një Kërkesë / Problem</h2>
                    <form onSubmit={handleCreateTicket} className="space-y-5">
-                      <input required placeholder="Subjekti i problemit..." className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl outline-none focus:border-blue-400 font-medium" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} />
+                      {/* RREGULLIMI */}
+                      <input 
+                        required 
+                        placeholder="Subjekti i problemit..." 
+                        className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-blue-400 font-medium text-gray-900 placeholder:text-gray-400" 
+                        value={newSubject} 
+                        onChange={(e) => setNewSubject(e.target.value)} 
+                      />
                       
                       <div className="relative">
-                        <textarea required placeholder="Na shpjegoni detajet..." className="w-full bg-gray-50 border border-gray-200 p-4 rounded-xl outline-none focus:border-blue-400 font-medium h-40 resize-none pb-12" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}></textarea>
+                        {/* RREGULLIMI */}
+                        <textarea 
+                          required 
+                          placeholder="Na shpjegoni detajet..." 
+                          className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-blue-400 font-medium h-40 resize-none pb-12 text-gray-900 placeholder:text-gray-400" 
+                          value={newMessage} 
+                          onChange={(e) => setNewMessage(e.target.value)}
+                        ></textarea>
                         
                         <div className="absolute bottom-4 left-4 flex items-center gap-3">
                           <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-                          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 bg-white p-2 rounded-lg border border-gray-200 shadow-sm transition-colors flex items-center gap-2">
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-gray-600 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 p-2 rounded-lg border border-gray-200 shadow-sm transition-colors flex items-center gap-2">
                             <Paperclip size={18} /> <span className="text-xs font-bold">Bashkëngjit Foto (Opsionale)</span>
                           </button>
                         </div>
@@ -354,13 +364,14 @@ export default function SupportClient({ locale, initialTickets }: { locale: stri
 
                         <form onSubmit={handleSendMessage} className="flex gap-2 items-end bg-gray-50 p-2 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:bg-white transition-colors">
                           <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-                          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0">
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0">
                             <Paperclip size={20} />
                           </button>
                           
+                          {/* RREGULLIMI */}
                           <textarea 
                             placeholder="Shkruaj një mesazh..." 
-                            className="flex-1 bg-transparent border-none outline-none px-2 py-3 text-sm resize-none custom-scrollbar min-h-[44px] max-h-[120px]" 
+                            className="flex-1 bg-transparent border-none outline-none px-2 py-3 text-sm resize-none custom-scrollbar min-h-[44px] max-h-[120px] text-gray-900 placeholder:text-gray-400" 
                             value={chatInput} 
                             onChange={(e) => setChatInput(e.target.value)}
                             onKeyDown={(e) => {

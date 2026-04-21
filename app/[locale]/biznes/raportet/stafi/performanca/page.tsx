@@ -22,19 +22,15 @@ export default async function StaffPerformancePage({
   const session = await getServerSession();
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  // --- LOGJIKA E RE DHE E SAKTË PËR TË GJETUR BIZNESIN ---
-  // 1. Kërkojmë nëse personi që po logohet është PRONARI
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
   });
 
-  // 2. Nëse nuk është pronari, kërkojmë nëse është STAF
   if (!business) {
     const dbUser = await prisma.users.findUnique({
       where: { email: session.user.email }
     });
 
-    // Nëse është staf, gjejmë biznesin të cilit i përket
     if (dbUser) {
       business = await prisma.businesses.findUnique({
         where: { id: dbUser.business_id }
@@ -42,21 +38,23 @@ export default async function StaffPerformancePage({
     }
   }
 
-  // 3. Nëse emaili nuk u gjet as si pronar, as si staf, atëherë e dëbojmë
   if (!business) redirect(`/${locale}/login`);
-  // --------------------------------------------------------
 
   const t = await getTranslations("StaffPerformance");
   const tEntity = await getTranslations("Entities");
 
+  // RREGULLIMI PËR TË MARRË TË GJITHË STAFIN (ADMIN, MANAGER, RECEPTION)
   const staffMembersRaw = await prisma.users.findMany({
-    where: { business_id: business.id },
-    select: { id: true, full_name: true, role: true } 
+    where: { 
+      business_id: business.id 
+    },
+    select: { id: true, full_name: true, role: true },
+    orderBy: { role: 'asc' } // I renditim sipas rolit
   });
 
   const staffMembers = staffMembersRaw.map(staff => ({
     id: staff.id,
-    name: `${staff.full_name} (${staff.role})`
+    name: `${staff.full_name} (${staff.role.charAt(0).toUpperCase() + staff.role.slice(1)})`
   }));
 
   let totalBookings = 0;
@@ -76,12 +74,11 @@ export default async function StaffPerformancePage({
     
     totalPaymentsCollected = Number(payments._sum.amount || 0);
 
-    // Numërojmë direkt nga tabela e Rezervimeve!
     totalBookings = await prisma.bookings.count({
       where: {
         business_id: business.id,
-        created_by: staffId, // Tani që e rregulluam actions.ts, kjo do të punojë!
-        status: { not: "draft" } // Injorojmë ato të papërfunduarat
+        created_by: staffId,
+        status: { not: "draft" } 
       }
     });
 
@@ -109,7 +106,6 @@ export default async function StaffPerformancePage({
     });
   }
 
-  // --- FUNKSIONI PËR PËRKTHIMIN E VEPRIMEVE NGA DB ---
   const translateAction = (rawAction: string) => {
     const actionLower = rawAction.toLowerCase();
     if (actionLower.includes("krijim")) return t("actionCreate");
@@ -117,7 +113,7 @@ export default async function StaffPerformancePage({
     if (actionLower.includes("përditësim")) return t("actionUpdate");
     if (actionLower.includes("shtim")) return t("actionAdd");
     if (actionLower.includes("fshirje")) return t("actionDelete");
-    return rawAction; // Fallback nëse nuk gjen përputhje
+    return rawAction; 
   };
 
   return (

@@ -99,7 +99,7 @@ export async function updateBookingAction(id: string, data: any) {
 
     const user = await prisma.users.findUnique({
       where: { email: session.user.email },
-      select: { id: true, business_id: true }
+      select: { id: true, business_id: true, full_name: true }
     });
 
     if (!user || !user.business_id) return { error: "Biznesi ose përdoruesi nuk u gjet." };
@@ -133,7 +133,6 @@ export async function updateBookingAction(id: string, data: any) {
       payment_status: calculatedPaymentStatus,
       staff_notes: data.staff_notes || null,
       admin_notes: data.admin_notes || null,
-      // ZGJIDHJA PËR SALLËN OSE MENUNË
       hall_id: data.hall_id || null,
       menu_id: data.menu_id || null,
     };
@@ -176,6 +175,7 @@ export async function updateBookingAction(id: string, data: any) {
         }
       }
 
+      // ZGJIDHJA 1: Nëse po regjistrohet pagesë bashkë me editimin, hidhe në histori si Pagesë
       if (newPaymentAmount > 0) {
         await tx.payments.create({
           data: {
@@ -183,8 +183,21 @@ export async function updateBookingAction(id: string, data: any) {
             type: data.payment_type || "payment", recorded_by: user.id 
           }
         });
+
+        // Regjistrojmë pagesën në Audit
+        await tx.audit_logs.create({
+          data: {
+            business_id: businessId, 
+            user_id: user.id, 
+            action: data.payment_type === 'refund' ? "Kthim Pagese (Refund)" : "Shtim Pagese",
+            entity: "bookings", 
+            entity_id: id, 
+            after_state: JSON.stringify({ detaje: `U regjistrua pagesa prej ${newPaymentAmount}€. Metoda: ${data.payment_method}` })
+          }
+        });
       }
 
+      // Regjistrojmë vetë ndryshimin e rezervimit në Audit
       let logActionName = "Modifikim Rezervimi";
       let logDetailText = `Përditësoi të dhënat. Statusi: ${data.status}`;
       if (data.status === 'cancelled') logActionName = "Anulim Rezervimi";
@@ -192,8 +205,12 @@ export async function updateBookingAction(id: string, data: any) {
       
       await tx.audit_logs.create({
         data: {
-          business_id: businessId, user_id: user.id, action: logActionName,
-          entity: "bookings", entity_id: id, after_state: JSON.stringify({ detaje: logDetailText })
+          business_id: businessId, 
+          user_id: user.id, 
+          action: logActionName,
+          entity: "bookings", 
+          entity_id: id, 
+          after_state: JSON.stringify({ detaje: logDetailText })
         }
       });
     });

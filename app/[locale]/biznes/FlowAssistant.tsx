@@ -87,16 +87,14 @@ export default function FlowAssistant({ locale, userRole = "admin" }: { locale: 
 
   return (
     <>
-      {/* 1. SHTUAM print:hidden KËTU (Tek butoni rrethor jashtë) */}
       <button 
         onClick={() => setIsOpen(true)}
-        className={`print:hidden fixed bottom-6 right-6 z-[9998] bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all duration-300 hover:scale-110 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        className={`print:hidden fixed bottom-6 right-6 z-[99998] bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] transition-all duration-300 hover:scale-110 ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
       >
         <Sparkles size={24} />
       </button>
 
-      {/* 2. SHTUAM print:hidden KËTU (Tek dritarja e chat-it) */}
-      <div className={`print:hidden fixed bottom-6 right-6 z-[9999] w-[360px] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+      <div className={`print:hidden fixed bottom-6 right-6 z-[99999] w-[360px] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
         
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex justify-between items-center text-white shadow-sm shrink-0">
           <div className="flex items-center gap-3">

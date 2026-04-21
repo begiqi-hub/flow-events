@@ -21,7 +21,6 @@ export default function AddMenuPage() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   
-  // Shteti i ri për Modalin e Limiteve
   const [limitModal, setLimitModal] = useState<{title: string, message: string} | null>(null);
 
   const [compressedImage, setCompressedImage] = useState("");
@@ -74,7 +73,6 @@ export default function AddMenuPage() {
         image: compressedImage
       });
 
-      // 1. KONTROLLI NËSE KEMI ARRITUR LIMITIN (UPSELL)
       if (res?.isLimitError) {
         setLoading(false);
         setLimitModal({ title: res.limitTitle || "Limit i arritur", message: res.error || "" });
@@ -87,16 +85,12 @@ export default function AddMenuPage() {
         return;
       }
 
-      // ==============================================================
-      // 2. LOGJIKA E ONBOARDING (SETUP WIZARD)
-      // ==============================================================
       const searchParams = new URLSearchParams(window.location.search);
       const isOnboarding = searchParams.get('onboarding') === 'true';
 
       if (isOnboarding) {
         setToast({ show: true, message: "Hapi 2 u përfundua! Po kalojmë tek Ekstrat...", type: "tour" });
         setTimeout(() => {
-          // Kalojmë te Ekstrat duke mbajtur stafetën "?onboarding=true"
           router.push(`/${locale}/biznes/ekstra/shto?onboarding=true`);
         }, 2000);
       } else {
@@ -113,11 +107,11 @@ export default function AddMenuPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 relative">
+    <div className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 relative font-sans">
       
       {/* TOAST NORMAL DHE TOUR */}
       {toast.show && (
-        <div className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 animate-in fade-in duration-300`}>
+        <div className={`fixed inset-0 z-[110] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 animate-in fade-in duration-300`}>
           <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center relative animate-in zoom-in-95 duration-300">
             <div className={`relative mx-auto -mt-16 mb-6 w-24 h-24 rounded-full flex items-center justify-center border-8 border-white shadow-lg ${
               toast.type === "success" ? "bg-[#F0FDF4] text-emerald-500" : 
@@ -159,7 +153,7 @@ export default function AddMenuPage() {
 
       {/* MODALI I UPSELL-IT */}
       {limitModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] max-w-md w-full p-10 shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
             
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-40 pointer-events-none">
@@ -241,7 +235,15 @@ export default function AddMenuPage() {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
               <Utensils size={16} className="text-gray-400" /> {t("menuNameLabel")}
             </label>
-            <input type="text" required placeholder={t("menuNamePlaceholder")} className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+            {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400 */}
+            <input 
+              type="text" 
+              required 
+              placeholder={t("menuNamePlaceholder")} 
+              className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all text-gray-900 placeholder:text-gray-400" 
+              value={formData.name} 
+              onChange={(e) => setFormData({...formData, name: e.target.value})} 
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
@@ -257,14 +259,31 @@ export default function AddMenuPage() {
                   </div>
                 </div>
               </div>
-              <input type="number" step="0.01" placeholder="Psh: 12.50" className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-orange-500 focus:ring-1 bg-white font-medium text-sm" value={formData.internal_cost} onChange={(e) => setFormData({...formData, internal_cost: e.target.value})} />
+              {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400 */}
+              <input 
+                type="number" 
+                step="0.01" 
+                placeholder="Psh: 12.50" 
+                className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-orange-500 focus:ring-1 bg-white font-medium text-sm text-gray-900 placeholder:text-gray-400" 
+                value={formData.internal_cost} 
+                onChange={(e) => setFormData({...formData, internal_cost: e.target.value})} 
+              />
             </div>
 
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                 <Banknote size={16} className="text-emerald-500" /> {t("priceLabel")} (Çmimi i Shitjes)
               </label>
-              <input type="number" step="0.01" required placeholder={t("pricePlaceholder")} className="w-full border border-emerald-200 p-4 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 bg-white font-black text-sm text-emerald-900 placeholder:text-gray-400" value={formData.price_per_person} onChange={(e) => setFormData({...formData, price_per_person: e.target.value})} />
+              {/* RREGULLIMI: text-emerald-900, placeholder:text-gray-400 */}
+              <input 
+                type="number" 
+                step="0.01" 
+                required 
+                placeholder={t("pricePlaceholder")} 
+                className="w-full border border-emerald-200 p-4 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 bg-white font-black text-sm text-emerald-900 placeholder:text-gray-400" 
+                value={formData.price_per_person} 
+                onChange={(e) => setFormData({...formData, price_per_person: e.target.value})} 
+              />
             </div>
           </div>
 
@@ -272,7 +291,15 @@ export default function AddMenuPage() {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
               <AlignLeft size={16} className="text-gray-400" /> {t("contentLabel")}
             </label>
-            <textarea rows={4} required placeholder={t("contentPlaceholder")} className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 resize-none font-medium text-sm transition-all leading-relaxed" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+            {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400 */}
+            <textarea 
+              rows={4} 
+              required 
+              placeholder={t("contentPlaceholder")} 
+              className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 resize-none font-medium text-sm transition-all leading-relaxed text-gray-900 placeholder:text-gray-400" 
+              value={formData.description} 
+              onChange={(e) => setFormData({...formData, description: e.target.value})} 
+            />
           </div>
 
           <hr className="border-gray-100" />

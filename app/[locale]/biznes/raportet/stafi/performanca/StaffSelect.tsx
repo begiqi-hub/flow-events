@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Users } from "lucide-react";
-import { useTranslations } from "next-intl"; // Shtuar importi i përkthimeve
+import { useTranslations } from "next-intl"; 
 
 type StaffMember = {
   id: string;
@@ -13,7 +13,7 @@ export default function StaffSelect({ staffList }: { staffList: StaffMember[] })
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const t = useTranslations("StaffPerformance"); // Lidhja me bllokun e përkthimeve
+  const t = useTranslations("StaffPerformance"); 
   
   const currentStaffId = searchParams.get("staffId") || "";
 
@@ -34,16 +34,17 @@ export default function StaffSelect({ staffList }: { staffList: StaffMember[] })
       </div>
       <div className="flex-1">
         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-          {t("selectStaff")} {/* Përkthimi për "Zgjidh Punonjësin" */}
+          {t("selectStaff")}
         </label>
+        {/* RREGULLIMI: text-gray-900 që të lexohet emri i zgjedhur qartë */}
         <select
           value={currentStaffId}
           onChange={handleChange}
-          className="w-full bg-transparent text-gray-900 font-semibold text-lg focus:outline-none cursor-pointer"
+          className="w-full bg-transparent text-gray-900 font-bold text-lg focus:outline-none cursor-pointer"
         >
-          <option value="">{t("selectPlaceholder")}</option> {/* Përkthimi për listën */}
+          <option value="" className="text-gray-500">{t("selectPlaceholder")}</option>
           {staffList.map((staff) => (
-            <option key={staff.id} value={staff.id}>
+            <option key={staff.id} value={staff.id} className="text-gray-900 font-medium">
               {staff.name}
             </option>
           ))}

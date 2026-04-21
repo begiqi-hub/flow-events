@@ -78,9 +78,9 @@ export default function DashboardClient({ business, locale, stats, monthBookings
   return (
     <div className="w-full relative z-0">
       
-      {/* POPUP I DETAJEVE */}
+      {/* POPUP I DETAJEVE - RREGULLUAR z-index */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-gray-100">
             <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-3">
@@ -194,9 +194,9 @@ export default function DashboardClient({ business, locale, stats, monthBookings
         </div>
       )}
 
-      {/* MODALI I DITËS */}
+      {/* MODALI I DITËS - RREGULLUAR z-index */}
       {dayModal.isOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden animate-in zoom-in-95 relative z-[160]">
             <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50">
               <h3 className="font-black text-gray-900 text-lg flex items-center gap-2"><CalendarIcon className="text-blue-500" size={20}/>Data: {dayModal.date} {currentMonthName}</h3>

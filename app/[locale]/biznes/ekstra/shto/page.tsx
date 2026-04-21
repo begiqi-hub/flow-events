@@ -48,9 +48,7 @@ export default function AddExtraPage() {
         return;
       }
 
-      // ==============================================================
       // LOGJIKA E ONBOARDING (SETUP WIZARD)
-      // ==============================================================
       const searchParams = new URLSearchParams(window.location.search);
       const isOnboarding = searchParams.get('onboarding') === 'true';
 
@@ -121,7 +119,6 @@ export default function AddExtraPage() {
       {limitModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] max-w-md w-full p-10 shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
-            
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-40 pointer-events-none">
               <Crown size={180} />
             </div>
@@ -156,7 +153,6 @@ export default function AddExtraPage() {
                  </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
@@ -177,11 +173,12 @@ export default function AddExtraPage() {
           <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
             <Sparkles size={16} className="text-gray-400" /> {t("extraNameLabel")}
           </label>
+          {/* RREGULLIMI: text-gray-900, placeholder:text-gray-400, bg-white */}
           <input 
             type="text" 
             required 
             placeholder={t("extraNamePlaceholder")}
-            className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-sm transition-all" 
+            className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 font-medium text-gray-900 text-sm transition-all placeholder:text-gray-400" 
             value={formData.name} 
             onChange={(e) => setFormData({...formData, name: e.target.value})} 
           />
@@ -200,11 +197,12 @@ export default function AddExtraPage() {
                 </div>
               </div>
             </div>
+            {/* RREGULLIMI */}
             <input 
               type="number" 
               step="0.01" 
               placeholder="Psh: 150.00" 
-              className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-orange-500 focus:ring-1 bg-white font-medium text-sm transition-all" 
+              className="w-full bg-white border border-gray-200 p-4 rounded-xl outline-none focus:border-orange-500 focus:ring-1 font-medium text-gray-900 text-sm transition-all placeholder:text-gray-400" 
               value={formData.internal_cost} 
               onChange={(e) => setFormData({...formData, internal_cost: e.target.value})} 
             />
@@ -214,12 +212,13 @@ export default function AddExtraPage() {
             <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
               <Banknote size={16} className="text-emerald-500" /> {t("priceLabel")} (Shitet)
             </label>
+            {/* RREGULLIMI */}
             <input 
               type="number" 
               step="0.01" 
               required 
               placeholder={t("pricePlaceholder")}
-              className="w-full border border-emerald-200 p-4 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 bg-white font-black text-sm text-emerald-900 placeholder:text-gray-400 transition-all" 
+              className="w-full bg-white border border-emerald-200 p-4 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 font-black text-sm text-emerald-900 placeholder:text-gray-400 transition-all" 
               value={formData.price} 
               onChange={(e) => setFormData({...formData, price: e.target.value})} 
             />
