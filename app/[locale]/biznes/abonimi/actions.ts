@@ -10,20 +10,16 @@ export async function createPaymentIntent(data: {
   packageId?: string; 
 }) {
   try {
-    // 1. Fjalori i prefikseve për çdo gjuhë që suporton sistemi
     const prefixes: Record<string, string> = {
-      sq: "FAT", // Shqip (Faturë)
-      en: "INV", // Anglisht (Invoice)
-      mk: "FAK", // Maqedonisht (Фактура / Faktura)
-      cg: "FAK", // Malazezisht (Faktura)
-      el: "TIM", // Greqisht (Τιμολόγιο / Timologio)
-      // Mund të shtosh gjuhë të tjera këtu në të ardhmen (psh. de: "REC" për Rechnung)
+      sq: "FAT", 
+      en: "INV", 
+      mk: "FAK", 
+      cg: "FAK", 
+      el: "TIM", 
     };
 
-    // 2. Marrim prefiksin sipas 'locale'. Nëse gjuha nuk ekziston në listë, përdorim 'INV' si Default.
     const prefix = prefixes[data.locale] || "INV";
     
-    // 3. Gjenerojmë numrin me prefiksin dinamik
     const invoiceNum = `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     const newPayment = await prisma.sa_payments.create({
@@ -42,5 +38,28 @@ export async function createPaymentIntent(data: {
   } catch (error) {
     console.error(error);
     return { error: "Dështoi krijimi i kërkesës për pagesë." };
+  }
+}
+
+// ==========================================
+// FUNKSIONI I RI PËR ANULIMIN E ABONIMIT
+// ==========================================
+export async function cancelSubscriptionAction(data: { businessId: string; locale: string }) {
+  try {
+    // Ruajmë statusin si 'cancelled_subscription'. Përdoruesi ende mund ta përdorë deri
+    // në 'trialEndsAt', por platforma di që ky nuk do të rinovojë më.
+    await prisma.businesses.update({
+      where: { id: data.businessId },
+      data: {
+        status: "cancelled_subscription"
+      }
+    });
+
+    revalidatePath(`/${data.locale}/biznes/abonimi`);
+    revalidatePath(`/${data.locale}/biznes`); // Rifresko edhe dashboardin
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Dështoi procesi i anulimit të abonimit." };
   }
 }

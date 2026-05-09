@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { 
   Check, X, Clock, Banknote, ShieldCheck, Mail, Instagram,
   Layers, Users, UtensilsCrossed, Info, FileText,
-  CreditCard, Calendar, Megaphone, ArrowRight, Download, Ticket, Zap, History, Printer, Copy, ShieldAlert
+  CreditCard, Calendar, Megaphone, ArrowRight, Download, Ticket, Zap, History, Printer, Copy, ShieldAlert, AlertTriangle
 } from "lucide-react";
-import { createPaymentIntent } from "./actions"; 
+import { createPaymentIntent, cancelSubscriptionAction } from "./actions"; // <--- Shtuam aksionin e ri
 import { format, addMonths, addYears, differenceInDays } from "date-fns";
 import { sq } from "date-fns/locale";
 import { useReactToPrint } from "react-to-print";
@@ -28,15 +28,18 @@ export default function AbonimiClient({
   const [generatedRef, setGeneratedRef] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null); 
   
-  // MODALI I RI PËR ERROR-ET E KAPACITETIT
   const [errorModal, setErrorModal] = useState<string | null>(null);
-
   const [historicalInvoice, setHistoricalInvoice] = useState<any>(null);
+
+  // SHTUAR: MODALI PËR ANULIMIN E ABONIMIT
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const [paddle, setPaddle] = useState<Paddle | null>(null);
   const [paddleError, setPaddleError] = useState<string | null>(null);
 
   const isTrial = business.status === 'trial' || !business.status;
+  const isCancelled = business.status === 'cancelled_subscription';
   const [showPricing, setShowPricing] = useState(isTrial);
 
   useEffect(() => {
@@ -61,14 +64,12 @@ export default function AbonimiClient({
     }).catch(err => setPaddleError(err.message));
   }, [locale, router]); 
 
-  // ==========================================
-  // LLOGARITJA E DITËVE TË MBETURA (PËR KREDITIN)
-  // ==========================================
   let daysLeft = 0;
   let unusedCredit = 0;
   let expiryDate = "Nuk ka datë";
 
-  if (business.trialEndsAt && business.status === 'active') {
+  // Rregulluar: Ditet i llogarisim edhe nëse është aktiv edhe nëse e ka anuluar paraprakisht (por prap ka ditë)
+  if (business.trialEndsAt && (business.status === 'active' || isCancelled)) {
     const endObj = new Date(business.trialEndsAt);
     daysLeft = differenceInDays(endObj, new Date());
     expiryDate = format(endObj, "dd.MM.yyyy", { locale: sq });
@@ -79,14 +80,12 @@ export default function AbonimiClient({
     }
   }
 
-  // Logjika financiare brenda modalit të faturës
   let baseAmount = 0;
   let finalToPay = 0;
   let discountFromCredit = 0;
   let isUpgrade = false;
 
   if (selectedPkg) {
-    // FIX PËR ERRORIN: E kthejmë me detyrim në Number()
     baseAmount = Number(billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price);
     
     if (business.package) {
@@ -99,7 +98,6 @@ export default function AbonimiClient({
     discountFromCredit = isUpgrade ? Math.min(unusedCredit, baseAmount) : 0;
     finalToPay = baseAmount - discountFromCredit;
   }
-  // ==========================================
 
   const invoiceRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -116,9 +114,6 @@ export default function AbonimiClient({
   });
 
   const openPackageModal = (pkg: any) => {
-    // ==========================================
-    // KONTROLLI I LIMITEVE ME POPUP TË BUKUR!
-    // ==========================================
     if (pkg.halls_limit !== -1 && currentUsage.halls > pkg.halls_limit) {
       setErrorModal(`Kjo pako lejon vetëm **${pkg.halls_limit} salla**, por ju keni **${currentUsage.halls} salla aktive**.\n\nJu lutem çaktivizoni ose fshini sallat e tepërta përpara se të ndryshoni pakon.`);
       return;
@@ -131,7 +126,6 @@ export default function AbonimiClient({
       setErrorModal(`Kjo pako lejon vetëm **${pkg.menus_limit} menu**, por ju keni **${currentUsage.menus} menu aktive**.\n\nJu lutem çaktivizoni menutë e tepërta nga menaxhimi i menuve.`);
       return;
     }
-    // ==========================================
 
     setSelectedPkg(pkg);
     setGeneratedRef(""); 
@@ -182,6 +176,19 @@ export default function AbonimiClient({
     setLoadingId(null); 
   };
 
+  // AKSIONI PËR ANULIMIN E ABONIMIT NGA UI
+  const handleCancelSubscription = async () => {
+    setIsCancelling(true);
+    const res = await cancelSubscriptionAction({ businessId: business.id, locale: locale });
+    setIsCancelling(false);
+    
+    if (res.success) {
+      setShowCancelModal(false);
+    } else {
+      alert(res.error || "Pati një gabim gjatë anulimit të abonimit.");
+    }
+  };
+
   const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
@@ -223,7 +230,6 @@ export default function AbonimiClient({
     }
   }
 
-  // Funksion për të kthyer tekstin me 'bold' në HTML
   const formatBoldText = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, index) => {
@@ -237,7 +243,6 @@ export default function AbonimiClient({
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500 font-sans">
       
-      {/* POPUP (MODAL) I BUKUR PËR GABIMET E KAPACITETIT */}
       {errorModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-300 border border-gray-100">
@@ -258,7 +263,38 @@ export default function AbonimiClient({
         </div>
       )}
 
-      {/* PANELI KRYESOR I ABONIMIT & HISTORIKUT TË FATURAVE */}
+      {/* POPUP (MODAL) PËR ANULIMIN E ABONIMIT */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 text-center animate-in zoom-in-95 duration-300 border border-gray-100">
+            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-rose-100">
+              <AlertTriangle size={36} strokeWidth={2.5} />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-3">Jeni i sigurt?</h3>
+            <p className="text-gray-500 text-sm font-medium whitespace-pre-line mb-8 leading-relaxed">
+              Nëse e anuloni abonimin, platforma juaj do të jetë aktive vetëm deri në datën <strong className="text-gray-900">{expiryDate}</strong>.<br/><br/>
+              Pas kësaj date, faqja do të bllokohet dhe nuk do të keni më mundësi të hyni as në rezervime dhe as në sistem. Për të ri-aktivizuar sistemin do të duhet të paguani sërish.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleCancelSubscription}
+                disabled={isCancelling}
+                className="w-full bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isCancelling ? <Clock className="animate-spin" size={18} /> : null}
+                Po, Anulo Abonimin Tim
+              </button>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="w-full bg-gray-50 text-gray-500 font-bold py-4 rounded-xl hover:bg-gray-100 hover:text-gray-700 transition-all"
+              >
+                Kthehu mbrapa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!showPricing && (
         <div className="mb-12 max-w-5xl mx-auto space-y-8">
           <div className="bg-white rounded-[2rem] p-10 border border-gray-100 shadow-sm relative overflow-hidden">
@@ -275,6 +311,8 @@ export default function AbonimiClient({
                   <div className="flex gap-2">
                     {business.status === 'active' ? (
                        <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 border border-emerald-100"><Check size={12} /> Aktiv</span>
+                    ) : isCancelled ? (
+                       <span className="bg-rose-50 text-rose-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 border border-rose-100"><X size={12} /> I Anuluar (Deri {expiryDate})</span>
                     ) : (
                        <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1.5 border border-amber-100"><Clock size={12} /> Në Pritje</span>
                     )}
@@ -285,8 +323,8 @@ export default function AbonimiClient({
               <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-[1.5rem] min-w-[240px] text-right">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Data e Skadimit:</p>
                 <p className="text-xl font-black text-gray-900 mb-1">{expiryDate}</p>
-                {business.status === 'active' && daysLeft > 0 && <p className="text-xs font-bold text-emerald-600">Mbeten edhe {daysLeft} ditë</p>}
-                {business.status === 'active' && daysLeft <= 0 && <p className="text-xs font-bold text-red-500">I skaduar</p>}
+                {(business.status === 'active' || isCancelled) && daysLeft > 0 && <p className={`text-xs font-bold ${isCancelled ? 'text-amber-600' : 'text-emerald-600'}`}>Mbeten edhe {daysLeft} ditë</p>}
+                {(business.status === 'active' || isCancelled) && daysLeft <= 0 && <p className="text-xs font-bold text-red-500">I skaduar</p>}
               </div>
             </div>
 
@@ -307,9 +345,22 @@ export default function AbonimiClient({
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <button onClick={() => setShowPricing(true)} className="bg-gray-900 hover:bg-black text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-md">
-                  Ndrysho Paketën <ArrowRight size={16} />
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                
+                {/* BUTONI I ANULIMIT TË ABONIMIT (VETËM NËSE ËSHTË AKTIV) */}
+                {business.status === 'active' ? (
+                  <button 
+                    onClick={() => setShowCancelModal(true)} 
+                    className="text-xs font-bold text-gray-400 hover:text-red-500 underline underline-offset-4 transition-colors px-2 py-1"
+                  >
+                    Anulo Abonimin (Rinovimin)
+                  </button>
+                ) : (
+                  <div></div> 
+                )}
+                
+                <button onClick={() => setShowPricing(true)} className="w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md">
+                  {isCancelled ? "Rinovo Paketën" : "Ndrysho Paketën"} <ArrowRight size={16} />
                 </button>
               </div>
             </div>
@@ -365,7 +416,6 @@ export default function AbonimiClient({
         </div>
       )}
 
-      {/* ZGJEDHJA E PAKETËS */}
       {showPricing && (
         <div className="animate-in slide-in-from-bottom-8 duration-700">
           {!isTrial && (
@@ -465,7 +515,6 @@ export default function AbonimiClient({
         </div>
       )}
 
-      {/* MODAL I PAGESËS PËR PAKETËN E RE */}
       {selectedPkg && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-md p-4 print:bg-white print:p-0">
           <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] print:max-h-none print:shadow-none print:rounded-none">
@@ -552,7 +601,6 @@ export default function AbonimiClient({
                            <span className="font-bold text-gray-900 font-mono">{baseAmount.toFixed(2)} €</span>
                         </div>
                         
-                        {/* KREDITI NGA PAKOJA E VJETËR */}
                         {isUpgrade && discountFromCredit > 0 && (
                           <div className="flex justify-between py-2 text-sm border-b border-gray-100">
                             <span className="text-emerald-600 font-bold uppercase tracking-wider">Kredit nga pako e vjetër ({daysLeft} ditë)</span>
@@ -610,14 +658,12 @@ export default function AbonimiClient({
                      <p className="text-gray-500 font-medium mb-8 leading-relaxed">Si dëshironi të paguani për paketën {selectedPkg.name}?</p>
                      
                      <div className="flex flex-col gap-3 mt-auto">
-                       {/* BUTONI I KARTELËS */}
                        {systemSettings?.enable_card_payments !== false && (
                          <button onClick={handlePaddlePayment} disabled={loadingId !== null} className="w-full bg-[#0f172a] text-white py-4 rounded-2xl font-bold hover:bg-[#1e293b] transition-all shadow-lg flex items-center justify-center gap-2">
                            {loadingId === 'paddle' ? <Clock size={18} className="animate-spin" /> : <CreditCard size={18} />} Paguaj me Kartë
                          </button>
                        )}
 
-                       {/* BUTONI I TRANSFERTËS BANKARE */}
                        {systemSettings?.enable_bank_transfers !== false && (
                          <button onClick={handleConfirm} disabled={loadingId !== null} className="w-full bg-white border-2 border-gray-200 text-gray-800 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2">
                            {loadingId === selectedPkg.id ? <Clock size={18} className="animate-spin text-gray-500" /> : <Banknote size={18} className="text-gray-500" />} Transfertë Bankare

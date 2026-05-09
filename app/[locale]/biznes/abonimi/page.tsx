@@ -71,7 +71,7 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
       locale={locale} 
       systemSettings={safeSystemSettings}
       bankAccount={safeBankAccount}
-      currentUsage={currentUsage} // <--- Ia kalojmë numërimin klientit
+      currentUsage={currentUsage} 
     />
   );
 }
