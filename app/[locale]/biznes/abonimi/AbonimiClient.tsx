@@ -145,7 +145,7 @@ export default function AbonimiClient({
     setLoadingId(null);
   };
 
-  const handlePaddlePayment = () => {
+ const handlePaddlePayment = () => {
     if (paddleError || !paddle || !selectedPkg) return;
     setLoadingId('paddle');
 
@@ -153,7 +153,8 @@ export default function AbonimiClient({
     let priceId = "";
 
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
-       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY!;
+       // KODI I TESTIT: Detyrojmë çmimin 1 Euro pavarësisht ciklit
+       priceId = "pri_01kpv229q28k0mamvhrnq8e0qm"; 
     } else if (pkgName.includes("business") || pkgName.includes("pro")) {
        priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY!;
     } else if (pkgName.includes("elite") || pkgName.includes("premium")) {
