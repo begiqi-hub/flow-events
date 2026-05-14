@@ -43,7 +43,7 @@ export default function AbonimiClient({
   const [showPricing, setShowPricing] = useState(isTrial);
 
   useEffect(() => {
-    const tokenToUse = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "test_25f28a0f1d30c5d1bee41791130";
+    const tokenToUse = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "live_e8917a133a0a0bdc8342fa7b958";
     
     if (!tokenToUse || tokenToUse === "VENDOS_TOKENIN_KËTU") {
         setPaddleError("Mungon Client Token i Paddle!");
@@ -152,9 +152,9 @@ export default function AbonimiClient({
     const pkgName = selectedPkg.name.toLowerCase();
     let priceId = "";
 
+    // Përdorim variablat e mjedisit (.env) që do t'i shtojmë në Vercel
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
-       // KODI I TESTIT: Detyrojmë çmimin 1 Euro pavarësisht ciklit
-       priceId = "pri_01kpv229q28k0mamvhrnq8e0qm"; 
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY!;
     } else if (pkgName.includes("business") || pkgName.includes("pro")) {
        priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY!;
     } else if (pkgName.includes("elite") || pkgName.includes("premium")) {
@@ -162,7 +162,7 @@ export default function AbonimiClient({
     }
 
     if (!priceId || priceId === "undefined") {
-       alert("Gabim: Nuk u gjet ID e çmimit. Kontrolloni .env file.");
+       alert("Gabim: Nuk u gjet ID e çmimit. Kontrolloni konfigurimet në Vercel.");
        setLoadingId(null);
        return;
     }
@@ -171,9 +171,15 @@ export default function AbonimiClient({
         paddle.Checkout.open({
             items: [{ priceId: priceId, quantity: 1 }],
             customer: { email: business.email },
-            customData: { businessId: business.id.toString(), packageId: selectedPkg.id.toString(), billingCycle: billingCycle }
+            customData: { 
+                businessId: business.id.toString(), 
+                packageId: selectedPkg.id.toString(), 
+                billingCycle: billingCycle 
+            }
         });
-    } catch (err: any) { alert("Ndodhi një gabim: " + err.message); }
+    } catch (err: any) { 
+        alert("Ndodhi një gabim: " + err.message); 
+    }
     setLoadingId(null); 
   };
 
