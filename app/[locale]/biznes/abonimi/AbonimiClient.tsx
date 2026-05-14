@@ -51,7 +51,7 @@ export default function AbonimiClient({
     }
 
     initializePaddle({
-      environment: "sandbox",
+      environment: "production",
       token: tokenToUse,
       eventCallback: function(data) {
         if (data.name === "checkout.completed") {
