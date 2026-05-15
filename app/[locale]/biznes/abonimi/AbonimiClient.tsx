@@ -148,25 +148,25 @@ export default function AbonimiClient({
     const pkgName = selectedPkg.name.toLowerCase();
     let priceId = "";
 
-    // Përdorim variablat e mjedisit (.env) që do t'i shtojmë në Vercel
+    // Lexojmë ID-të e REJA që do të vendosësh në Vercel
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
-       priceId = billingCycle === 'monthly' ? "pri_01kpv229q28k0mamvhrnq8e0qm" : "pri_01kpv22zjemw1r2yatkjcqwshk";
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY!;
     } else if (pkgName.includes("business") || pkgName.includes("pro")) {
-       priceId = billingCycle === 'monthly' ? "pri_01kp653grfknvsbxybj5jagk87" : "pri_01kp654nca0r7hdvpp5xh7mj5z";
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY!;
     } else if (pkgName.includes("elite") || pkgName.includes("premium")) {
-       priceId = billingCycle === 'monthly' ? "pri_01kp657cfyhmkwdgb4qng3b0b7" : "pri_01kp656fj6h194er34y5j6vjsp";
+       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_YEARLY!;
     }
 
     if (!priceId || priceId === "undefined") {
-       alert("Gabim: Nuk u gjet ID e çmimit.");
+       alert("Gabim: Nuk u gjet ID e çmimit për këtë paketë.");
        setLoadingId(null);
        return;
     }
-    
+
     try {
         paddle.Checkout.open({
             items: [{ priceId: priceId, quantity: 1 }],
-            customer: { email: business.email },
+            customer: { email: business.email }, // Kjo plotëson emailin automatikisht në checkout
             customData: { 
                 businessId: business.id.toString(), 
                 packageId: selectedPkg.id.toString(), 
