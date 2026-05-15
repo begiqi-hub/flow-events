@@ -43,12 +43,8 @@ export default function AbonimiClient({
   const [showPricing, setShowPricing] = useState(isTrial);
 
   useEffect(() => {
-    const tokenToUse = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "live_e8917a133a0a0bdc8342fa7b958";
-    
-    if (!tokenToUse || tokenToUse === "VENDOS_TOKENIN_KËTU") {
-        setPaddleError("Mungon Client Token i Paddle!");
-        return;
-    }
+    // VENDOSIM TOKENIN DIREKT PA PËRDORUR VERCEL (Për të shmangur problemet e cache)
+    const tokenToUse = "live_e8917a133a0a0bdc8342fa7b958";
 
     initializePaddle({
       environment: "production",
