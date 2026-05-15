@@ -148,7 +148,6 @@ export default function AbonimiClient({
     const pkgName = selectedPkg.name.toLowerCase();
     let priceId = "";
 
-    // Lexojmë ID-të e REJA që do të vendosësh në Vercel
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
        priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY!;
     } else if (pkgName.includes("business") || pkgName.includes("pro")) {
@@ -157,8 +156,15 @@ export default function AbonimiClient({
        priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_YEARLY!;
     }
 
+    // --- RRESHTAT PËR TË ZBULUAR GABIMIN ---
+    console.log("1. Emri i pakos së klikuar:", pkgName);
+    console.log("2. Cikli i faturimit:", billingCycle);
+    console.log("3. Çmimi Starter nga Vercel është:", process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY);
+    console.log("4. ID-ja finale që po i dërgohet Paddle:", priceId);
+    // ----------------------------------------
+
     if (!priceId || priceId === "undefined") {
-       alert("Gabim: Nuk u gjet ID e çmimit për këtë paketë.");
+       alert("Gabim: Nuk u gjet ID e çmimit.");
        setLoadingId(null);
        return;
     }
@@ -166,7 +172,7 @@ export default function AbonimiClient({
     try {
         paddle.Checkout.open({
             items: [{ priceId: priceId, quantity: 1 }],
-            customer: { email: business.email }, // Kjo plotëson emailin automatikisht në checkout
+            customer: { email: business.email },
             customData: { 
                 businessId: business.id.toString(), 
                 packageId: selectedPkg.id.toString(), 
@@ -178,7 +184,7 @@ export default function AbonimiClient({
     }
     setLoadingId(null); 
   };
-
+  
   // AKSIONI PËR ANULIMIN E ABONIMIT NGA UI
   const handleCancelSubscription = async () => {
     setIsCancelling(true);
