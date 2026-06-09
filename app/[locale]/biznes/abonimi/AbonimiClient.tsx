@@ -148,26 +148,25 @@ export default function AbonimiClient({
     const pkgName = selectedPkg.name.toLowerCase();
     let priceId = "";
 
-    // Përdorim fallbacks (ID-të e vërteta) nëse Vercel dështon të lexojë .env
+    // SHKËPUTJE TOTALE NGA VERCEL ENV. Hardcode direkt me ID-të e vërteta.
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
        priceId = billingCycle === 'monthly' 
-           ? (process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY || "pri_01kpv229q28k0mamvhrnq8e0qm") 
-           : (process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY || "pri_01kpv22zjemw1r2yatkjcqwshk");
+           ? "pri_01kpv229q28k0mamvhrnq8e0qm" 
+           : "pri_01kpv22zjemw1r2yatkjcqwshk";
     } else if (pkgName.includes("business") || pkgName.includes("pro")) {
        priceId = billingCycle === 'monthly' 
-           ? (process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY || "pri_01kpv1zd54n40ftepj9g4vzaax") 
-           : (process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY || "pri_01kpv20s8kssvzeqjnpe27bstv");
+           ? "pri_01kpv1zd54n40ftepj9g4vzaax" 
+           : "pri_01kpv20s8kssvzeqjnpe27bstv";
     } else if (pkgName.includes("elite") || pkgName.includes("premium")) {
        priceId = billingCycle === 'monthly' 
-           ? (process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_MONTHLY || "pri_01kpv1sfdk4w8819q3xw2n5rmt") 
-           : (process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_YEARLY || "pri_01kpv1vsyt0mrtdhzk4cpgf645");
+           ? "pri_01kpv1sfdk4w8819q3xw2n5rmt" 
+           : "pri_01kpv1vsyt0mrtdhzk4cpgf645";
     }
 
-    console.log("TEST I FUNDIT -> Emri Pakos:", pkgName, "| Cikli:", billingCycle, "| ID Finale:", priceId);
+    console.log("HARDCODE TEST -> Emri Pakos:", pkgName, "| Cikli:", billingCycle, "| ID Finale:", priceId);
 
-    // Ndalojmë hapjen nëse ende kapet ID e vjetër e gabuar e cache-it
-    if (!priceId || priceId === "undefined" || priceId === "pri_01kp653grfknvsbxybj5jagk87") {
-       alert("Gabim: Sistemi po lexon ende ID-të e vjetra nga Cache i Vercel.");
+    if (!priceId) {
+       alert("Gabim kritik: Nuk u gjenerua asnjë ID.");
        setLoadingId(null);
        return;
     }
