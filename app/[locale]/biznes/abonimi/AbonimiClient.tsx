@@ -148,23 +148,26 @@ export default function AbonimiClient({
     const pkgName = selectedPkg.name.toLowerCase();
     let priceId = "";
 
+    // Përdorim fallbacks (ID-të e vërteta) nëse Vercel dështon të lexojë .env
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
-       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY!;
+       priceId = billingCycle === 'monthly' 
+           ? (process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY || "pri_01kpv229q28k0mamvhrnq8e0qm") 
+           : (process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_YEARLY || "pri_01kpv22zjemw1r2yatkjcqwshk");
     } else if (pkgName.includes("business") || pkgName.includes("pro")) {
-       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY!;
+       priceId = billingCycle === 'monthly' 
+           ? (process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_MONTHLY || "pri_01kpv1zd54n40ftepj9g4vzaax") 
+           : (process.env.NEXT_PUBLIC_PADDLE_PRICE_BUSINESS_YEARLY || "pri_01kpv20s8kssvzeqjnpe27bstv");
     } else if (pkgName.includes("elite") || pkgName.includes("premium")) {
-       priceId = billingCycle === 'monthly' ? process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_MONTHLY! : process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_YEARLY!;
+       priceId = billingCycle === 'monthly' 
+           ? (process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_MONTHLY || "pri_01kpv1sfdk4w8819q3xw2n5rmt") 
+           : (process.env.NEXT_PUBLIC_PADDLE_PRICE_ELITE_YEARLY || "pri_01kpv1vsyt0mrtdhzk4cpgf645");
     }
 
-    // --- RRESHTAT PËR TË ZBULUAR GABIMIN ---
-    console.log("1. Emri i pakos së klikuar:", pkgName);
-    console.log("2. Cikli i faturimit:", billingCycle);
-    console.log("3. Çmimi Starter nga Vercel është:", process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY);
-    console.log("4. ID-ja finale që po i dërgohet Paddle:", priceId);
-    // ----------------------------------------
+    console.log("TEST I FUNDIT -> Emri Pakos:", pkgName, "| Cikli:", billingCycle, "| ID Finale:", priceId);
 
-    if (!priceId || priceId === "undefined") {
-       alert("Gabim: Nuk u gjet ID e çmimit.");
+    // Ndalojmë hapjen nëse ende kapet ID e vjetër e gabuar e cache-it
+    if (!priceId || priceId === "undefined" || priceId === "pri_01kp653grfknvsbxybj5jagk87") {
+       alert("Gabim: Sistemi po lexon ende ID-të e vjetra nga Cache i Vercel.");
        setLoadingId(null);
        return;
     }
@@ -180,7 +183,7 @@ export default function AbonimiClient({
             }
         });
     } catch (err: any) { 
-        alert("Ndodhi një gabim: " + err.message); 
+        alert("Ndodhi një gabim në hapjen e Paddle: " + err.message); 
     }
     setLoadingId(null); 
   };
