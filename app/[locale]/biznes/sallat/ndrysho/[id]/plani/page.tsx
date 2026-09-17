@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Draggable from "react-draggable";
-import { ArrowLeft, Save, PlusCircle, Square, Circle, Trash2, LayoutDashboard, Heart } from "lucide-react";
+import { ArrowLeft, Save, PlusCircle, Square, Circle, Trash2, LayoutDashboard, Heart, Map as MapIcon } from "lucide-react";
 import { getFloorPlan, saveFloorPlan } from "./actions";
 
 interface TableObj {
@@ -230,7 +230,7 @@ export default function FloorPlanEditorPage({ params }: { params: Promise<{ loca
 
           {tables.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 font-medium pointer-events-none select-none">
-              <Map size={48} className="mb-4 opacity-20" />
+              <MapIcon size={48} className="mb-4 opacity-20" />
               Salla është bosh. Shto tavolina nga mjetet anësore.
             </div>
           )}
