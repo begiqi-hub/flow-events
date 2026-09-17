@@ -405,14 +405,15 @@ model venue_layouts {
 model tables {
   id        String @id @default(uuid()) @db.VarChar(36)
   layout_id String @db.VarChar(36)
-  name      String @db.VarChar(100) // p.sh. "Tavolina 1", "Tavolina Çiftit"
-  seats     Int    // Kapaciteti i ulëseve
-  type      String @default("circle") @db.VarChar(50) // circle, rectangle, couple
-  pos_x     Float  // Koordinata X në Canvas
-  pos_y     Float  // Koordinata Y në Canvas
+  name      String @db.VarChar(100)
+  seats     Int
+  type      String @default("circle") @db.VarChar(50)
+  pos_x     Float
+  pos_y     Float
+  rotation  Float  @default(0) // <--- SHTO KËTË RRESHT
 
   venue_layouts venue_layouts @relation(fields: [layout_id], references: [id], onDelete: Cascade)
-  guests        guests[]      // Mysafirët që ulen në këtë tavolinë
+  guests        guests[]      
 
   @@index([layout_id], map: "idx_table_layout_id")
 }

@@ -75,6 +75,7 @@ export async function saveFloorPlan(hallId: string, tablesData: any[]) {
       type: t.type,
       pos_x: parseFloat(t.pos_x),
       pos_y: parseFloat(t.pos_y),
+      rotation: parseFloat(t.rotation || 0),
     }));
 
     if (newTables.length > 0) {
