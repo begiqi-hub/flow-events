@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl"; 
-import { Building2, Users, Image as ImageIcon, ArrowLeft, Save, AlignLeft, Check, Activity } from "lucide-react";
+// SHTUAR: Map, Plus dhe Edit3 nga lucide-react për ikonat e planit
+import { Building2, Users, Image as ImageIcon, ArrowLeft, Save, AlignLeft, Check, Activity, Map, Plus, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { updateHallAction, getHallAction } from "./actions";
 
@@ -18,6 +19,9 @@ export default function EditHallPage({ params }: { params: Promise<{ locale: str
   const [fetching, setFetching] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   
+  // SHTUAR: State për të ditur nëse ka plan ekzistues
+  const [hasFloorPlan, setHasFloorPlan] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "", capacity: "", description: "", image: "", parking: true, ac: true, status: "active"
   });
@@ -30,8 +34,13 @@ export default function EditHallPage({ params }: { params: Promise<{ locale: str
           name: data.name, capacity: data.capacity.toString(),
           description: data.description || "", image: data.image || "",
           parking: data.parking, ac: data.ac,
-          status: data.status || "active" // SHTUAR STATUSI KËTU
+          status: data.status || "active"
         });
+        
+        // SHTUAR: Kontrollojmë nëse array 'venue_layouts' ka të paktën 1 element
+        if (data.venue_layouts && data.venue_layouts.length > 0) {
+          setHasFloorPlan(true);
+        }
       } else {
         setToast({ show: true, message: t("notFound"), type: "error" });
       }
@@ -109,9 +118,48 @@ export default function EditHallPage({ params }: { params: Promise<{ locale: str
         <p className="text-gray-500 mt-2 text-sm">{t("pageSubtitle")}</p>
       </div>
 
+      {/* ========================================================= */}
+      {/* SHTUAR: SEKSIONI I PLANIT TË SALLËS (OPSIONAL)            */}
+      {/* ========================================================= */}
+      <div className={`bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center border border-indigo-100 shrink-0">
+            <Map size={26} />
+          </div>
+          <div>
+            <h3 className="text-lg font-extrabold text-gray-900">Plani i Sallës (Opsional)</h3>
+            <p className="text-sm text-gray-500 font-medium mt-1">
+              {hasFloorPlan 
+                ? "Kjo sallë ka një plan aktiv të konfiguruar." 
+                : "Ky plan është opsional. Mund ta krijoni kur të dëshironi."}
+            </p>
+          </div>
+        </div>
+        
+        <Link 
+          href={`/${locale}/biznes/sallat/ndrysho/${id}/plani`}
+          className={`px-6 py-3.5 rounded-xl font-bold flex items-center gap-2 transition-all shrink-0 ${
+            hasFloorPlan 
+              ? "bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 shadow-sm" 
+              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg"
+          }`}
+        >
+          {hasFloorPlan ? (
+            <>
+              <Edit3 size={18} /> Ndrysho Planin
+            </>
+          ) : (
+            <>
+              <Plus size={18} /> Krijo Planin
+            </>
+          )}
+        </Link>
+      </div>
+      {/* ========================================================= */}
+
       <form onSubmit={handleSubmit} className={`bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10 flex flex-col transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         
-        {/* SHTUAR: STATUSI I SALLËS */}
+        {/* STATUSI I SALLËS */}
         <div className="mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${formData.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
@@ -187,7 +235,7 @@ export default function EditHallPage({ params }: { params: Promise<{ locale: str
           </div>
         </div>
 
-        {/* CHECKBOXES (Stili i Zi Katror) */}
+        {/* CHECKBOXES */}
         <div className="flex flex-col sm:flex-row items-center gap-6 border border-gray-100 p-5 rounded-2xl mb-8">
           <label className="flex-1 w-full flex items-center justify-between cursor-pointer group">
             <span className="flex items-center gap-2 text-sm font-medium text-gray-700">{t("parkingLabel")}</span>

@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "../../../../../../lib/prisma"; 
 import { revalidatePath } from "next/cache";
 
-// 1. Tërheqim të dhënat ekzistuese të sallës
+// 1. Tërheqim të dhënat ekzistuese të sallës (SHTUAM KONTROLLIN PËR PLANIN E SALLËS)
 export async function getHallAction(id: string) {
   try {
     const session = await getServerSession();
@@ -23,6 +23,9 @@ export async function getHallAction(id: string) {
       where: {
         id: id,
         business_id: user.business_id
+      },
+      include: {
+        venue_layouts: true // <--- SHTUAR: Për të parë nëse ka plan salle të krijuar
       }
     });
 
@@ -33,7 +36,7 @@ export async function getHallAction(id: string) {
   }
 }
 
-// 2. Ruajmë ndryshimet e reja
+// 2. Ruajmë ndryshimet e reja (MBETET E PANRYSYSHUAR)
 export async function updateHallAction(id: string, data: any) {
   try {
     const session = await getServerSession();
@@ -63,8 +66,8 @@ export async function updateHallAction(id: string, data: any) {
         description: data.description,
         parking: data.parking,
         ac: data.ac,
-        image: data.image, // Linku/DataURI i fotos
-        status: data.status // <--- SHTUAR: Ruan statusin Aktiv/Pasiv në databazë
+        image: data.image,
+        status: data.status
       }
     });
 
