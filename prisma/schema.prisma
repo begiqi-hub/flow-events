@@ -33,7 +33,7 @@ model booking_extras {
   line_total Decimal? @db.Decimal(10, 2)
   bookings   bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "booking_extras_ibfk_1")
   extras     extras   @relation(fields: [extra_id], references: [id], onUpdate: Restrict, map: "booking_extras_ibfk_2")
-
+  
   @@index([booking_id], map: "booking_id")
   @@index([extra_id], map: "extra_id")
 }
@@ -76,6 +76,8 @@ model bookings {
   documents      documents[]
   payments       payments[]
   guests         guests[] // SHTUAR: Lidhja me listën e mysafirëve
+  layout_snapshot Json?  // SHTUAR: Ruan kopjen e ngrirë të sallës kur konfirmohet rezervimi
+  guest_list Json?  // Ruan listën e mysafirëve sipas tavolinave në format JSON
 
   @@index([business_id], map: "business_id")
   @@index([client_id], map: "client_id")
@@ -132,6 +134,10 @@ model businesses {
   menus      menus[]
   users      users[]
   tickets    tickets[]
+  
+  // SHTUAR PER V3 MARKETPLACE:
+  listings       Listing[]
+  advertisements Advertisement[]
 }
 
 model clients {
@@ -195,10 +201,18 @@ model halls {
   created_at  DateTime?     @default(now()) @db.Timestamp(0)
   updated_at  DateTime?     @updatedAt
 
+  // SHTUAR PËR METODËN E ÇELËSAVE (TOGGLES)
+  // ==========================================
+  is_published Boolean @default(true)  // Kontrollon nëse salla shfaqet në Listimin Publik
+  is_managed   Boolean @default(false) // Kontrollon nëse salla ka të drejtë të përdorë Sistemin e Menaxhimit (Kalendarin, etj.)
+
   bookings      bookings[]
   businesses    businesses      @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "halls_ibfk_1")
   user_halls    user_halls[]
   venue_layouts venue_layouts[] // SHTUAR: Lidhja me skicat e kësaj salle
+
+  // SHTUAR PER V3 MARKETPLACE:
+  listing       Listing?
 
   @@index([business_id], map: "business_id")
 }
@@ -384,7 +398,7 @@ model Package {
 }
 
 // ==========================================
-// SHTUAR: MODELET E REJA PËR SALLAT DHE FTESAT
+// MODELET PËR SKICAT, TAVOLINAT DHE FTESAT
 // ==========================================
 
 model venue_layouts {
@@ -410,7 +424,7 @@ model tables {
   type      String @default("circle") @db.VarChar(50)
   pos_x     Float
   pos_y     Float
-  rotation  Float  @default(0) // <--- SHTO KËTË RRESHT
+  rotation  Float  @default(0)
 
   venue_layouts venue_layouts @relation(fields: [layout_id], references: [id], onDelete: Cascade)
   guests        guests[]      
@@ -527,4 +541,131 @@ model superadmin_logs {
   entity     String   
   details    String?  @db.Text
   created_at DateTime @default(now())
+}
+
+// ==========================================
+// INVITATION ENGINE MODELS
+// ==========================================
+
+model event_invitation_templates {
+  id          String   @id @default(cuid())
+  name        String
+  event_type  String   // p.sh., "Dasma", "Ditelindje"
+  category    String   // p.sh., "Elegant", "Minimalist"
+  thumbnail   String?  // Linku i imazhit parashikues
+  canvas_data Json     // Struktura e dizajnit (Fabric.js JSON)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  invitations event_invitations[]
+}
+
+model event_invitations {
+  id            String   @id @default(cuid())
+  token         String   @unique @default(cuid()) // URL token per qasje publike
+  business_id   String?  // Lidhja me biznesin nese ftesa krijohet nga paneli
+  booking_id    String?  // Lidhja me nje rezervim ekzistues
+  template_id   String?  // Shablloni baze
+  
+  // Te dhenat e eventit
+  event_type    String
+  event_name    String?
+  host_name     String?
+  venue_name    String?
+  event_date    DateTime?
+  start_time    String?
+  
+  canvas_data   Json     // Dizajni i personalizuar
+  status        String   @default("draft") // "draft" ose "published"
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  template      event_invitation_templates? @relation(fields: [template_id], references: [id])
+  guests        event_invitation_guests[]
+}
+
+model event_invitation_guests {
+  id            String   @id @default(cuid())
+  invitation_id String
+  name          String
+  phone         String?
+  rsvp_status   String   @default("pending") // "attending", "not_attending", "pending"
+  guest_count   Int      @default(1)
+  created_at    DateTime @default(now())
+
+  invitation    event_invitations @relation(fields: [invitation_id], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// V3 PUBLIC MARKETPLACE & ADVERTISING (MODELET E REJA)
+// ==========================================
+
+model Listing {
+  id                    String        @id @default(uuid()) @db.VarChar(36)
+  hallId                String        @unique @db.VarChar(36)
+  hall                  halls         @relation(fields: [hallId], references: [id], onDelete: Cascade)
+  businessId            String        @db.VarChar(36)
+  business              businesses    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  status                ListingStatus @default(DRAFT)
+  
+  marketing_name        String?       @db.VarChar(255)
+  marketing_description String?       @db.Text // FUSHA E RE PËR PËRSHKRIMIN
+  address               String?       @db.Text
+  youtube_url           String?       @db.Text
+  mainImage             String?       @db.LongText 
+  gallery               Json?     
+  type                  String?  @default("Dasma")    
+
+  createdAt             DateTime      @default(now()) @db.Timestamp(0)
+  updatedAt             DateTime      @updatedAt
+
+  @@index([status])
+  @@index([businessId])
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  INACTIVE
+}
+
+model Advertisement {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  
+  businessId    String   @db.VarChar(36)
+  business      businesses @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  name          String   @db.VarChar(255)
+  type          AdType
+  status        AdStatus @default(DRAFT)
+
+  desktopImage  String   @db.LongText
+  mobileImage   String?  @db.LongText
+  targetUrl     String   @db.VarChar(255)
+
+  // Ruhet në format JSON (p.sh. ["Prishtine", "Tirane"]) sepse MySQL nuk suporton arrays native (String[])
+  targetCities  Json?    
+  placement     String?  @db.VarChar(100)
+  priority      Int      @default(0)
+
+  startDate     DateTime? @db.Timestamp(0)
+  endDate       DateTime? @db.Timestamp(0)
+
+  createdAt     DateTime @default(now()) @db.Timestamp(0)
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+}
+
+enum AdType {
+  LISTING_CARD
+  MEGABANNER
+}
+
+enum AdStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  EXPIRED
 }

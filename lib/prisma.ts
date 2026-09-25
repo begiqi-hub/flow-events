@@ -1,14 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
-// Krijojmë një variabël globale që nuk fshihet kur Next.js bën Hot Reload
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+const prismaClientSingleton = () => {
+  return new PrismaClient();
 };
 
-// Nëse ekziston lidhja, e përdorim atë. Nëse jo, krijojmë një të re.
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient();
+declare global {
+  // Lejon variablin global të mbijetojë gjatë Hot Reload në zhvillim
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+}
 
-// Ruajmë lidhjen në variablën globale vetëm në fazën e zhvillimit (Development)
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = globalThis.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;

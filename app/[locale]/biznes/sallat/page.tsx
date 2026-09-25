@@ -5,6 +5,7 @@ import { prisma } from "../../../../lib/prisma";
 import Link from "next/link";
 import { Building2, PlusCircle, Pencil, Users, ParkingCircle, Snowflake, Image as ImageIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server"; 
+import HallToggles from "./HallToggles";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -97,7 +98,7 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
                   <p className="text-gray-500 text-sm mb-4 line-clamp-2">{hall.description}</p>
                 )}
                 
-                <div className="flex items-center gap-3 mb-6 mt-auto">
+                <div className="flex items-center gap-3 mb-4">
                   {hall.parking && (
                     <span className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
                       <ParkingCircle size={14} /> {t("parkingLabel")}
@@ -110,7 +111,17 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-gray-50 flex items-center gap-2">
+                {/* SHTUAR: Çelësat e Listimit dhe Menaxhimit */}
+                <div className="mt-auto pt-4 border-t border-gray-100">
+                   <HallToggles 
+                     hallId={hall.id} 
+                     businessId={business.id} 
+                     initialIsPublished={hall.is_published ?? true} 
+                     initialIsManaged={hall.is_managed ?? false} 
+                   />
+                </div>
+
+                <div className="pt-4 border-t border-gray-50 flex items-center gap-2 mt-4">
                   <Link 
                     href={`/${locale}/biznes/sallat/ndrysho/${hall.id}`}
                     className="flex-1 flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-bold transition-colors"

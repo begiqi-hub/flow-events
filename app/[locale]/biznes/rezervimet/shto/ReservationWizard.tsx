@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { 
   Check, ChevronRight, ChevronLeft, CalendarDays, Utensils, Users, 
   Banknote, Building2, Clock, UsersRound, AlertTriangle, Sparkles, Percent,
-  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck, PartyPopper, Search, Lock, Layers, PenTool
+  FileDigit, MapPin, Mail, Phone, ChevronDown, Wallet, FileText, User, Building, ShieldAlert, UserCheck, PartyPopper, Search, Lock, Layers, PenTool,
+  Copy, MessageCircle // <- SHTUAR IKONAT E REJA
 } from "lucide-react";
 import { useTranslations } from "next-intl"; 
 
@@ -242,6 +243,26 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
     }
   };
 
+  // ==========================================
+  // FUNKSIONET E REJA PËR DËRGIMIN E LINKUT
+  // ==========================================
+  const copyPublicLink = () => {
+    if (!toast.bookingId) return;
+    const link = `${window.location.origin}/${locale}/p/rezervimi/${toast.bookingId}`;
+    navigator.clipboard.writeText(link);
+    alert("Linku u kopjua me sukses në memorje!");
+  };
+
+  const sendWhatsApp = () => {
+    if (!toast.bookingId) return;
+    const link = `${window.location.origin}/${locale}/p/rezervimi/${toast.bookingId}`;
+    const cName = formData.client_type === 'business' ? formData.client_business_name : formData.client_name;
+    const text = `Përshëndetje ${cName},%0A%0AJu falënderojmë që zgjodhët ${business?.name} për eventin tuaj! Këtu keni linkun e dedikuar për të parë detajet dhe për të shtuar listën e mysafirëve në tavolina:%0A${link}%0A%0AJu mirëpresim!`;
+    const fullPhone = `${formData.client_phone_prefix}${formData.client_phone}`.replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${fullPhone}?text=${text}`, '_blank');
+  };
+  // ==========================================
+
   const handleSubmit = async () => {
     setLoading(true);
     setToast({ show: false, message: "", type: "success", complete: false, bookingId: "", isQuotation: false });
@@ -313,9 +334,27 @@ export default function ReservationWizard({ business, halls, menus, extras, clie
                   </button>
                 )}
 
+                {/* ==================================================== */}
+                {/* SHTUAR: BUTONAT PËR PORTALIN E KLIENTIT (FTESAT) */}
+                {/* ==================================================== */}
+                {!toast.isQuotation && (
+                  <div className="flex flex-col gap-2 bg-indigo-50/80 p-4 rounded-2xl border border-indigo-100 my-1">
+                    <p className="text-xs font-bold text-indigo-800 text-left">Dërgoni këtë link te Rezervuesi. Ku mund të shoh detajet e eventit dhe të organizoj mysafirët në tavolina.</p>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={copyPublicLink} className="flex-1 bg-white text-indigo-700 border border-indigo-200 font-bold py-3 px-2 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm text-sm">
+                        <Copy size={18} /> Kopjo Linkun
+                      </button>
+                      <button type="button" onClick={sendWhatsApp} disabled={!formData.client_phone} className="flex-1 bg-[#25D366] text-white font-bold py-3 px-2 rounded-xl flex items-center justify-center gap-2 hover:bg-[#20bd5a] transition-all shadow-sm disabled:opacity-50 text-sm">
+                        <MessageCircle size={18} /> WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* ==================================================== */}
+
                 <button 
                   onClick={() => router.push(`/${locale}/biznes/${toast.isQuotation ? 'ofertat' : 'rezervimet'}`)} 
-                  className="w-full bg-emerald-500 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:bg-emerald-600 hover:scale-[1.02] shadow-emerald-200 mt-2"
+                  className="w-full bg-emerald-500 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:bg-emerald-600 hover:scale-[1.02] shadow-emerald-200 mt-1"
                 >
                   Kthehu te Lista <span className="text-xl">→</span>
                 </button>

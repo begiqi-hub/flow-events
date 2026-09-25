@@ -129,6 +129,22 @@ export async function saveReservationAction(data: any) {
     const diffMins = (reqEndMin < reqStartMin ? reqEndMin + 1440 : reqEndMin) - reqStartMin;
     const endTimeObj = new Date(startTimeObj.getTime() + (diffMins * 60000));
 
+    // ==========================================
+    // LOGJIKA E SNAPSHOT TË SALLËS (SHTUAR KËTU)
+    // ==========================================
+    let snapshotToSave = null;
+    // Bëjmë Snapshot vetëm nëse është rezervim real (jo ofertë) dhe ka një sallë të zgjedhur
+    if (!data.is_quotation && data.hall_id) {
+      const activeLayout = await prisma.venue_layouts.findFirst({
+        where: { hall_id: data.hall_id },
+        include: { tables: true }
+      });
+      if (activeLayout) {
+        snapshotToSave = JSON.parse(JSON.stringify(activeLayout));
+      }
+    }
+    // ==========================================
+
     const result = await prisma.$transaction(async (tx) => {
       
       const fullPhone = `${data.client_phone_prefix} ${data.client_phone}`;
@@ -204,13 +220,13 @@ export async function saveReservationAction(data: any) {
         calculatedPaymentStatus = "pending";
       }
 
-      // KRIJIMI I REZERVIMIT ME FUSHAT E REJA
+      // KRIJIMI I REZERVIMIT ME FUSHAT E REJA (Përfshirë layout_snapshot)
       const booking = await tx.bookings.create({
         data: {
           business_id: businessId,
           hall_id: data.hall_id,
           client_id: client.id,
-          created_by: user.id, // ID e stafit që e krijon
+          created_by: user.id,
           event_date: eventDateObj,
           start_time: startTimeObj,
           end_time: endTimeObj,
@@ -229,6 +245,7 @@ export async function saveReservationAction(data: any) {
           event_type: data.event_type || null,
           staff_notes: data.staff_notes || null, 
           admin_notes: data.admin_notes || null, 
+          layout_snapshot: snapshotToSave ? snapshotToSave : null // SHTUAR FUSHA E SNAPSHOT-it
         }
       });
 

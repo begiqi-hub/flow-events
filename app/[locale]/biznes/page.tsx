@@ -5,6 +5,16 @@ import Link from "next/link";
 import { Building2, Landmark, ShieldAlert, Sparkles, Utensils, CheckCircle2, Clock } from "lucide-react";
 import DashboardClient from "./DashboardClient";
 import { getTranslations } from "next-intl/server"; // <--- Shtuar
+import LandingPageClient from "@/app/[locale]/LandingPageClient";
+
+
+export default function BiznesetPage() {
+  return (
+    <main>
+      <LandingPageClient />
+    </main>
+  );
+}
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

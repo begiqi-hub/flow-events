@@ -9,7 +9,7 @@ import {
   Building2, Utensils, Sparkles, UserCircle, ChevronLeft, ChevronRight,
   LogOut, Settings, Building, FileText, Menu, X, ShieldAlert, Landmark, AlertCircle, Globe,
   TrendingUp, Bell, Clock, Wallet, PenTool,
-  LifeBuoy, Monitor, Lock, AlertTriangle, CreditCard
+  LifeBuoy, Monitor, Lock, AlertTriangle, CreditCard, Inbox
 } from "lucide-react";
 
 const GJUHET = [
@@ -37,7 +37,7 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
   const notifRef = useRef<HTMLDivElement>(null); 
 
   const logoPath = "/logo-register.svg";
-  const iconPath = "/icon-512x512.png"; // <--- IKONA PËR MENUNË E MBYLLUR
+  const iconPath = "/icon-512x512.png"; 
 
   const currentLang = GJUHET.find(g => g.code === locale) || GJUHET[0];
 
@@ -113,6 +113,11 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
     { name: uiTranslations.extras || "Ekstrat", href: `/${locale}/biznes/ekstra`, icon: Sparkles },
   ];
 
+  const marketplaceItems = [
+    { name: "Listimi Publik", href: `/${locale}/biznes/listing`, icon: Globe },
+    { name: "Kërkesat", href: `/${locale}/biznes/listing/kerkesat`, icon: Inbox },
+  ];
+
   const supportItems = [
     { name: "Ndihma", href: `/${locale}/biznes/ndihma`, icon: LifeBuoy }
   ];
@@ -166,7 +171,6 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
           {isMinimized ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
 
-        {/* LOGJIKA E RE PËR LOGON / IKONËN */}
         <div className={`h-16 md:h-20 flex items-center justify-center border-b border-gray-50 transition-all shrink-0 w-full`}>
           <Link href={`/${locale}/biznes`} className="flex items-center justify-center w-full">
              {isMinimized ? (
@@ -247,6 +251,30 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
           </div>
           
           {configItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link 
+                key={item.name} 
+                href={item.href} 
+                className={`flex items-center rounded-xl transition-all font-medium group
+                  ${isActive ? 'bg-[#0f172a] text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
+                  ${isMinimized ? 'md:justify-center p-3 gap-3 md:gap-0' : 'px-3 py-2.5 gap-3'}
+                `}
+                title={isMinimized ? item.name : ""}
+              >
+                <item.icon size={20} className={isActive ? "text-white" : "text-gray-500 group-hover:text-gray-900 shrink-0"} />
+                <span className={`whitespace-nowrap ${isMinimized ? 'md:hidden block' : 'block'}`}>{item.name}</span>
+              </Link>
+            )
+          })}
+
+          {/* RENDEROJMË MARKETPLACE ITEMS KËTU */}
+          <div className={`mt-6 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider ${isMinimized ? 'md:text-center px-3' : 'px-3'}`}>
+            <span className={isMinimized ? 'md:hidden block' : 'block'}>Marketplace</span>
+            <span className={`hidden ${isMinimized ? 'md:block' : ''}`}>•••</span>
+          </div>
+          
+          {marketplaceItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
               <Link 

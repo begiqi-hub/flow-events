@@ -105,9 +105,10 @@ export async function updateBookingAction(id: string, data: any) {
     if (!user || !user.business_id) return { error: "Biznesi ose përdoruesi nuk u gjet." };
     const businessId = user.business_id;
 
+    // SHTUAR: Tërheqim edhe layout_snapshot për të parë nëse është bërë Snapshot më parë
     const existingBooking = await prisma.bookings.findUnique({
         where: { id: id, business_id: businessId },
-        select: { client_id: true }
+        select: { client_id: true, layout_snapshot: true } 
     });
 
     if (!existingBooking) return { error: "Rezervimi nuk ekziston." };
@@ -115,7 +116,7 @@ export async function updateBookingAction(id: string, data: any) {
     const finalTotal = Number(data.total_amount) || 0;
     const historicallyPaid = Number(data.historically_paid) || 0;
     const newPaymentAmount = Number(data.new_payment_amount) || 0;
-    
+
     let totalPaidSoFar = historicallyPaid;
     if (data.payment_type === 'refund') totalPaidSoFar -= newPaymentAmount;
     else totalPaidSoFar += newPaymentAmount;
@@ -123,6 +124,24 @@ export async function updateBookingAction(id: string, data: any) {
     let calculatedPaymentStatus = "pending";
     if (totalPaidSoFar >= finalTotal && finalTotal > 0) calculatedPaymentStatus = "paid";
     else if (totalPaidSoFar > 0 && totalPaidSoFar < finalTotal) calculatedPaymentStatus = "deposit";
+
+    // ==========================================
+    // LOGJIKA E SNAPSHOT TË SALLËS
+    // ==========================================
+    let snapshotToSave = existingBooking.layout_snapshot;
+
+    // Nëse statusi po kalon në Konfirmuar dhe nuk ka ende snapshot, e krijojmë
+    if (data.status === 'confirmed' && data.hall_id && !snapshotToSave) {
+      const activeLayout = await prisma.venue_layouts.findFirst({
+        where: { hall_id: data.hall_id },
+        include: { tables: true }
+      });
+      if (activeLayout) {
+        // E kthejmë në objekt të pastër JSON para ruajtjes
+        snapshotToSave = JSON.parse(JSON.stringify(activeLayout));
+      }
+    }
+    // ==========================================
 
     let updateData: any = {
       event_type: data.event_type || null,
@@ -135,6 +154,7 @@ export async function updateBookingAction(id: string, data: any) {
       admin_notes: data.admin_notes || null,
       hall_id: data.hall_id || null,
       menu_id: data.menu_id || null,
+      layout_snapshot: snapshotToSave ? snapshotToSave : null // RUHET SNAPSHOT KËTU
     };
 
     if (data.event_date && data.start_time && data.end_time) {
@@ -175,7 +195,6 @@ export async function updateBookingAction(id: string, data: any) {
         }
       }
 
-      // ZGJIDHJA 1: Nëse po regjistrohet pagesë bashkë me editimin, hidhe në histori si Pagesë
       if (newPaymentAmount > 0) {
         await tx.payments.create({
           data: {
@@ -184,7 +203,6 @@ export async function updateBookingAction(id: string, data: any) {
           }
         });
 
-        // Regjistrojmë pagesën në Audit
         await tx.audit_logs.create({
           data: {
             business_id: businessId, 
@@ -197,12 +215,12 @@ export async function updateBookingAction(id: string, data: any) {
         });
       }
 
-      // Regjistrojmë vetë ndryshimin e rezervimit në Audit
       let logActionName = "Modifikim Rezervimi";
       let logDetailText = `Përditësoi të dhënat. Statusi: ${data.status}`;
       if (data.status === 'cancelled') logActionName = "Anulim Rezervimi";
       if (data.status === 'quotation') logActionName = "Gjeneroi Ofertë";
-      
+      if (data.status === 'confirmed' && !existingBooking.layout_snapshot) logDetailText += " (U gjenerua Snapshot i sallës)";
+
       await tx.audit_logs.create({
         data: {
           business_id: businessId, 

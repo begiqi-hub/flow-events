@@ -37,8 +37,8 @@ export default function BusinessErrorPage({
       </h1>
       
       <p className="text-gray-500 max-w-md mx-auto mb-10 text-lg font-medium leading-relaxed">
-        Duket se keni humbur lidhjen me internetin ose databaza po vonon të përgjigjet. 
-        Ju lutem kontrolloni rrjetin tuaj (WiFi/4G) dhe provoni përsëri.
+        Duket se keni humbur lidhjen me internetin ose databaza po vonon të përgjigjet për shkak të lidhjes së Internetit të dobët. 
+        Ju lutem kontrolloni rrjetin tuaj dhe provoni përsëri.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-sm mx-auto">

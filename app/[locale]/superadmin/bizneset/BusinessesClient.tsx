@@ -6,7 +6,7 @@ import { sq } from "date-fns/locale";
 import { 
   Building2, Search, Edit,
   CheckCircle2, Clock, Mail, Phone, ExternalLink, ShieldOff,
-  X, Shield, KeyRound, Save, Eye
+  X, Shield, KeyRound, Save, Eye, Store, MonitorSmartphone, Layers
 } from "lucide-react";
 import { updateBusinessInfo, resetBusinessPassword, getImpersonationToken } from "./actions";
 import { useRouter } from "next/navigation";
@@ -15,25 +15,21 @@ import { signIn } from "next-auth/react";
 export default function BusinessesClient({ locale, businesses }: { locale: string, businesses: any[] }) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
 
-  // State për Modalin
   const [editingBusiness, setEditingBusiness] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"info" | "security">("info");
   
-  // State për Format
   const [formData, setFormData] = useState<any>({});
   const [newPassword, setNewPassword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  // FILTRIMI I BIZNESEVE
   const filteredBusinesses = businesses.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (b.email && b.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                           (b.nui && b.nui.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    // Logjika: "all" i fsheh trialet, i shfaq vetëm kur zgjidhet "trial"
     let matchesStatus = false;
     if (statusFilter === "all") {
        matchesStatus = b.status !== "trial"; 
@@ -55,7 +51,37 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
     return "🌍";
   };
 
-  // FUNKSIONI: HYR SI BIZNES
+  // FUNKSIONI I RI: Formatimi i emrit të qytetit nga Databaza
+  const formatCityName = (city: string) => {
+    if (!city) return "I pacaktuar";
+    
+    // Fjalori për konvertimin e saktë të qyteteve shqiptare
+    const cityMap: Record<string, string> = {
+      'mitrovice_jug': 'Mitrovicë (Jug)',
+      'mitrovice_veri': 'Mitrovicë (Veri)',
+      'prishtine': 'Prishtinë',
+      'peje': 'Pejë',
+      'prizren': 'Prizren',
+      'ferizaj': 'Ferizaj',
+      'gjilan': 'Gjilan',
+      'gjakove': 'Gjakovë',
+      'tirane': 'Tiranë',
+      'durres': 'Durrës',
+      'shkup': 'Shkup',
+      'tetove': 'Tetovë'
+    };
+
+    const normalized = city.toLowerCase().trim();
+    if (cityMap[normalized]) return cityMap[normalized];
+    
+    // Rregulli gjenerik nëse qyteti nuk është në fjalor:
+    // kthe "nje_qytet" në "Nje Qytet"
+    return normalized
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const handleImpersonate = async (businessId: string) => {
     if (!confirm("A jeni i sigurt që dëshironi të hyni si ky biznes?")) return;
     
@@ -64,7 +90,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
     if (res.success && res.targetEmail) {
       await signIn("credentials", {
         email: res.targetEmail,
-        password: "KODI_YT_SEKRET_123", // Duhet të jetë i njëjtë me atë te route.ts
+        password: "KODI_YT_SEKRET_123", 
         redirect: true,
         callbackUrl: `/${locale}/biznes`,
       });
@@ -78,7 +104,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
     setFormData({
       name: b.name || "", nui: b.nui || "", email: b.email || "",
       phone: b.phone || "", country: b.country || "", city: b.city || "", address: b.address || "",
-      status: b.status || "trial" // Shtohet statusi për t'u modifikuar
+      status: b.status || "trial"
     });
     setNewPassword("");
     setMessage({ type: "", text: "" });
@@ -125,7 +151,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
   return (
     <div className="max-w-[1600px] mx-auto p-4 md:p-8 min-h-[calc(100vh-80px)] font-sans">
       
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
@@ -138,7 +163,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
         </div>
       </div>
 
-      {/* FILTRAT */}
       <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -162,7 +186,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
         </select>
       </div>
 
-      {/* TABELA */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[1200px]">
@@ -171,7 +194,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Kompania & Kontakti</th>
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Lokacioni</th>
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Statusi & Data</th>
-                <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Abonimi</th>
+                <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Abonimi & Platforma</th>
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-right">Veprime</th>
               </tr>
             </thead>
@@ -179,7 +202,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
               {filteredBusinesses.length > 0 ? filteredBusinesses.map((b) => (
                 <tr key={b.id} className="hover:bg-gray-50/50 transition-colors group">
                   
-                  {/* KOMPANIA */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       {b.logo_url ? (
@@ -213,18 +235,18 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                     </div>
                   </td>
 
-                  {/* LOKACIONI */}
+                  {/* LOKACIONI I PËRDITËSUAR */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{getFlag(b.country)}</span>
                       <div>
-                        <p className="text-sm font-bold text-gray-800">{b.city || "I pacaktuar"}</p>
+                        {/* Këtu përdorim funksionin e ri për të formatuar qytetin */}
+                        <p className="text-sm font-bold text-gray-800">{formatCityName(b.city)}</p>
                         <p className="text-xs font-medium text-gray-500">{b.country || "Shteti i pacaktuar"}</p>
                       </div>
                     </div>
                   </td>
 
-                  {/* STATUSI & DATA (Përditësuar me Skadimin) */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col items-start gap-1">
                       {b.status === 'active' ? (
@@ -243,7 +265,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1" title="Data e regjistrimit">
                         Reg: {format(new Date(b.created_at), "dd MMM yyyy", { locale: sq })}
                       </p>
-                      {/* SHFAQJA E DATËS SË SKADIMIT NËSE EKZISTON */}
                       {b.trialEndsAt && (
                         <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5" title="Data kur përfundon prova ose skadon pakoja">
                           Skadon: {format(new Date(b.trialEndsAt), "dd MMM yyyy", { locale: sq })}
@@ -252,20 +273,44 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                     </div>
                   </td>
 
-                  {/* ABONIMI */}
                   <td className="px-6 py-4">
-                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-2 inline-block">
-                      <p className="text-xs font-black text-gray-800">{b.package?.name || "E Pacaktuar"}</p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                        {b.package?.price || "0.00"} {b.currency}/Muaj
-                      </p>
+                    <div className="flex flex-col items-start gap-2">
+                      <div className="bg-gray-50 border border-gray-100 rounded-xl p-2 inline-block w-full">
+                        <p className="text-xs font-black text-gray-800">{b.package?.name || "E Pacaktuar"}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          {b.package?.price || "0.00"} {b.currency}/Muaj
+                        </p>
+                      </div>
+
+                      {/* LOGJIKA E PLATFORMËS E PËRDITËSUAR */}
+                      {(() => {
+                        // KUSHTI 1: Të gjitha bizneset e regjistruara përdorin Sistemin
+                        const isSystem = true; 
+                        
+                        // KUSHTI 2: Për Marketplace, duhet të verifikojmë nëse ekziston vlera 'has_marketplace' ose nëse ka listime.
+                        // SHËNIM: Sigurohu që Prisma dërgon `has_marketplace: true/false` për çdo biznes!
+                        const isMarketplace = b.has_marketplace === true; 
+
+                        if (isMarketplace && isSystem) {
+                          return (
+                            <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 w-fit">
+                              <Layers size={12} /> Marketplace & Sistemi
+                            </span>
+                          );
+                        }
+                        
+                        // Nëse isMarketplace është false, atëherë përdor vetëm Sistemin
+                        return (
+                          <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-100 w-fit">
+                            <MonitorSmartphone size={12} /> Vetëm Sistemi
+                          </span>
+                        );
+                      })()}
                     </div>
                   </td>
 
-                  {/* VEPRIME (Hequr fshirja) */}
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      
                       <button 
                         onClick={() => handleImpersonate(b.id)}
                         className="p-2.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl transition-all border border-indigo-100 shadow-sm"
@@ -287,7 +332,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-gray-500">Nuk u gjet asnjë biznes.</td>
+                  <td colSpan={5} className="px-6 py-20 text-center text-gray-500">Nuk u gjet asnjë biznes me këtë status ose kërkim.</td>
                 </tr>
               )}
             </tbody>
@@ -295,7 +340,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
         </div>
       </div>
 
-      {/* MODAL I EDITIMIT */}
       {editingBusiness && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -361,7 +405,6 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                       <input type="text" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} placeholder="Psh. Prishtinë" className="w-full bg-gray-50 border border-gray-100 p-3.5 rounded-2xl outline-none focus:border-indigo-400 font-bold mt-1" />
                     </div>
                     
-                    {/* SHTUAR: Ndryshimi i Statusit (Aktiv/Bllokuar) */}
                     <div className="col-span-2 mt-2">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1">
                         <ShieldOff size={12}/> Menaxhimi i Llogarisë

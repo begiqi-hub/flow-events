@@ -8,13 +8,32 @@ import {
 } from "lucide-react";
 import { updateBusinessProfileAction } from "./actions";
 import { useTranslations } from "next-intl"; 
+import { CITIES } from "@/lib/constants/cities";
 
-const locationsData: Record<string, string[]> = {
-  "Kosovo": ["Prishtinë", "Prizren", "Pejë", "Gjakovë", "Mitrovicë", "Gjilan", "Ferizaj", "Vushtrri", "Podujevë", "Suharekë", "Rahovec", "Kamenicë", "Shtime", "Drenas", "Skënderaj", "Deçan", "Klinë", "Lipjan"],
-  "Albania": ["Tiranë", "Durrës", "Vlorë", "Elbasan", "Shkodër", "Fier", "Korçë", "Berat", "Lushnjë", "Kavajë", "Pogradec", "Gjirokastër", "Krujë", "Lezhë", "Kukës", "Sarandë"],
-  "North Macedonia": ["Shkup (Skopje)", "Tetovë", "Gostivar", "Kumanovë", "Kërçovë", "Strugë", "Ohër", "Manastir (Bitola)", "Prilep", "Veles"],
-  "Montenegro": ["Podgoricë", "Ulqin", "Tivar (Bar)", "Budvë", "Kotor", "Tuz", "Rozhajë", "Plavë", "Gusi", "Cetinje", "Nikshiq"],
-  "Greece": ["Athinë", "Selanik", "Janinë", "Patra", "Larisa", "Volos", "Kretë"]
+const locationsData: Record<string, { id: string; name: string }[]> = {
+  "Kosovo": [...CITIES], // Kosova merr automatikisht të gjitha qytetet nga skedari yt statik
+  "Albania": [
+    { id: "tirane", name: "Tiranë" }, { id: "durres", name: "Durrës" }, { id: "vlore", name: "Vlorë" }, 
+    { id: "elbasan", name: "Elbasan" }, { id: "shkoder", name: "Shkodër" }, { id: "fier", name: "Fier" }, 
+    { id: "korce", name: "Korçë" }, { id: "berat", name: "Berat" }, { id: "lushnje", name: "Lushnjë" }, 
+    { id: "kavaje", name: "Kavajë" }, { id: "pogradec", name: "Pogradec" }, { id: "gjirokaster", name: "Gjirokastër" }, 
+    { id: "kruje", name: "Krujë" }, { id: "lezhe", name: "Lezhë" }, { id: "kukes", name: "Kukës" }, { id: "sarande", name: "Sarandë" }
+  ],
+  "North Macedonia": [
+    { id: "shkup", name: "Shkup (Skopje)" }, { id: "tetove", name: "Tetovë" }, { id: "gostivar", name: "Gostivar" }, 
+    { id: "kumanove", name: "Kumanovë" }, { id: "kercove", name: "Kërçovë" }, { id: "struge", name: "Strugë" }, 
+    { id: "oher", name: "Ohër" }, { id: "manastir", name: "Manastir (Bitola)" }, { id: "prilep", name: "Prilep" }, { id: "veles", name: "Veles" }
+  ],
+  "Montenegro": [
+    { id: "podgorice", name: "Podgoricë" }, { id: "ulqin", name: "Ulqin" }, { id: "tivar", name: "Tivar (Bar)" }, 
+    { id: "budve", name: "Budvë" }, { id: "kotor", name: "Kotor" }, { id: "tuz", name: "Tuz" }, 
+    { id: "rozhaje", name: "Rozhajë" }, { id: "plave", name: "Plavë" }, { id: "gusi", name: "Gusi" }, 
+    { id: "cetinje", name: "Cetinje" }, { id: "nikshiq", name: "Nikshiq" }
+  ],
+  "Greece": [
+    { id: "athine", name: "Athinë" }, { id: "selanik", name: "Selanik" }, { id: "janine", name: "Janinë" }, 
+    { id: "patra", name: "Patra" }, { id: "larisa", name: "Larisa" }, { id: "volos", name: "Volos" }, { id: "krete", name: "Kretë" }
+  ]
 };
 
 export default function ProfileClient({ business, locale = "sq", userRole = "admin" }: { business: any, locale?: string, userRole?: string }) {
@@ -536,7 +555,7 @@ export default function ProfileClient({ business, locale = "sq", userRole = "adm
                   <select className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-bold text-gray-900 cursor-pointer" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})}>
                     <option value="">{t("citySelect")}</option>
                     {availableCities.map(city => (
-                      <option key={city} value={city}>{city}</option>
+                      <option key={city.id} value={city.id}>{city.name}</option>
                     ))}
                   </select>
                 ) : (

@@ -52,6 +52,10 @@ export default async function CalendarPage({
       event_date: {
         gte: startDate,
         lte: endDate
+      },
+      // SHTUAR: Filtri i sigurisë që rezervimi t'i përkasë një salle me menaxhim aktiv
+      halls: {
+        is_managed: true
       }
     },
     include: {

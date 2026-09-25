@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { 
   CalendarDays, Users, Banknote, Phone, Mail, Briefcase, MapPin,
-  ArrowLeft, Save, User, CheckCircle2, AlertTriangle, Sparkles, Building2, XCircle, ArrowRightLeft, Clock4, Info, Utensils, Receipt, RotateCcw, PartyPopper, CheckCheck, FileText, Lock, Undo2, History, ChevronDown, ChevronUp
+  ArrowLeft, Save, User, CheckCircle2, AlertTriangle, Sparkles, Building2, XCircle, ArrowRightLeft, Clock4, Info, Utensils, Receipt, RotateCcw, PartyPopper, CheckCheck, FileText, Lock, Undo2, History, ChevronDown, ChevronUp, Link as LinkIcon, Copy, MessageCircle
 } from "lucide-react";
 import Link from "next/link";
 import { getBookingAction, updateBookingAction } from "./actions";
@@ -16,19 +16,19 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const resolvedParams = use(params);
   const locale = resolvedParams.locale;
   const id = resolvedParams.id;
-  
+
   const t = useTranslations("EditBookingPage"); 
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
-  
+
   const [hallsList, setHallsList] = useState<any[]>([]);
   const [menusList, setMenusList] = useState<any[]>([]);
   const [availableExtras, setAvailableExtras] = useState<any[]>([]);
   const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
   const [clientsList, setClientsList] = useState<any[]>([]); 
-  
+
   const [businessInfo, setBusinessInfo] = useState<any>(null);
   const [historicallyPaid, setHistoricallyPaid] = useState<number>(0);
 
@@ -36,10 +36,13 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const [createdAt, setCreatedAt] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [showLogsModal, setShowLogsModal] = useState(false);
-
-  const [isClientSectionOpen, setIsClientSectionOpen] = useState(true); 
-  const [showClientDropdown, setShowClientDropdown] = useState(false); 
   
+  // State për Snapshot-in
+  const [hasSnapshot, setHasSnapshot] = useState(false);
+
+  const [isClientSectionOpen, setIsClientSectionOpen] = useState(false); 
+  const [showClientDropdown, setShowClientDropdown] = useState(false); 
+
   const [bookingType, setBookingType] = useState<'menu' | 'rent'>('menu');
   const [customHallPrice, setCustomHallPrice] = useState<number>(0);
 
@@ -53,7 +56,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
   const [formData, setFormData] = useState({
     client_name: "", client_phone: "", client_email: "", client_type: "individual", business_num: "",
     personal_no: "", gender: "", city: "", address: "",
-    
+
     event_type: "", hall_id: "", menu_id: "",
     event_date: "", start_time: "", end_time: "", participants: "",
     total_amount: "0", status: "confirmed", cancel_reason: "",
@@ -85,10 +88,11 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
         setMenusList(data.allMenus || []);
         setClientsList(data.allClients || []); 
         setBusinessInfo(data.business);
-        
+
         setCreatorName(data.booking.creator?.full_name || data.business?.name || "Sistemi");
         setCreatedAt(data.booking.created_at);
         setAuditLogs(data.auditLogs || []);
+        setHasSnapshot(!!data.booking.layout_snapshot);
 
         const preSelected = data.booking.booking_extras?.map((be: any) => be.extras) || [];
         setSelectedExtras(preSelected);
@@ -110,7 +114,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
         const dbMenuPrice = dbMenu ? Number(dbMenu.price_per_person) : 0;
         const dbPax = Number(data.booking.participants) || 0;
         const dbExtras = preSelected.reduce((sum: number, ext: any) => sum + Number(ext.price), 0);
-        
+
         let initialRent = 0;
         if (initialBookingType === 'rent') {
            initialRent = dbTotal - dbExtras;
@@ -140,7 +144,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
           gender: data.booking.clients?.gender || "",
           city: data.booking.clients?.city || "",
           address: data.booking.clients?.address || "",
-          
+
           event_type: (data.booking as any).event_type || "",
           hall_id: data.booking.hall_id || "",
           menu_id: dbMenuId || "", 
@@ -194,13 +198,13 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
     if (overrides.participants !== undefined) updatedForm.participants = overrides.participants;
     if (overrides.menu_id !== undefined) updatedForm.menu_id = overrides.menu_id;
     if (overrides.hall_id !== undefined) updatedForm.hall_id = overrides.hall_id;
-    
+
     setFormData({ ...updatedForm, total_amount: finalNewTotal.toFixed(2) });
   };
 
   const handleParticipantChange = (e: any) => recalculateTotal({ participants: e.target.value });
   const handleMenuChange = (e: any) => recalculateTotal({ menu_id: e.target.value });
-  
+
   const handleHallChange = (e: any) => {
     const newHallId = e.target.value;
     const newHall = hallsList.find(h => h.id === newHallId);
@@ -208,7 +212,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
     setCustomHallPrice(newPrice);
     recalculateTotal({ hall_id: newHallId, hallPrice: newPrice });
   };
-  
+
   const toggleExtra = (extra: any) => {
     const exists = selectedExtras.find((e: any) => e.id === extra.id);
     let newExtras;
@@ -285,23 +289,37 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
       historically_paid: historicallyPaid,
       status: finalStatus
     };
-    
+
     try {
       const res = await updateBookingAction(id, dataToSubmit);
       if (res?.error) {
         setToast({ show: true, message: res.error, type: "error" });
         setLoading(false);
       } else {
+        // SHTUAR: Nëse u ruajt me sukses si "Konfirmuar", aktivizojmë linkun
+        if (finalStatus === 'confirmed') setHasSnapshot(true);
+        
+        // Shfaqim dritaren e suksesit dhe ndalim loading, pa e mbyllur faqen
         setToast({ show: true, message: t("toastSuccess") || "Rezervimi u ruajt me sukses!", type: "success" });
-        setTimeout(() => { 
-          if (isQuotation) router.push(`/${locale}/biznes/ofertat/${id}/printo`);
-          else router.push(`/${locale}/biznes/rezervimet`);
-        }, 1000);
+        setLoading(false);
       }
     } catch (error) {
       setToast({ show: true, message: t("toastErrorNet") || "Gabim në lidhje me serverin.", type: "error" });
       setLoading(false);
     }
+  };
+
+  const copyPublicLink = () => {
+    const link = `${window.location.origin}/${locale}/p/rezervimi/${id}`;
+    navigator.clipboard.writeText(link);
+    setToast({ show: true, message: "Linku u kopjua në memorje!", type: "success" });
+  };
+
+  const sendWhatsApp = () => {
+    const link = `${window.location.origin}/${locale}/p/rezervimi/${id}`;
+    const text = `Përshëndetje ${formData.client_name},%0A%0AJu falënderojmë që zgjodhët ${businessInfo?.name} për eventin tuaj! Këtu keni linkun e dedikuar për të parë detajet dhe për të shtuar listën e mysafirëve në tavolina:%0A${link}%0A%0AJu mirëpresim!`;
+    const cleanPhone = formData.client_phone.replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
   const renderCancellationPolicy = () => {
@@ -365,54 +383,45 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 relative min-h-[80vh]">
+      
+      {/* DRITARJA E SUKSESIT / KUDJESIT (E Përditësuar me Butonat) */}
       {toast.show && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[40px] shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95">
-             <h3 className="text-xl font-semibold text-gray-900 mb-2">{toast.type === "success" ? t("toastSuccessTitle") || "Sukses" : t("toastWarningTitle") || "Kujdes"}</h3>
-            <p className="text-gray-500 text-sm mb-8 font-medium">{toast.message}</p>
-            <button onClick={() => setToast({ ...toast, show: false })} className={`w-full text-white font-semibold py-4 px-6 rounded-2xl ${toast.type === "success" ? "bg-emerald-500" : "bg-[#FF5C39]"}`}>{t("closeBtn") || "Mbyll"}</button>
+             <h3 className="text-xl font-semibold text-gray-900 mb-2">
+               {toast.type === "success" ? t("toastSuccessTitle") || "Sukses!" : t("toastWarningTitle") || "Kujdes!"}
+             </h3>
+            <p className="text-gray-500 text-sm mb-6 font-medium">{toast.message}</p>
+
+            {/* SHTUAR: Shfaqja e butonave të ftesës drejtpërdrejt në Modal */}
+            {toast.type === "success" && hasSnapshot && (
+              <div className="flex flex-col gap-3 mb-6 bg-indigo-50 p-5 rounded-3xl border border-indigo-100">
+                <p className="text-xs font-bold text-indigo-800 mb-1">Dërgoni këtë link te klienti. Ata mund të shohin detajet e eventit dhe të organizojnë mysafirët në tavolina, nga telefoni i tyre.</p>
+                <button type="button" onClick={copyPublicLink} className="w-full bg-white hover:bg-gray-50 text-indigo-700 border border-indigo-200 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm">
+                  <Copy size={18} /> Kopjo Linkun
+                </button>
+                <button type="button" onClick={sendWhatsApp} disabled={!formData.client_phone} className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
+                  <MessageCircle size={18} /> Dërgo në WhatsApp
+                </button>
+              </div>
+            )}
+
+            <button 
+              onClick={() => {
+                setToast({ ...toast, show: false });
+                if (toast.type === "success") {
+                  router.push(`/${locale}/biznes/rezervimet`);
+                }
+              }} 
+              className={`w-full text-white font-semibold py-4 px-6 rounded-2xl transition-all ${toast.type === "success" ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30" : "bg-[#FF5C39] hover:bg-red-600"}`}
+            >
+              {t("closeBtn") || "Mbyll"}
+            </button>
           </div>
         </div>
       )}
 
-      {showLogsModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-               <h3 className="text-lg font-bold flex items-center gap-2 text-gray-800"><History size={20} className="text-indigo-500"/> Historiku i Modifikimeve</h3>
-               <button onClick={() => setShowLogsModal(false)} className="text-gray-400 hover:text-gray-900 bg-white p-1.5 rounded-full shadow-sm"><XCircle size={20}/></button>
-            </div>
-            <div className="p-6 overflow-y-auto space-y-4 bg-slate-50">
-               {auditLogs.length === 0 ? (
-                 <p className="text-gray-500 text-center py-4">Nuk ka asnjë ndryshim të regjistruar.</p>
-               ) : (
-                 auditLogs.map((log: any, idx: number) => {
-                   let details = "";
-                   try { details = JSON.parse(log.after_state).detaje; } catch { details = "Ndryshim pa detaje."; }
-                   return (
-                     <div key={idx} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative">
-                       <div className="flex justify-between items-start mb-2">
-                         <div className="flex items-center gap-2">
-                           <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-black uppercase">
-                             {(log.users?.full_name || "A").substring(0,2)}
-                           </div>
-                           <div>
-                             <p className="text-sm font-bold text-gray-900">{log.users?.full_name || businessInfo?.name}</p>
-                             <p className="text-[10px] font-bold text-gray-400">{log.action}</p>
-                           </div>
-                         </div>
-                         <p className="text-[11px] text-gray-400 font-medium">{format(new Date(log.created_at), 'dd.MM HH:mm')}</p>
-                       </div>
-                       <p className="text-sm text-gray-600 bg-gray-50 p-2.5 rounded-lg ml-10 border border-gray-100">{details}</p>
-                     </div>
-                   );
-                 })
-               )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* TITULLI I FAQES */}
       <div className="mb-8">
         <Link href={`/${locale}/biznes/rezervimet`} className="inline-flex items-center text-sm font-medium text-gray-400 hover:text-gray-700 mb-2 transition-colors">
           <ArrowLeft size={16} className="mr-1" /> {t("backBtn") || "Kthehu"}
@@ -420,8 +429,46 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 tracking-tight">{t("pageTitle") || "Ndrysho Rezervimin"}</h1>
       </div>
 
+      {/* ==================================================== */}
+      {/* 0. PORTALI I KLIENTIT (WIDGETI I RI) */}
+      {/* ==================================================== */}
+      {!fetching && (
+        <div className={`mb-6 p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row gap-6 items-center justify-between ${hasSnapshot ? 'bg-indigo-600 border-indigo-700' : 'bg-white border-gray-200'}`}>
+          <div className="flex-1">
+            <h2 className={`text-xl font-black mb-1 flex items-center gap-2 ${hasSnapshot ? 'text-white' : 'text-gray-800'}`}>
+              <LinkIcon size={20} className={hasSnapshot ? 'text-indigo-200' : 'text-gray-400'}/>
+              Portali i Klientit (Ftesat & Ulëset)
+            </h2>
+            <p className={`text-sm font-medium ${hasSnapshot ? 'text-indigo-100' : 'text-gray-500'}`}>
+              {hasSnapshot 
+                ? "Dërgoni këtë link te klienti. Ata mund të shohin detajet e eventit dhe të organizojnë mysafirët në tavolina, nga telefoni i tyre." 
+                : "Aprovoni dhe ruani rezervimin (Statusi: Konfirmuar) për të gjeneruar linkun unik që klienti mund të përdorë për ftesat."}
+            </p>
+          </div>
+          
+          {hasSnapshot ? (
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <button type="button" onClick={copyPublicLink} className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm">
+                <Copy size={16} /> Kopjo Linkun
+              </button>
+              <button type="button" onClick={sendWhatsApp} disabled={!formData.client_phone} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <MessageCircle size={18} /> Dërgo në WhatsApp
+              </button>
+            </div>
+          ) : (
+             <div className="w-full md:w-auto">
+                <span className="bg-amber-50 text-amber-600 border border-amber-200 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2">
+                   <AlertTriangle size={14}/> E Mbyllur. Konfirmo rezervimin poshtë.
+                </span>
+             </div>
+          )}
+        </div>
+      )}
+
+      {/* FORMULARI KRYESOR (Pjesa tjetër e kodit mbetet e njëjtë nga <form onSubmit... ) */}
+
       <form onSubmit={(e) => handleSave(e, false)} className={`bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${fetching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-        
+
         {/* ==================================================== */}
         {/* 1. KLIENTI WIZARD */}
         {/* ==================================================== */}
@@ -445,7 +492,7 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
            {isClientSectionOpen && (
              <div className="p-6 md:p-8 pt-0 animate-in slide-in-from-top-2 fade-in duration-300">
-               
+
                <div className="flex p-1 bg-gray-200/50 rounded-xl w-fit mb-8 border border-gray-100">
                   <button 
                     type="button" 
@@ -578,40 +625,40 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
         {/* 2. DETAJET E EVENTIT DHE MËNYRA E LLOGARITJES */}
         {/* ==================================================== */}
         <div className="p-6 md:p-8 border-b border-gray-100">
-           
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Lloji i Eventit</label>
-                <div className="relative">
-                  <PartyPopper size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" list="event-types" required placeholder="psh: Dasëm" className="w-full border border-gray-200 p-4 pl-11 rounded-xl outline-none focus:border-indigo-400 font-semibold text-gray-800 shadow-sm" value={formData.event_type} onChange={(e) => setFormData({...formData, event_type: e.target.value})} />
-                  <datalist id="event-types"><option value="Dasëm" /><option value="Fejesë" /><option value="Ditëlindje" /><option value="Event Korporativ / Biznes" /><option value="Konferencë / Seminar" /></datalist>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Salla</label>
-                <div className="relative">
-                  <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <select className="w-full border border-gray-200 p-4 pl-11 rounded-xl outline-none focus:border-indigo-400 font-semibold bg-white text-gray-800 shadow-sm" value={formData.hall_id} onChange={handleHallChange}>
-                    <option value="">-- Zgjidh Sallën --</option>
-                    {hallsList.map((h: any) => <option key={h.id} value={h.id}>{h.name}</option>)}
-                  </select>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Numri i Pjesëmarrësve</label>
-                <div className="relative">
-                  <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="number" required placeholder="Psh: 200" className="w-full border border-gray-200 p-4 pl-11 rounded-xl outline-none focus:border-indigo-400 font-semibold text-gray-800 shadow-sm" value={formData.participants} onChange={handleParticipantChange} />
-                </div>
-              </div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+             <div>
+               <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Lloji i Eventit</label>
+               <div className="relative">
+                 <PartyPopper size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                 <input type="text" list="event-types" required placeholder="psh: Dasëm" className="w-full border border-gray-200 p-4 pl-11 rounded-xl outline-none focus:border-indigo-400 font-semibold text-gray-800 shadow-sm" value={formData.event_type} onChange={(e) => setFormData({...formData, event_type: e.target.value})} />
+                 <datalist id="event-types"><option value="Dasëm" /><option value="Fejesë" /><option value="Ditëlindje" /><option value="Event Korporativ / Biznes" /><option value="Konferencë / Seminar" /></datalist>
+               </div>
+             </div>
+
+             <div>
+               <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Salla</label>
+               <div className="relative">
+                 <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                 <select className="w-full border border-gray-200 p-4 pl-11 rounded-xl outline-none focus:border-indigo-400 font-semibold bg-white text-gray-800 shadow-sm" value={formData.hall_id} onChange={handleHallChange}>
+                   <option value="">-- Zgjidh Sallën --</option>
+                   {hallsList.map((h: any) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                 </select>
+               </div>
+             </div>
+
+             <div>
+               <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Numri i Pjesëmarrësve</label>
+               <div className="relative">
+                 <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                 <input type="number" required placeholder="Psh: 200" className="w-full border border-gray-200 p-4 pl-11 rounded-xl outline-none focus:border-indigo-400 font-semibold text-gray-800 shadow-sm" value={formData.participants} onChange={handleParticipantChange} />
+               </div>
+             </div>
            </div>
 
            <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><Banknote size={16} className="text-emerald-500"/> Si do të llogaritet ky event?</h4>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                  <label className={`flex-1 flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${bookingType === 'menu' ? 'border-indigo-500 bg-indigo-50/50 shadow-sm' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
                     <input type="radio" checked={bookingType === 'menu'} onChange={() => { setBookingType('menu'); setCustomHallPrice(0); recalculateTotal({ bookingType: 'menu', hallPrice: 0 }); }} className="w-4 h-4 text-indigo-600 focus:ring-indigo-500" />
@@ -645,7 +692,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                  </div>
               )}
            </div>
-
         </div>
 
         {/* ==================================================== */}
@@ -717,10 +763,9 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
         <div className="p-6 md:p-8 bg-gray-50/50 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6"><Receipt size={20} className="text-emerald-500"/> Financat & Pagesat</h3>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-4">
-              
               <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
@@ -749,7 +794,6 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
 
             <div>
               <div className={`p-6 rounded-2xl border shadow-sm h-full ${formData.payment_type === 'refund' ? 'bg-red-50 border-red-100' : 'bg-white border-emerald-100'}`}>
-                
                 <div className="flex p-1 bg-gray-100 rounded-lg mb-4 w-full">
                    <button 
                      type="button" 
@@ -770,13 +814,13 @@ export default function EditBookingPage({ params }: { params: Promise<{ locale: 
                 <label className={`flex items-center gap-2 text-sm font-semibold uppercase tracking-wider mb-2 ${formData.payment_type === 'refund' ? 'text-red-600' : 'text-emerald-600'}`}>
                    {formData.payment_type === 'refund' ? 'Shuma për t\'u kthyer' : 'Shto Pagesë Sot (Opsionale)'}
                 </label>
-                
+
                 <p className="text-xs text-gray-500 mb-4 font-medium">
                   {formData.payment_type === 'refund' 
                     ? `Maksimumi që mund të ktheni: ${symbol} ${historicallyPaid.toFixed(2)}` 
                     : "Nëse klienti po paguan tani, shtoni vlerën më poshtë."}
                 </p>
-                
+
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
                     <input 

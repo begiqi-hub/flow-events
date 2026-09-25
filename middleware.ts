@@ -44,7 +44,9 @@ export async function middleware(request: NextRequest) {
   // ==========================================
   // HAPI 2: KONTROLLI I SIGURISË & ROLEVE (Kodi yt)
   // ==========================================
-  const isProtectedPath = pathname.includes('/biznes') || pathname.includes('/recepsioni');
+    const isProtectedPath = 
+    (pathname.includes('/biznes') && !pathname.includes('/bizneset')) || 
+    pathname.includes('/recepsioni');
 
   if (isProtectedPath) {
     const token = await getToken({ 
@@ -95,5 +97,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next|.*\\..*).*)']
+  matcher: ['/((?!api|_next|p/|.*\\..*).*)']
 };

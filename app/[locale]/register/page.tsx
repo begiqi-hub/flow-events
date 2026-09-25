@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl"; 
 import { ChevronDown, Globe, ShieldCheck, ArrowRight, Briefcase, X, FileText } from "lucide-react";
+import { CITIES } from "@/lib/constants/cities"; // Importojmë listën zyrtare të Kosovës
 
 // KONFIGURIMET
 const GJUHET = [
@@ -24,12 +25,38 @@ const SHTETET = [
   { id: "GR", name: "Greqi", dialCode: "+30", flag: "gr" },
 ];
 
-const QYTETET: Record<string, string[]> = {
-  "XK": ["Prishtinë", "Prizren", "Pejë", "Gjakovë", "Mitrovicë", "Gjilan", "Ferizaj"],
-  "AL": ["Tiranë", "Durrës", "Vlorë", "Elbasan", "Shkodër", "Korçë"],
-  "MK": ["Shkup", "Tetovë", "Gostivar", "Kumanovë", "Strugë"],
-  "ME": ["Ulqin", "Tuz", "Podgoricë", "Tivar"],
-  "GR": ["Athinë", "Selanik", "Janinë"],
+// E kthejmë në Record<string, {id: string, name: string}[]> për t'u përputhur me CITIES
+const QYTETET: Record<string, { id: string; name: string }[]> = {
+  "XK": [...CITIES], // Kosova merr automatikisht të gjitha qytetet nga skedari yt statik
+  "AL": [
+    { id: "tirane", name: "Tiranë" }, 
+    { id: "durres", name: "Durrës" }, 
+    { id: "vlore", name: "Vlorë" }, 
+    { id: "elbasan", name: "Elbasan" }, 
+    { id: "shkoder", name: "Shkodër" }, 
+    { id: "korce", name: "Korçë" }
+  ],
+  "MK": [
+    { id: "shkup", name: "Shkup" }, 
+    { id: "tetove", name: "Tetovë" }, 
+    { id: "gostivar", name: "Gostivar" }, 
+    { id: "kumanove", name: "Kumanovë" }, 
+    { id: "struge", name: "Strugë" }
+  ],
+  "ME": [
+    { id: "ulqin", name: "Ulqin" }, 
+    { id: "tuz", name: "Tuz" }, 
+    { id: "podgorice", name: "Podgoricë" }, 
+    { id: "tivar", name: "Tivar" }
+  ],
+  "GR": [
+    { id: "athine", name: "Athinë" }, 
+    { id: "selanik", name: "Selanik" }, 
+    { id: "janine", name: "Janinë" }
+  ],
+  "GB": [
+    { id: "londer", name: "London" }
+  ],
 };
 
 export default function RegisterPage() {
@@ -48,7 +75,7 @@ export default function RegisterPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [availableCities, setAvailableCities] = useState<string[]>(QYTETET["XK"]);
+  const [availableCities, setAvailableCities] = useState<{id: string, name: string}[]>(QYTETET["XK"]);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -262,7 +289,11 @@ export default function RegisterPage() {
               <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("cityLabel")}</label>
               <select className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white font-medium cursor-pointer" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})}>
                 <option value="">{t("select")}</option>
-                {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
+                {availableCities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
               </select>
             </div>
 

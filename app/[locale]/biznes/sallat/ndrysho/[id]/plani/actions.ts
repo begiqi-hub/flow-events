@@ -16,13 +16,19 @@ export async function getFloorPlan(hallId: string) {
 
     if (!user || !user.business_id) return { error: "Biznesi nuk u gjet" };
 
+    // Tërheqim informacionin e Sallës (Emrin dhe Kapacitetin)
+    const hallInfo = await prisma.halls.findFirst({
+      where: { id: hallId, business_id: user.business_id },
+      select: { name: true, capacity: true }
+    });
+
     // Gjejmë nëse salla ka tashmë një plan
     const layout = await prisma.venue_layouts.findFirst({
       where: { hall_id: hallId },
       include: { tables: true }
     });
 
-    return { success: true, layout };
+    return { success: true, layout, hall: hallInfo };
   } catch (error: any) {
     console.error("Gabim gjatë marrjes së planit:", error);
     return { error: "Gabim teknik gjatë ngarkimit të planit." };
