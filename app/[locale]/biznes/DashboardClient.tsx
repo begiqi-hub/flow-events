@@ -9,7 +9,28 @@ import {
   Clock, MapPin, Users, CalendarCheck, CheckCircle2, Clock4, X, Phone, Banknote, PartyPopper, UsersRound, Eye, Edit, Sparkles, Wallet, Utensils, AlertCircle, Landmark
 } from "lucide-react";
 
-export default function DashboardClient({ business, locale, stats, monthBookings, notifications, uiTranslations = {}, userRole = "admin" }: any) {
+// 1. ZGJIDHJA: Krijojmë një Interface strikt për TypeScript
+interface DashboardProps {
+  business: any;
+  locale: string;
+  stats?: any;
+  monthBookings: any[];
+  notifications: any[];
+  uiTranslations?: any; // Kjo i tregon Vercel-it që ky variabël është i vlefshëm
+  userRole?: string;
+}
+
+// 2. Aplikojmë "DashboardProps" në vend të "any"
+export default function DashboardClient({ 
+  business, 
+  locale, 
+  stats, 
+  monthBookings, 
+  notifications, 
+  uiTranslations = {}, 
+  userRole = "admin" 
+}: DashboardProps) {
+  
   const [view, setView] = useState<'list' | 'calendar'>('calendar'); 
   const [dayModal, setDayModal] = useState<{isOpen: boolean, date: number | null, bookings: any[]}>({isOpen: false, date: null, bookings: []});
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
