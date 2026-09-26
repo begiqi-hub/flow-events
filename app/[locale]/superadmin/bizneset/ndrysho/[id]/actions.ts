@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { prisma } from "../../../../../../lib/prisma";
 // 1. IMPORTI I DITARIT TË SPIUNAZHIT 🕵️‍♂️
 import { createAuditLog } from "../../../logs/actions";
+// SHTUAR: Moduli i domosdoshëm për të rifreskuar tabelat në UI
+import { revalidatePath } from "next/cache";
 
 export async function updateBusinessAction(id: string, data: any) {
   try {
@@ -27,7 +29,8 @@ export async function updateBusinessAction(id: string, data: any) {
         phone: data.phone,
         status: data.status,
         trialEndsAt: trialDate,
-        //* packageId: data.packageId || null //
+        // KORRIGJUAR: U hoq komenti për të ruajtur paketën e re ose për ta bërë null
+        packageId: data.packageId || null 
       }
     });
 
@@ -38,6 +41,9 @@ export async function updateBusinessAction(id: string, data: any) {
       "BIZNESI",
       `U përditësuan të dhënat për biznesin: ${data.name} (Statusi i ri: ${data.status})`
     );
+
+    // 3. SHTUAR: Detyron Next.js të fshijë cache-in dhe të tregojë të dhënat e reja në tabelë
+    revalidatePath("/", "layout");
 
     return { success: true };
   } catch (error) {

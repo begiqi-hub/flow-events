@@ -30,14 +30,31 @@ export default function EditBusinessClient({ locale, business, packages }: { loc
     setError("");
     setIsSubmitting(true);
 
-    const res = await updateBusinessAction(business.id, formData);
-    setIsSubmitting(false);
+    try {
+      // ZGJIDHJA: Pastrimi i të dhënave. Kthejmë strings bosh ("") në null dhe numrat në Integer.
+      const payload = {
+        ...formData,
+        packageId: formData.packageId === "" 
+          ? null 
+          : (!isNaN(Number(formData.packageId)) ? Number(formData.packageId) : formData.packageId),
+        
+        trialEndsAt: formData.trialEndsAt === "" 
+          ? null 
+          : new Date(formData.trialEndsAt).toISOString()
+      };
 
-    if (res.error) {
-      setError(res.error);
-    } else {
-      router.push(`/${locale}/superadmin/bizneset`);
-      router.refresh();
+      const res = await updateBusinessAction(business.id, payload);
+
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        router.push(`/${locale}/superadmin/bizneset`);
+        router.refresh();
+      }
+    } catch (err) {
+      setError("Ndodhi një gabim në server gjatë ruajtjes. Provo përsëri.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -121,7 +138,8 @@ export default function EditBusinessClient({ locale, business, packages }: { loc
               <select 
                 name="status" 
                 value={formData.status} onChange={handleChange}
-                className={`w-full bg-slate-900 border px-4 py-3 rounded-xl outline-none font-bold appearance-none
+                // U hoq class "appearance-none" që të shfaqet shigjeta normale e dropdown-it
+                className={`w-full bg-slate-900 border px-4 py-3 rounded-xl outline-none font-bold transition-colors
                   ${formData.status === 'active' ? 'border-emerald-500 text-emerald-400 focus:ring-emerald-500/20' : 
                     formData.status === 'suspended' ? 'border-red-500 text-red-400 focus:ring-red-500/20' : 
                     'border-amber-500 text-amber-400 focus:ring-amber-500/20'}`}
@@ -151,7 +169,8 @@ export default function EditBusinessClient({ locale, business, packages }: { loc
               <select 
                 name="packageId" 
                 value={formData.packageId} onChange={handleChange}
-                className="w-full bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-white font-bold appearance-none"
+                // Këtu mund të ruash appearance-none nëse nuk të prish punë, por rekomandohet pa të
+                className="w-full bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-white font-bold"
               >
                 <option value="">-- Pa Paketë --</option>
                 {packages.map(p => (

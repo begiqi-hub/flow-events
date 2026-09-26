@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 import { CITIES } from "@/lib/constants/cities";
 
 const locationsData: Record<string, { id: string; name: string }[]> = {
-  "Kosovo": [...CITIES], // Kosova merr automatikisht të gjitha qytetet nga skedari yt statik
+  "Kosovë": [...CITIES], // Kosova merr automatikisht të gjitha qytetet nga skedari yt statik
   "Albania": [
     { id: "tirane", name: "Tiranë" }, { id: "durres", name: "Durrës" }, { id: "vlore", name: "Vlorë" }, 
     { id: "elbasan", name: "Elbasan" }, { id: "shkoder", name: "Shkodër" }, { id: "fier", name: "Fier" }, 
@@ -541,7 +541,7 @@ export default function ProfileClient({ business, locale = "sq", userRole = "adm
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t("countryLabel")}</label>
                 <select className="w-full border border-gray-200 p-4 rounded-xl outline-none focus:border-gray-900 focus:ring-1 bg-white font-bold text-gray-900 cursor-pointer" value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value, city: ""})}>
                   <option value="">{t("countrySelect")}</option>
-                  <option value="Kosovo">{t("countryKs")}</option>
+                  <option value="Kosovë">{t("countryKs")}</option>
                   <option value="Albania">{t("countryAl")}</option>
                   <option value="North Macedonia">{t("countryMk")}</option>
                   <option value="Montenegro">{t("countryMe")}</option>
