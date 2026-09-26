@@ -6,11 +6,13 @@ import { sq } from "date-fns/locale";
 import { 
   Building2, Search, Edit,
   CheckCircle2, Clock, Mail, Phone, ExternalLink, ShieldOff,
-  X, Shield, KeyRound, Save, Eye, Store, MonitorSmartphone, Layers
+  X, Shield, KeyRound, Save, Eye, Store, MonitorSmartphone, Layers,
+  TrendingUp, AlertOctagon, Activity, AlertTriangle
 } from "lucide-react";
 import { updateBusinessInfo, resetBusinessPassword, getImpersonationToken } from "./actions";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
 export default function BusinessesClient({ locale, businesses }: { locale: string, businesses: any[] }) {
   const router = useRouter();
@@ -25,14 +27,52 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  const now = new Date();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+
+  // LOGJIKA E RE: Llogaritja e datës së saktë të skadimit (nga Databaza ose +14 ditë nga regjistrimi)
+  const getExpirationDate = (b: any) => {
+    if (b.trialEndsAt) return new Date(b.trialEndsAt);
+    
+    // Fallback: 14 ditë pas krijimit të llogarisë
+    const fallbackDate = new Date(b.created_at);
+    fallbackDate.setDate(fallbackDate.getDate() + 14);
+    return fallbackDate;
+  };
+
+  // LOGJIKA E RE: Verifikimi strikt duke përdorur datën e llogaritur më sipër
+  const isBusinessExpired = (b: any) => {
+    if (b.status === 'active') return false; // Bizneset aktive nuk skadojnë
+    const expireDate = getExpirationDate(b);
+    return expireDate < now;
+  };
+
+  // Llogaritja e statistikave për kartat
+  const stats = {
+    total: businesses.length,
+    new: businesses.filter(b => new Date(b.created_at) >= thirtyDaysAgo).length,
+    active: businesses.filter(b => b.status === 'active').length,
+    expired: businesses.filter(isBusinessExpired).length,
+    trial: businesses.filter(b => b.status === 'trial' && !isBusinessExpired(b)).length,
+    marketplace: businesses.filter(b => b.has_marketplace).length
+  };
+
   const filteredBusinesses = businesses.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (b.email && b.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                           (b.nui && b.nui.toLowerCase().includes(searchTerm.toLowerCase()));
     
     let matchesStatus = false;
+    const isExpired = isBusinessExpired(b);
+    
+    // Filtrimi logjik i ndarë saktë
     if (statusFilter === "all") {
        matchesStatus = b.status !== "trial"; 
+    } else if (statusFilter === "expired") {
+       matchesStatus = isExpired;
+    } else if (statusFilter === "trial") {
+       matchesStatus = b.status === 'trial' && !isExpired;
     } else {
        matchesStatus = b.status === statusFilter;
     }
@@ -51,49 +91,25 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
     return "🌍";
   };
 
-  // FUNKSIONI I RI: Formatimi i emrit të qytetit nga Databaza
   const formatCityName = (city: string) => {
     if (!city) return "I pacaktuar";
-    
-    // Fjalori për konvertimin e saktë të qyteteve shqiptare
     const cityMap: Record<string, string> = {
-      'mitrovice_jug': 'Mitrovicë (Jug)',
-      'mitrovice_veri': 'Mitrovicë (Veri)',
-      'prishtine': 'Prishtinë',
-      'peje': 'Pejë',
-      'prizren': 'Prizren',
-      'ferizaj': 'Ferizaj',
-      'gjilan': 'Gjilan',
-      'gjakove': 'Gjakovë',
-      'tirane': 'Tiranë',
-      'durres': 'Durrës',
-      'shkup': 'Shkup',
-      'tetove': 'Tetovë'
+      'mitrovice_jug': 'Mitrovicë (Jug)', 'mitrovice_veri': 'Mitrovicë (Veri)',
+      'prishtine': 'Prishtinë', 'peje': 'Pejë', 'prizren': 'Prizren',
+      'ferizaj': 'Ferizaj', 'gjilan': 'Gjilan', 'gjakove': 'Gjakovë',
+      'tirane': 'Tiranë', 'durres': 'Durrës', 'shkup': 'Shkup', 'tetove': 'Tetovë'
     };
-
     const normalized = city.toLowerCase().trim();
     if (cityMap[normalized]) return cityMap[normalized];
     
-    // Rregulli gjenerik nëse qyteti nuk është në fjalor:
-    // kthe "nje_qytet" në "Nje Qytet"
-    return normalized
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    return normalized.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   const handleImpersonate = async (businessId: string) => {
     if (!confirm("A jeni i sigurt që dëshironi të hyni si ky biznes?")) return;
-    
     const res = await getImpersonationToken(businessId);
-    
     if (res.success && res.targetEmail) {
-      await signIn("credentials", {
-        email: res.targetEmail,
-        password: "KODI_YT_SEKRET_123", 
-        redirect: true,
-        callbackUrl: `/${locale}/biznes`,
-      });
+      await signIn("credentials", { email: res.targetEmail, password: "KODI_YT_SEKRET_123", redirect: true, callbackUrl: `/${locale}/biznes` });
     } else {
       alert(res.error);
     }
@@ -106,21 +122,15 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
       phone: b.phone || "", country: b.country || "", city: b.city || "", address: b.address || "",
       status: b.status || "trial"
     });
-    setNewPassword("");
-    setMessage({ type: "", text: "" });
-    setActiveTab("info");
+    setNewPassword(""); setMessage({ type: "", text: "" }); setActiveTab("info");
   };
 
   const handleSaveInfo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setMessage({ type: "", text: "" });
-    
+    e.preventDefault(); setIsSaving(true); setMessage({ type: "", text: "" });
     const res = await updateBusinessInfo(editingBusiness.id, formData, locale);
     if (res.success) {
       setMessage({ type: "success", text: "Të dhënat u ruajtën me sukses!" });
-      router.refresh();
-      setTimeout(() => setEditingBusiness(null), 1500);
+      router.refresh(); setTimeout(() => setEditingBusiness(null), 1500);
     } else {
       setMessage({ type: "error", text: res.error || "Gabim!" });
     }
@@ -129,19 +139,12 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      setMessage({ type: "error", text: "Fjalëkalimi duhet të jetë të paktën 6 karaktere." });
-      return;
-    }
-
-    setIsSaving(true);
-    setMessage({ type: "", text: "" });
-    
+    if (newPassword.length < 6) { setMessage({ type: "error", text: "Minimumi 6 karaktere." }); return; }
+    setIsSaving(true); setMessage({ type: "", text: "" });
     const res = await resetBusinessPassword(editingBusiness.id, newPassword, locale);
     if (res.success) {
       setMessage({ type: "success", text: "Fjalëkalimi u ndryshua me sukses!" });
-      setNewPassword("");
-      router.refresh();
+      setNewPassword(""); router.refresh();
     } else {
       setMessage({ type: "error", text: res.error || "Gabim!" });
     }
@@ -154,18 +157,60 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-            <Building2 className="text-indigo-600" size={32} /> 
-            Bizneset e Regjistruara
+            <Building2 className="text-indigo-600" size={32}/> Bizneset e Regjistruara
           </h1>
           <p className="text-gray-500 font-medium mt-1">
-            Menaxho të gjitha kompanitë që përdorin platformën (Aktiv & Bllokuar: {businesses.filter(b => b.status !== 'trial').length})
+            Menaxho të gjitha kompanitë që përdorin platformën (Gjithsej: {stats.total})
           </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white border border-gray-100 shadow-sm p-5 rounded-3xl flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><TrendingUp size={24}/></div>
+          <div>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Të Reja</p>
+            <p className="text-2xl font-black text-gray-900 leading-tight">{stats.new}</p>
+            <p className="text-[10px] text-gray-500 font-bold">30 ditët e fundit</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-100 shadow-sm p-5 rounded-3xl flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><CheckCircle2 size={24}/></div>
+          <div>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Aktive</p>
+            <p className="text-2xl font-black text-gray-900 leading-tight">{stats.active}</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-100 shadow-sm p-5 rounded-3xl flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Clock size={24}/></div>
+          <div>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Në Provë</p>
+            <p className="text-2xl font-black text-gray-900 leading-tight">{stats.trial}</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-100 shadow-sm p-5 rounded-3xl flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Layers size={24}/></div>
+          <div>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Marketplace</p>
+            <p className="text-2xl font-black text-gray-900 leading-tight">{stats.marketplace}</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-100 shadow-sm p-5 rounded-3xl flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="p-3 bg-red-50 text-red-600 rounded-2xl"><AlertTriangle size={24}/></div>
+          <div>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Të Skaduara</p>
+            <p className="text-2xl font-black text-gray-900 leading-tight">{stats.expired}</p>
+          </div>
         </div>
       </div>
 
       <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
           <input 
             type="text" 
             placeholder="Kërko me emër, email ose NUI..." 
@@ -182,7 +227,8 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
           <option value="all">Të Gjitha (Pa Provat)</option>
           <option value="active">🟢 Aktive</option>
           <option value="suspended">🔴 Të Bllokuara</option>
-          <option value="trial">🟠 Në Provë (Trial)</option>
+          <option value="trial">🟠 Në Provë (Aktive)</option>
+          <option value="expired">⚠️ Të Skaduara (Abonim/Provë)</option>
         </select>
       </div>
 
@@ -191,7 +237,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
           <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100">
-                <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Kompania & Kontakti</th>
+                <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Biznesi</th>
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Lokacioni</th>
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Statusi & Data</th>
                 <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Abonimi & Platforma</th>
@@ -199,17 +245,16 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredBusinesses.length > 0 ? filteredBusinesses.map((b) => (
+              {filteredBusinesses.length > 0 ? filteredBusinesses.map((b) => {
+                const isPastDue = isBusinessExpired(b);
+                const expireDate = getExpirationDate(b); // Marrim datën ekzakte të skadimit për ta shfaqur
+
+                return (
                 <tr key={b.id} className="hover:bg-gray-50/50 transition-colors group">
-                  
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       {b.logo_url ? (
-                        <img 
-                          src={b.logo_url} 
-                          alt={b.name} 
-                          className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-gray-100 shadow-sm group-hover:scale-105 transition-transform" 
-                        />
+                        <img src={b.logo_url} alt={b.name} className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-gray-100 shadow-sm group-hover:scale-105 transition-transform" />
                       ) : (
                         <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-black text-lg shrink-0 group-hover:scale-105 transition-transform">
                           {b.name.substring(0, 2).toUpperCase()}
@@ -220,7 +265,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                           {b.name}
                           {b.website && (
                             <a href={b.website.startsWith('http') ? b.website : `http://${b.website}`} target="_blank" rel="noreferrer" className="text-gray-300 hover:text-indigo-500 transition-colors" title="Hap Website">
-                              <ExternalLink size={12} />
+                              <ExternalLink size={12}/>
                             </a>
                           )}
                         </p>
@@ -228,19 +273,17 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                           <span className="flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md tracking-widest shadow-sm">
                             NUI: {b.nui}
                           </span>
-                          <span className="flex items-center gap-1.5"><Mail size={12} className="text-gray-400"/> {b.email}</span>
-                          <span className="flex items-center gap-1.5"><Phone size={12} className="text-gray-400"/> {b.phone}</span>
+                          <span className="flex items-center gap-1.5"><Mail className="text-gray-400" size={12}/> {b.email}</span>
+                          <span className="flex items-center gap-1.5"><Phone className="text-gray-400" size={12}/> {b.phone}</span>
                         </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* LOKACIONI I PËRDITËSUAR */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{getFlag(b.country)}</span>
                       <div>
-                        {/* Këtu përdorim funksionin e ri për të formatuar qytetin */}
                         <p className="text-sm font-bold text-gray-800">{formatCityName(b.city)}</p>
                         <p className="text-xs font-medium text-gray-500">{b.country || "Shteti i pacaktuar"}</p>
                       </div>
@@ -249,7 +292,11 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
 
                   <td className="px-6 py-4">
                     <div className="flex flex-col items-start gap-1">
-                      {b.status === 'active' ? (
+                      {isPastDue ? (
+                        <span className="bg-red-50 text-red-700 px-2.5 py-1 rounded-lg text-[10px] font-black border border-red-100 flex items-center gap-1">
+                          <AlertTriangle size={12}/> SKADUAR
+                        </span>
+                      ) : b.status === 'active' ? (
                         <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-[10px] font-black border border-emerald-100 flex items-center gap-1">
                           <CheckCircle2 size={12}/> AKTIVE
                         </span>
@@ -262,14 +309,16 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                           <Clock size={12}/> PROVË
                         </span>
                       )}
+                      
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1" title="Data e regjistrimit">
                         Reg: {format(new Date(b.created_at), "dd MMM yyyy", { locale: sq })}
                       </p>
-                      {b.trialEndsAt && (
-                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-0.5" title="Data kur përfundon prova ose skadon pakoja">
-                          Skadon: {format(new Date(b.trialEndsAt), "dd MMM yyyy", { locale: sq })}
-                        </p>
-                      )}
+                      
+                      {/* LOGJIKA E RE: Tregon datën e saktë të skadimit për të gjithë, edhe ata pa trialEndsAt */}
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${isPastDue ? 'text-red-500' : 'text-indigo-500'}`} title="Data kur përfundon prova ose skadon pakoja">
+                        Skadon: {format(expireDate, "dd MMM yyyy", { locale: sq })}
+                      </p>
+                      
                     </div>
                   </td>
 
@@ -278,31 +327,27 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                       <div className="bg-gray-50 border border-gray-100 rounded-xl p-2 inline-block w-full">
                         <p className="text-xs font-black text-gray-800">{b.package?.name || "E Pacaktuar"}</p>
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                          {b.package?.price || "0.00"} {b.currency}/Muaj
+                          {b.package?.price !== undefined && b.package?.price !== null 
+                            ? Number(b.package.price).toFixed(2) 
+                            : "0.00"} {b.currency || 'EUR'}/Muaj
                         </p>
                       </div>
 
-                      {/* LOGJIKA E PLATFORMËS E PËRDITËSUAR */}
                       {(() => {
-                        // KUSHTI 1: Të gjitha bizneset e regjistruara përdorin Sistemin
                         const isSystem = true; 
-                        
-                        // KUSHTI 2: Për Marketplace, duhet të verifikojmë nëse ekziston vlera 'has_marketplace' ose nëse ka listime.
-                        // SHËNIM: Sigurohu që Prisma dërgon `has_marketplace: true/false` për çdo biznes!
                         const isMarketplace = b.has_marketplace === true; 
 
                         if (isMarketplace && isSystem) {
                           return (
                             <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 w-fit">
-                              <Layers size={12} /> Marketplace & Sistemi
+                              <Layers size={12}/> Marketplace & Sistemi
                             </span>
                           );
                         }
                         
-                        // Nëse isMarketplace është false, atëherë përdor vetëm Sistemin
                         return (
                           <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-100 w-fit">
-                            <MonitorSmartphone size={12} /> Vetëm Sistemi
+                            <MonitorSmartphone size={12}/> Vetëm Sistemi
                           </span>
                         );
                       })()}
@@ -316,23 +361,20 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                         className="p-2.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl transition-all border border-indigo-100 shadow-sm"
                         title="Hyr si ky biznes"
                       >
-                        <Eye size={16} />
+                        <Eye size={16}/>
                       </button>
 
-                      <button 
-                        onClick={() => openEditModal(b)}
-                        className="p-2.5 bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 rounded-xl transition-colors border border-gray-100 hover:border-indigo-100"
-                        title="Modifiko & Statusi"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      <Link className="p-2.5 bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 rounded-xl transition-colors border border-gray-100 hover:border-indigo-100 flex items-center justify-center" href={`/${locale}/superadmin/bizneset/ndrysho/${b.id}`} title="Modifiko & Statusi">
+                        <Edit size={16}/>
+                      </Link>
                     </div>
                   </td>
 
                 </tr>
-              )) : (
+                );
+              }) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-gray-500">Nuk u gjet asnjë biznes me këtë status ose kërkim.</td>
+                  <td colSpan={5} className="px-6 py-20 text-center text-gray-500 font-medium">Nuk u gjet asnjë biznes me këtë status ose kërkim.</td>
                 </tr>
               )}
             </tbody>
@@ -340,6 +382,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
         </div>
       </div>
 
+      {/* Modal i Modifikimit (Rikthyer) */}
       {editingBusiness && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -350,7 +393,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                 <p className="text-sm font-medium text-gray-500 mt-0.5">Menaxho detajet, statusin ose fjalëkalimin</p>
               </div>
               <button onClick={() => setEditingBusiness(null)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
-                <X size={20} />
+                <X size={20}/>
               </button>
             </div>
 
@@ -359,19 +402,19 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                 onClick={() => {setActiveTab("info"); setMessage({type:"", text:""});}}
                 className={`pb-4 px-2 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'info' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
               >
-                <Building2 size={16} /> Të dhënat e Biznesit
+                <Building2 size={16}/> Të dhënat e Biznesit
               </button>
               <button 
                 onClick={() => {setActiveTab("security"); setMessage({type:"", text:""});}}
                 className={`pb-4 px-2 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${activeTab === 'security' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
               >
-                <Shield size={16} /> Siguria (Fjalëkalimi)
+                <Shield size={16}/> Siguria (Fjalëkalimi)
               </button>
             </div>
 
             {message.text && (
               <div className={`mx-8 mt-6 p-4 rounded-2xl text-sm font-bold flex items-center gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                {message.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldOff size={16} />}
+                {message.type === 'success' ? <CheckCircle2 size={16}/> : <ShieldOff size={16}/>}
                 {message.text}
               </div>
             )}
@@ -428,7 +471,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
               ) : (
                 <form onSubmit={handleResetPassword} className="space-y-6">
                   <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-3">
-                    <ShieldOff className="text-amber-600 shrink-0 mt-0.5" size={20} />
+                    <ShieldOff className="text-amber-600 shrink-0 mt-0.5" size={20}/>
                     <div>
                       <h4 className="text-sm font-bold text-amber-900">Kujdes: Po ndryshoni fjalëkalimin e klientit!</h4>
                       <p className="text-xs font-medium text-amber-700 mt-1 leading-relaxed">
@@ -440,7 +483,7 @@ export default function BusinessesClient({ locale, businesses }: { locale: strin
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fjalëkalimi i Ri</label>
                     <div className="relative mt-1">
-                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
                       <input 
                         type="text" 
                         required 

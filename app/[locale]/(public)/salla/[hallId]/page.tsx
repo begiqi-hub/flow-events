@@ -25,10 +25,16 @@ import RequestForm from "./RequestForm";
 import HallGallery from "./HallGallery";
 import PublicHeader from "@/components/public/PublicHeader";
 import PublicFooter from "@/components/public/PublicFooter";
+import { CITIES } from "@/lib/constants/cities"; // Përshtatni rrugën (path) nëse ndryshon sipas strukturës suaj
+
+const getCityName = (cityId: string | null | undefined) => {
+  if (!cityId) return "Kosovë";
+  const foundCity = CITIES.find(c => c.id === cityId);
+  return foundCity ? foundCity.name : cityId; 
+};
 
 export const revalidate = 3600;
 
-// Mbetet e pandryshuar logjika e Metadata
 export async function generateMetadata({ params }: { params: Promise<{ hallId: string }> }) {
   const { hallId } = await params;
   
@@ -44,7 +50,9 @@ export async function generateMetadata({ params }: { params: Promise<{ hallId: s
     };
   }
 
-  const title = `${listing.marketing_name || listing.hall.name} në ${listing.address || listing.business.city || 'Kosovë'} | HALLEVO`;
+  const cityDisplayName = getCityName(listing.address || listing.business.city);
+
+  const title = `${listing.marketing_name || listing.hall.name} në ${cityDisplayName} | HALLEVO`;
   const description = listing.hall.description 
     ? listing.hall.description.substring(0, 155) + "..."
     : `Rezervoni sallën ${listing.marketing_name || listing.hall.name} për eventin tuaj. Kapaciteti deri në ${listing.hall.capacity} persona.`;

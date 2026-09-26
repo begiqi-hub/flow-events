@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../../lib/prisma";
 import Link from "next/link";
-import { Building2, PlusCircle, Pencil, Users, ParkingCircle, Snowflake, Image as ImageIcon } from "lucide-react";
+import { Building2, Pencil, Users, ParkingCircle, Snowflake, Image as ImageIcon, Globe, CalendarCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server"; 
 import HallToggles from "./HallToggles";
+import AddHallButton from "./AddHallButton"; // Importojmë butonin e ri inteligjent
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,8 +18,10 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
   const session = await getServerSession();
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
+  // Marrim biznesin bashkë me të dhënat e Pakos për të lexuar limitin
   let business = await prisma.businesses.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    include: { package: true }
   });
 
   if (!business) {
@@ -27,7 +30,8 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
     });
     if (staffUser && staffUser.business_id) {
       business = await prisma.businesses.findUnique({
-        where: { id: staffUser.business_id }
+        where: { id: staffUser.business_id },
+        include: { package: true }
       });
     }
   }
@@ -39,10 +43,21 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
     orderBy: { created_at: 'asc' }
   });
 
+  // LLOGARITJA E LIMITEVE
+  const HARD_LIMIT_PUBLIC = 5; // Limiti fiks i platformës
+  const currentTotalHalls = halls.length;
+  const percentPublic = Math.min((currentTotalHalls / HARD_LIMIT_PUBLIC) * 100, 100);
+
+  // Kujdes: Ndrysho "halls_limit" me emrin e saktë të fushës në tabelën tënde Package
+  const LIMIT_MANAGEMENT = business.package?.halls_limit || 1; 
+  const currentManagedHalls = halls.filter(h => h.is_managed).length;
+  const percentManaged = Math.min((currentManagedHalls / LIMIT_MANAGEMENT) * 100, 100);
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
       
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+      {/* HEADER KRYESOR */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
             <Building2 className="text-gray-400" size={32} />
@@ -52,14 +67,71 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
             {t("pageSubtitle")}
           </p>
         </div>
-        <Link 
-          href={`/${locale}/biznes/sallat/shto`}
-          className="bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-sm flex items-center gap-2"
-        >
-          <PlusCircle size={20} /> {t("addHallBtn")}
-        </Link>
+        
+        {/* BUTONI INTELIGJENT */}
+        <AddHallButton 
+          currentHallsCount={currentTotalHalls} 
+          maxPublicHalls={HARD_LIMIT_PUBLIC} 
+          locale={locale} 
+        />
       </div>
 
+      {/* SEKSIONI I RI: LIMITET DHE LEGJENDA */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        
+        {/* 1. Karta e Limiteve të Listimit (Publik) */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-center">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <Globe size={16} className="text-blue-500" /> Salla të Regjistruara
+            </span>
+            <span className="text-sm font-black text-gray-900">{currentTotalHalls} / {HARD_LIMIT_PUBLIC}</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+            <div className={`h-2 rounded-full transition-all ${currentTotalHalls >= HARD_LIMIT_PUBLIC ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${percentPublic}%` }}></div>
+          </div>
+          <p className="text-xs font-medium text-gray-500">
+            Keni hapësirë edhe për <strong className="text-gray-700">{Math.max(HARD_LIMIT_PUBLIC - currentTotalHalls, 0)} salla</strong> të tjera në llogari.
+          </p>
+        </div>
+
+        {/* 2. Karta e Limiteve të Menaxhimit (SaaS) */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-center">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <CalendarCheck size={16} className="text-emerald-500" /> Kalendarë Aktivë
+            </span>
+            <span className="text-sm font-black text-gray-900">{currentManagedHalls} / {LIMIT_MANAGEMENT}</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+            <div className={`h-2 rounded-full transition-all ${currentManagedHalls >= LIMIT_MANAGEMENT ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${percentManaged}%` }}></div>
+          </div>
+          <p className="text-xs font-medium text-gray-500">
+            Sipas pakos <strong className="text-gray-700">{business.package?.name || "bazë"}</strong>, mund të menaxhoni {LIMIT_MANAGEMENT} salla njëkohësisht.
+          </p>
+        </div>
+
+        {/* 3. Legjenda Shpjeguese për Çelësat */}
+        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col justify-center gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-4 mt-0.5 bg-blue-500 rounded-full flex items-center px-0.5 shrink-0"><div className="w-3 h-3 bg-white rounded-full translate-x-4"></div></div>
+            <div>
+              <p className="text-xs font-bold text-gray-800">Listimi Publik (HALLEVO)</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">E bën sallën të dukshme për klientët në treg. Mund të keni deri në 5 salla publike.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-4 mt-0.5 bg-emerald-500 rounded-full flex items-center px-0.5 shrink-0"><div className="w-3 h-3 bg-white rounded-full translate-x-4"></div></div>
+            <div>
+              <p className="text-xs font-bold text-gray-800">Menaxhimi i Brendshëm</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">Aktivizon kalendarin për stafin tuaj. Limiti varet nga pakoja që keni zgjedhur.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* LISTA E SALLAVE */}
       {halls.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {halls.map((hall: any) => (
@@ -79,7 +151,6 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
                 </div>
 
                 {hall.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={hall.image} alt={hall.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
@@ -111,12 +182,11 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
                   )}
                 </div>
 
-                {/* SHTUAR: Çelësat e Listimit dhe Menaxhimit */}
                 <div className="mt-auto pt-4 border-t border-gray-100">
                    <HallToggles 
                      hallId={hall.id} 
                      businessId={business.id} 
-                     initialIsPublished={hall.is_published ?? true} 
+                     initialIsPublished={hall.is_published ?? false} 
                      initialIsManaged={hall.is_managed ?? false} 
                    />
                 </div>
@@ -137,7 +207,7 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm">
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm mt-8">
           <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
             <Building2 size={32} className="text-gray-400" />
           </div>
@@ -145,6 +215,7 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
           <p className="text-gray-500 max-w-sm mx-auto mb-8">
             {t("emptySubtitle")}
           </p>
+          {/* Në Empty State, e fshehim butonin e limitit sepse padyshim ka 0 salla */}
           <Link 
             href={`/${locale}/biznes/sallat/shto`} 
             className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md"

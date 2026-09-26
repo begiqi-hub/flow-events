@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toggleHallManagement, toggleHallPublication } from "./actions";
 import { Globe, CalendarCheck, AlertCircle, FileText, Zap } from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
 
 interface HallTogglesProps {
   hallId: string;
@@ -12,24 +13,34 @@ interface HallTogglesProps {
 }
 
 export default function HallToggles({ hallId, businessId, initialIsPublished, initialIsManaged }: HallTogglesProps) {
+  const router = useRouter();
+  const params = useParams();
+  const locale = (params?.locale as string) || "sq";
+
   const [isPublished, setIsPublished] = useState(initialIsPublished);
   const [isManaged, setIsManaged] = useState(initialIsManaged);
   const [isLoading, setIsLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
-  const [showIncompleteModal, setShowIncompleteModal] = useState(false); // SHTUAR: State për modalin e të dhënave
+  const [showIncompleteModal, setShowIncompleteModal] = useState(false);
 
   const handleTogglePublished = async () => {
     const newState = !isPublished;
     setIsPublished(newState); 
     
     const res = await toggleHallPublication(hallId, newState);
+    
     if (!res.success) {
       setIsPublished(!newState); 
       
       if (res.error === "INCOMPLETE_PROFILE") {
-        setShowIncompleteModal(true); // Hapet Modali UI në vend të Alert-it të shfletuesit
+        setShowIncompleteModal(true); 
       } else {
         alert("Gabim gjatë përditësimit të publikimit!");
+      }
+    } else {
+      // RIDREJTIMI: Nëse ruhet me sukses dhe statusi i ri është ON (true)
+      if (newState === true) {
+        router.push(`/${locale}/biznes/listing/${hallId}`);
       }
     }
   };
@@ -114,18 +125,16 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
         </div>
       )}
 
-      {/* MODALI 2: Të Dhëna të Mangëta (Zëvendësimi i window.confirm) */}
+      {/* MODALI 2: Të Dhëna të Mangëta */}
       {showIncompleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white max-w-[400px] w-full rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 relative p-8">
             
-            {/* Efekti i sfondit (Watermark) */}
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-60 rotate-12 pointer-events-none">
               <FileText size={180} strokeWidth={1} />
             </div>
 
             <div className="text-center relative z-10">
-              {/* Ikona Kryesore */}
               <div className="w-20 h-20 bg-indigo-50 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6">
                 <FileText size={32} className="text-indigo-600" />
               </div>
@@ -141,14 +150,10 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
                 <button 
                   onClick={() => {
                     const currentLocale = window.location.pathname.split('/')[1] || "sq";
-                    
-                    // Sigurohemi që hallId ekziston para se të bëjmë redirect
                     if (!hallId) {
                       alert("Gabim: ID e sallës mungon!");
                       return;
                     }
-
-                    // Ridrejton direkt tek faqja specifike e asaj salle
                     window.location.href = `/${currentLocale}/biznes/listing/${hallId}`;
                   }} 
                   className="w-full bg-[#111827] hover:bg-black text-white font-bold py-4 px-4 rounded-[1rem] flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"

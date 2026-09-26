@@ -1,4 +1,3 @@
-// app/[locale]/biznes/listing/[hallId]/page.tsx
 import React from "react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -29,7 +28,6 @@ export default async function EditListingPage({
   const businessId = currentUser?.business_id;
   if (!businessId) redirect(`/${locale}/login`);
 
-  // 1. Kontrollojmë fillimisht nëse salla ekziston dhe i përket këtij biznesi
   const hall = await prisma.halls.findFirst({
     where: { 
       id: hallId,
@@ -42,7 +40,6 @@ export default async function EditListingPage({
 
   if (!hall) redirect(`/${locale}/biznes/listing`);
 
-  // 2. Nëse salla nuk ka ende një rekord në tabelën listing, e krijojmë automatikisht me connect
   let listing = hall.listing;
   if (!listing) {
     listing = await prisma.listing.create({
@@ -54,7 +51,6 @@ export default async function EditListingPage({
     });
   }
 
-  // Përgatisim objektin me të dhënat e sallës për formularin
   const listingWithHall = {
     ...listing,
     hall: {
@@ -65,7 +61,8 @@ export default async function EditListingPage({
     }
   };
 
-  const isReady = !!hall.description && (!!listing.mainImage || !!hall.image);
+  // Validimi u hoq për përshkrimin, kërkohet vetëm fotografia kryesore për të bërë publikimin
+  const isReady = !!listing.mainImage || !!hall.image;
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8">
@@ -81,17 +78,15 @@ export default async function EditListingPage({
           </p>
         </div>
 
-        {/* Butoni i shpejtë për ndryshimin e statusit */}
         <div className="w-full md:w-80">
           <ListingClientForm 
-            hallId={hall.id} 
+            listingId={listing.id} 
             isReady={isReady} 
             currentStatus={listing.status} 
           />
         </div>
       </div>
 
-      {/* Komponenti Klient për Formularin e Redaktimit */}
       <ListingEditForm listing={listingWithHall} />
     </div>
   );
