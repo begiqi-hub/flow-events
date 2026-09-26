@@ -4,21 +4,12 @@ import { prisma } from "../../../lib/prisma";
 import Link from "next/link";
 import { Building2, Landmark, ShieldAlert, Sparkles, Utensils, CheckCircle2, Clock } from "lucide-react";
 import DashboardClient from "./DashboardClient";
-import { getTranslations } from "next-intl/server"; // <--- Shtuar
-import LandingPageClient from "@/app/[locale]/LandingPageClient";
-
-
-export default function BiznesetPage() {
-  return (
-    <main>
-      <LandingPageClient />
-    </main>
-  );
-}
+import { getTranslations } from "next-intl/server"; 
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// Ky është tashmë i vetmi "export default" në këtë faqe
 export default async function BusinessDashboard({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const session = await getServerSession();
@@ -53,7 +44,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   // =======================================================================
   // LOGJIKA E RE PËR TË GJETUR BIZNESIN APO STAFIN
   // =======================================================================
-  let userRole = "admin"; // <--- Deklarojmë rolin
+  let userRole = "admin"; 
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
   });
@@ -63,7 +54,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
       where: { email: session.user.email }
     });
     if (staffUser && staffUser.business_id) {
-      userRole = staffUser.role; // <--- Kapim rolin e stafit (psh. manager)
+      userRole = staffUser.role; 
       business = await prisma.businesses.findUnique({
         where: { id: staffUser.business_id }
       });
@@ -220,7 +211,7 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
         monthBookings={serializedMonthBookings}
         notifications={[]}
         userRole={userRole}
-        uiTranslations={uiTranslations} // <--- Shtuar kjo!
+        uiTranslations={uiTranslations}
       />
     </>
   );
