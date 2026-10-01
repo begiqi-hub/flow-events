@@ -31,13 +31,6 @@ const nextConfig: NextConfig = {
   */
   output: 'standalone', 
 
-  /* 
-    Çaktivizimi i Turbopack për të parandaluar gabimet e CSS worker crash 
-    gjatë ndërtimit në serverët tradicionalë (Hostinger)
-  */
-  experimental: {
-    turbopack: false,
-  },
 };
 
 // ==========================================
