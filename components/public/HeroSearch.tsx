@@ -75,7 +75,7 @@ export default function HeroSearch({ locale, variant, defaultValues }: HeroSearc
   // ==========================================
   if (variant === "horizontal") {
     return (
-      <form onSubmit={handleSearch} ref={dropdownRef} className="bg-[#101724] border border-white/5 rounded-3xl md:rounded-full p-2.5 flex flex-col md:flex-row items-center justify-between shadow-2xl relative z-40">
+      <form onSubmit={handleSearch} ref={dropdownRef} className="bg-[#0f1a2d] border border-white/5 rounded-3xl md:rounded-full p-2.5 flex flex-col md:flex-row items-center justify-between shadow-2xl relative z-40">
         
         {/* Qyteti */}
         <div className="flex-1 w-full relative">

@@ -149,7 +149,7 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
         {/* Pjesa e parë e sallave (8 salla maksimum) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {firstBatch.map((listing: any) => (
-            <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#101724] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
+            <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
               <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
                 {listing.mainImage || listing.hall?.image ? (
                   <img 
@@ -171,10 +171,10 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
                 <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#242730]/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors z-20">
                   <Heart className="w-4 h-4"/>
                 </button>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#101724] via-transparent to-transparent opacity-40" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-40" />
               </div>
               
-              <div className="p-5 flex-1 flex flex-col z-10 bg-[#101724]">
+              <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
                 <div>
                   <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
                     {listing.hall?.name || "Sallë Eventesh"}
@@ -214,7 +214,7 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
         {secondBatch.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {secondBatch.map((listing: any) => (
-              <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#101724] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
+              <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
                 <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
                   {listing.mainImage || listing.hall?.image ? (
                     <img 
@@ -236,10 +236,10 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
                   <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#242730]/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors z-20">
                     <Heart className="w-4 h-4"/>
                   </button>
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#101724] via-transparent to-transparent opacity-40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-40" />
                 </div>
                 
-                <div className="p-5 flex-1 flex flex-col z-10 bg-[#101724]">
+                <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
                   <div>
                     <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
                       {listing.hall?.name || "Sallë Eventesh"}

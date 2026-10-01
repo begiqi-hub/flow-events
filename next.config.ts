@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
+  /* 
+    Shtimi thelbësor për Hostinger: 
+    Krijon një version të pavarur të serverit që nuk varet nga Vercel 
+  */
+  output: 'standalone', 
 };
 
 // ==========================================

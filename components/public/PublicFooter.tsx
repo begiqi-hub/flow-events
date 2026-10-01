@@ -10,7 +10,7 @@ const premiumItalicStyle: React.CSSProperties = {
 
 export default function PublicFooter({ locale }: { locale: string }) {
   return (
-    <footer className="bg-[#0c1220] border-t border-white/5 pt-16 pb-16 px-6 lg:px-8 relative z-10">
+    <footer className="bg-[#0f1a2d] border-t border-white/5 pt-16 pb-16 px-6 lg:px-8 relative z-10">
       <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row justify-between items-start gap-10">
         
         {/* Kolona 1: Logo, Përshkrimi dhe Të Drejtat e Autorit */}

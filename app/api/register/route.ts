@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma"; 
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { sendEmail } from "../../../lib/mailer";
+// Janë bashkuar importet nga i njëjti skedar për kod më të pastër
+import { sendEmail, sendWelcomePromoEmail } from "../../../lib/mailer"; 
 
 export async function POST(req: Request) {
   try {
@@ -36,10 +37,10 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const otpCode = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
+    // Ruajtja në Databazë
     await prisma.$transaction(async (tx) => {
       const newBusiness = await tx.businesses.create({
         data: {
@@ -79,19 +80,27 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    // 5. Email bhejne ka process aur error handling
+    // Dërgimi i OTP
     const emailResult = await sendEmail({
       to: safeEmail,
       subject: "Kodi juaj i verifikimit - Hallevo",
       html: emailHtml
     });
 
-    // Kontrolloni nëse dërgimi dështoi
     if (!emailResult.success) {
       console.error("❌ GABIM NË NODEMAILER:", emailResult.error);
       return NextResponse.json({ 
         error: "Llogaria u krijua, por emaili dështoi. Shiko terminalin." 
       }, { status: 500 });
+    }
+
+    // Shtimi i dërgimit të Emaili-t të Mirëseardhjes + Promo Code
+    // Ekzekutohet vetëm nëse OTP dërgohet me sukses
+    try {
+      await sendWelcomePromoEmail(safeEmail, name);
+    } catch (promoError) {
+      // Kapim gabimet e këtij emaili specifiko që të mos bllokojmë procesin kryesor
+      console.error("Gabim në dërgimin e emailit të mirëseardhjes:", promoError);
     }
 
     return NextResponse.json({ success: true, message: "Kodi OTP u dërgua me sukses!" }, { status: 201 });

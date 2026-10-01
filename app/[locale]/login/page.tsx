@@ -153,7 +153,9 @@ export default function LoginPage() {
                 />
                 <span className="text-sm font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{t("rememberMe")}</span>
               </label>
-              <Link href="#" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors">{t("forgotPassword")}</Link>
+              <Link href="/forgot-password" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                {t("forgotPassword")}
+              </Link>
             </div>
 
             <button 

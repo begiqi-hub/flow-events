@@ -15,7 +15,7 @@ export default function PublicHeader({ locale, showBackButton = false }: PublicH
   const closeMenu = () => setIsOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a111d]/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0f1a2d]/90 backdrop-blur-xl">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 h-20 flex items-center justify-between relative">
         
         {/* Mobile Left: Kthehu */}

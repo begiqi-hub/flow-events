@@ -219,7 +219,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
             <h3 className="text-xl font-serif text-white mb-6">Karakteristikat</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
-              <div className="bg-[#111827] border border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:border-white/10 transition-colors">
+              <div className="bg-[#0f1a2d] border border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:border-white/10 transition-colors">
                 <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center shrink-0">
                   <Users className="w-5 h-5 text-[#A855F7]" />
                 </div>
@@ -229,7 +229,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
                 </div>
               </div>
 
-              <div className="bg-[#111827] border border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:border-white/10 transition-colors">
+              <div className="bg-[#0f1a2d] border border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:border-white/10 transition-colors">
                 <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center shrink-0">
                   <Wind className="w-5 h-5 text-[#A855F7]" />
                 </div>
@@ -241,7 +241,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
                 </div>
               </div>
 
-              <div className="bg-[#111827] border border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:border-white/10 transition-colors">
+              <div className="bg-[#0f1a2d] border border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:border-white/10 transition-colors">
                 <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center shrink-0">
                   <Car className="w-5 h-5 text-[#A855F7]" />
                 </div>
@@ -287,13 +287,13 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
         <div className="w-full lg:w-[35%] space-y-6 lg:sticky lg:top-28 h-fit">
           
           {/* Primary CTA Form Wrapper */}
-          <div className="bg-[#111827] border border-white/5 rounded-[24px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
+          <div className="bg-[#0f1a2d] border border-white/5 rounded-[24px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-32 h-32 bg-[#8B5CF6]/10 blur-[50px] rounded-full pointer-events-none" />
              <RequestForm businessId={listing.businessId} hallId={listing.hallId} />
           </div>
 
           {/* Direct Contact Card */}
-          <div className="bg-[#111827] border border-white/5 rounded-[24px] p-6 md:p-8 shadow-xl">
+          <div className="bg-[#0f1a2d] border border-white/5 rounded-[24px] p-6 md:p-8 shadow-xl">
             <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-6">
               Kontakto drejtpërdrejt
             </h4>
@@ -345,7 +345,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {otherListings.map((other) => (
-              <Link key={other.id} href={`/${locale}/salla/${other.hallId}`} className="group flex flex-col bg-[#111827] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/20 transition-all duration-300">
+              <Link key={other.id} href={`/${locale}/salla/${other.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/20 transition-all duration-300">
                 
                 <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
                   {other.mainImage || other.hall.image ? (
@@ -363,10 +363,10 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
                   <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#242730]/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors z-20">
                     <Heart className="w-4 h-4" />
                   </button>
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent opacity-50" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-50" />
                 </div>
                 
-                <div className="p-5 flex-1 flex flex-col z-10 bg-[#111827]">
+                <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
                   <div>
                     <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
                       {other.marketing_name || other.hall.name}
