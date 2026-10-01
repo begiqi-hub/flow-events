@@ -7,8 +7,8 @@ import { useParams } from "next/navigation";
 
 // SHTUAM discountText SI PARAMETËR DINAMIK
 export default function WelcomePromoWidget({ 
-  promoCode = "HALLEVO20", 
-  discountText = "20%" 
+  promoCode = "HALLEVO50", 
+  discountText = "50%" 
 }: { 
   promoCode?: string, 
   discountText?: string 
