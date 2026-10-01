@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-// 1. IMPORTUAM PROVIDER-IN E GJUHËS DHE FUNKSIONIN PËR TË MARRË MESAZHET
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 import "../globals.css";
 
 const geistSans = Geist({
@@ -60,8 +59,11 @@ export default async function RootLayout({
 }) {
   const { locale } = await params;
 
-  // 2. MARRIM TË GJITHA PËRKTHIMET (JSON) NGA SERVERI
-  const messages = await getMessages();
+  // 1. Aktivizimi i kërkuar nga next-intl për App Router (statike dhe dinamike)
+  setRequestLocale(locale);
+
+  // 2. Marrja e mesazheve duke kaluar specifikisht lokalin
+  const messages = await getMessages({ locale });
 
   return (
     <html lang={locale}>
@@ -69,7 +71,6 @@ export default async function RootLayout({
         suppressHydrationWarning 
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}
       >
-        {/* 3. MBËSHTJELLIM APLIKACIONIN QË TË GJITHË KOMPONENTËT TË KANË AKSES TE GJUHA */}
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
