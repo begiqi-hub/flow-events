@@ -152,3 +152,5 @@ export default function WelcomePromoWidget({
     </>
   );
 }
+
+// Ky eshte nje test per te detyruar Vercel te bej redeploy - Test 2
