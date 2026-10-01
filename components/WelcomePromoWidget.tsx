@@ -90,7 +90,7 @@ export default function WelcomePromoWidget({
               <Clock size={14} />
               {String(timeLeft.h).padStart(2, '0')}:{String(timeLeft.m).padStart(2, '0')}:{String(timeLeft.s).padStart(2, '0')}
             </div>
-            <Link 
+            <Link
               href={`/${locale}/biznes/abonimi`} 
               className="bg-white text-indigo-600 font-bold px-4 py-1 rounded-full text-xs hover:bg-gray-50 transition-colors hidden sm:block"
             >
