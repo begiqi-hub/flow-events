@@ -275,6 +275,10 @@ model users {
   user_halls user_halls[]
   bookings   bookings[]
 
+  email_verified DateTime?
+  otp_code       String?         @db.VarChar(50)
+  otp_expires_at DateTime?
+
   businesses businesses? @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "users_ibfk_1")
 
   @@index([business_id], map: "business_id")
@@ -495,8 +499,10 @@ enum users_hall_scope {
 }
 
 enum users_status {
+  pending
   active
   inactive
+  blocked
 }
 
 enum bookings_status {
@@ -668,4 +674,18 @@ enum AdStatus {
   ACTIVE
   PAUSED
   EXPIRED
+}
+
+model PromoCode {
+  id            String    @id @default(cuid())
+  code          String    @unique // P.sh., "HALLEVO2026"
+  discountType  String    // 'PERCENTAGE' ose 'FIXED'
+  discountValue Float     // P.sh., 20 (për 20%) ose 50 (për 50€)
+  maxUses       Int?      // Limiti i përdorimeve (null = pa limit)
+  usedCount     Int       @default(0) // Sa herë është përdorur deri tani
+  expiresAt     DateTime? // Data e skadencës
+  isActive      Boolean   @default(true) // Për ta ndalur manualisht
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

@@ -2,9 +2,7 @@
 
 import { getServerSession } from "next-auth";
 import { prisma } from "../../../../../../lib/prisma";
-// 1. IMPORTI I DITARIT TË SPIUNAZHIT 🕵️‍♂️
 import { createAuditLog } from "../../../logs/actions";
-// SHTUAR: Moduli i domosdoshëm për të rifreskuar tabelat në UI
 import { revalidatePath } from "next/cache";
 
 export async function updateBusinessAction(id: string, data: any) {
@@ -15,26 +13,56 @@ export async function updateBusinessAction(id: string, data: any) {
     const superadmin = await prisma.users.findUnique({ where: { email: session.user.email } });
     if (superadmin?.role !== "superadmin") return { error: "Nuk keni të drejta Superadmini." };
 
-    // Formatizimi i datës së trial-it (nëse ka dhënë)
+    // Formatizimi i datës së trial-it
     let trialDate = null;
     if (data.trialEndsAt) {
       trialDate = new Date(data.trialEndsAt);
     }
 
-    await prisma.businesses.update({
-      where: { id },
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        status: data.status,
-        trialEndsAt: trialDate,
-        // KORRIGJUAR: U hoq komenti për të ruajtur paketën e re ose për ta bërë null
-        packageId: data.packageId || null 
-      }
-    });
+    // Përgatitja e Veprimeve në Databazë (Transaction Array)
+    const transactionOperations = [];
 
-    // 2. REGJISTRIMI I VEPRIMIT NË AUDIT LOG
+    // Veprimi 1: Përditëso vetë biznesin
+    transactionOperations.push(
+      prisma.businesses.update({
+        where: { id },
+        data: {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          status: data.status,
+          trialEndsAt: trialDate,
+          packageId: data.packageId || null 
+        }
+      })
+    );
+
+    // Veprimi 2: Logjika zinxhir nëse Bllokohet
+    if (data.status === "suspended") {
+      // Fshih çdo sallë nga platforma Hallevo (Forco DRAFT)
+      transactionOperations.push(
+        prisma.listing.updateMany({
+          where: { businessId: id },
+          data: { status: "DRAFT" } // Nëse merrni përsëri gabim, ndryshoni në "draft" ose hiqni thonjëzat nëse nuk është String
+        })
+      );
+      
+      // SHËNIM: Përditësimi i përdoruesve (users) është komentuar përkohësisht për të shmangur gabimet e skemës. 
+      // Nëse tabela juaj 'users' ka kolonën 'status', mund ta hiqni komentin më poshtë:
+      /*
+      transactionOperations.push(
+        prisma.users.updateMany({
+          where: { business_id: id },
+          data: { status: "blocked" }
+        })
+      );
+      */
+    }
+
+    // Ekzekutimi i Transaksionit (Të gjitha bashkë)
+    await prisma.$transaction(transactionOperations);
+
+    // Regjistrimi i veprimit në Audit Log
     await createAuditLog(
       session.user.email,
       "UPDATE",
@@ -42,12 +70,16 @@ export async function updateBusinessAction(id: string, data: any) {
       `U përditësuan të dhënat për biznesin: ${data.name} (Statusi i ri: ${data.status})`
     );
 
-    // 3. SHTUAR: Detyron Next.js të fshijë cache-in dhe të tregojë të dhënat e reja në tabelë
+    // Pastrimi i Cache në të gjithë platformën
     revalidatePath("/", "layout");
 
     return { success: true };
-  } catch (error) {
-    console.error("Gabim në updateBusinessAction:", error);
-    return { error: "Ndodhi një gabim gjatë përditësimit të biznesit." };
+  } catch (error: any) {
+    // Printimi i detajuar i gabimit në terminal për t'ju ndihmuar në debug
+    console.error("GABIMI I PLOTË NGA PRISMA:", error);
+    
+    return { 
+      error: "Ndodhi një gabim gjatë përditësimit të biznesit. Kontrolloni terminalin e VS Code për detaje." 
+    };
   }
 }

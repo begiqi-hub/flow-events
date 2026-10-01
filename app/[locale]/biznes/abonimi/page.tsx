@@ -39,7 +39,7 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
   if (!business) redirect(`/${locale}/login`);
 
   // ==========================================
-  // KODI I RI: NUMËROJMË ASETET AKTIVE (PËR KONTROLLIN E DOWNGRADE)
+  // NUMËROJMË ASETET AKTIVE (PËR KONTROLLIN E DOWNGRADE)
   // ==========================================
   const activeHalls = await prisma.halls.count({ where: { business_id: business.id, status: 'active' } });
   const activeUsers = await prisma.users.count({ where: { business_id: business.id, status: 'active' } });
@@ -50,7 +50,11 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
     users: activeUsers,
     menus: activeMenus
   };
+  
   // ==========================================
+  // KODI I RI: Kontrolli nëse është abonimi i parë
+  // ==========================================
+  const isFirstSubscription = business.sa_payments.length === 0;
 
   const allPackages = await prisma.package.findMany({
     orderBy: { monthly_price: 'asc' }
@@ -71,7 +75,8 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
       locale={locale} 
       systemSettings={safeSystemSettings}
       bankAccount={safeBankAccount}
-      currentUsage={currentUsage} 
+      currentUsage={currentUsage}
+      isFirstSubscription={isFirstSubscription} // Dërgohet si Prop në Client
     />
   );
 }

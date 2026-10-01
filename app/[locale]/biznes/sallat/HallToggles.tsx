@@ -27,21 +27,24 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
     const newState = !isPublished;
     setIsPublished(newState); 
     
-    const res = await toggleHallPublication(hallId, newState);
-    
-    if (!res.success) {
-      setIsPublished(!newState); 
+    try {
+      const res = await toggleHallPublication(hallId, newState);
       
-      if (res.error === "INCOMPLETE_PROFILE") {
-        setShowIncompleteModal(true); 
+      if (!res.success) {
+        setIsPublished(!newState); // Kthe mbrapsht ndryshimin nëse dështon
+        
+        if (res.error === "INCOMPLETE_PROFILE") {
+          setShowIncompleteModal(true); 
+        } else {
+          alert("Gabim gjatë përditësimit të publikimit!");
+        }
       } else {
-        alert("Gabim gjatë përditësimit të publikimit!");
+        if (newState === true) {
+          router.push(`/${locale}/biznes/listing/${hallId}`);
+        }
       }
-    } else {
-      // RIDREJTIMI: Nëse ruhet me sukses dhe statusi i ri është ON (true)
-      if (newState === true) {
-        router.push(`/${locale}/biznes/listing/${hallId}`);
-      }
+    } catch (error) {
+      console.warn("Kërkesa e publikimit u ndërpre nga navigimi i shpejtë:", error);
     }
   };
 
@@ -52,19 +55,23 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
     
     setIsManaged(newState); 
 
-    const res = await toggleHallManagement(hallId, businessId, newState);
-    
-    if (!res.success) {
-      setIsManaged(!newState); 
+    try {
+      const res = await toggleHallManagement(hallId, businessId, newState);
       
-      if (res.error === "LIMIT_REACHED") {
-        setShowLimitModal(true); 
-      } else {
-        alert("Gabim: " + res.error);
+      if (!res.success) {
+        setIsManaged(!newState); // Kthe mbrapsht ndryshimin nëse dështon
+        
+        if (res.error === "LIMIT_REACHED") {
+          setShowLimitModal(true); 
+        } else {
+          alert("Gabim: " + res.error);
+        }
       }
+    } catch (error) {
+      console.warn("Kërkesa e menaxhimit u ndërpre nga navigimi i shpejtë:", error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (

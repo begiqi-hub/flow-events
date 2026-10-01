@@ -44,16 +44,15 @@ export default async function CalendarPage({
   const startDate = startOfWeek(firstDayOfMonth, { weekStartsOn: 1 });
   const endDate = endOfWeek(lastDayOfMonth, { weekStartsOn: 1 });
 
-  // SHTUAM KUSHTIN: status: { notIn: ['cancelled', 'completed', 'draft'] }
+  // SHTUAM 'pending' në listën e përjashtimeve në mënyrë që kërkesat e marketplace të mos dalin në kalendar
   const bookings = await prisma.bookings.findMany({
     where: { 
       business_id: business.id,
-      status: { notIn: ['cancelled', 'completed', 'draft'] },
+      status: { notIn: ['cancelled', 'completed', 'draft', 'pending'] }, // <--- Ndryshimi këtu
       event_date: {
         gte: startDate,
         lte: endDate
       },
-      // SHTUAR: Filtri i sigurisë që rezervimi t'i përkasë një salle me menaxhim aktiv
       halls: {
         is_managed: true
       }

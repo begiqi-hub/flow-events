@@ -1,33 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma"; 
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { sendEmail } from "../../../lib/mailer";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { name, email, password, phone, nui, city, activityId } = body;
 
-    // 0. Validimi Baze
     if (!name || !email || !password || !nui || !phone) {
       return NextResponse.json({ error: "Të gjitha fushat obligative duhet të plotësohen!" }, { status: 400 });
     }
 
-    // Siguria 1: Formatojmë emailin
     const safeEmail = email.toLowerCase().trim();
 
-    // 1. Kontrollojmë nëse emaili ekziston te PËRDORUESIT (Staf/Klientë)
     const existingUser = await prisma.users.findUnique({ where: { email: safeEmail } });
     if (existingUser) {
       return NextResponse.json({ error: "Ky email është i regjistruar tashmë në sistem!" }, { status: 400 });
     }
 
-    // 2. Kontrollojmë nëse emaili ekziston te BIZNESET
     const existingBusinessEmail = await prisma.businesses.findUnique({ where: { email: safeEmail } });
     if (existingBusinessEmail) {
       return NextResponse.json({ error: "Ky email përdoret nga një Biznes ekzistues!" }, { status: 400 });
     }
 
-    // 3. Kontrollojmë nëse ky NUI (Numër Biznesi) ekziston
     const existingBusinessNui = await prisma.businesses.findUnique({
       where: { nui: nui }
     });
@@ -40,9 +37,10 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Krijimi me Transaction
-    const result = await prisma.$transaction(async (tx) => {
-      
+    const otpCode = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await prisma.$transaction(async (tx) => {
       const newBusiness = await tx.businesses.create({
         data: {
           name: name,
@@ -56,21 +54,47 @@ export async function POST(req: Request) {
         },
       });
 
-      const newUser = await tx.users.create({
+      await tx.users.create({
         data: {
           full_name: name, 
           email: safeEmail,
           password: hashedPassword,
           role: "admin", 
           business_id: newBusiness.id,
-          status: "active",
+          status: "pending",
+          otp_code: otpCode,
+          otp_expires_at: expiresAt,
         },
       });
-
-      return { newBusiness, newUser };
     });
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; text-align: center;">
+        <h2 style="color: #333;">Mirësevini në Hallevo!</h2>
+        <p style="color: #555;">Kodi juaj për verifikimin e llogarisë është:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #8B5CF6; background: #f4f4f4; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          ${otpCode}
+        </div>
+        <p style="font-size: 12px; color: #999;">Ky kod skadon për 15 minuta. Mos ia jepni askujt tjetër këtë kod.</p>
+      </div>
+    `;
+
+    // 5. Email bhejne ka process aur error handling
+    const emailResult = await sendEmail({
+      to: safeEmail,
+      subject: "Kodi juaj i verifikimit - Hallevo",
+      html: emailHtml
+    });
+
+    // Kontrolloni nëse dërgimi dështoi
+    if (!emailResult.success) {
+      console.error("❌ GABIM NË NODEMAILER:", emailResult.error);
+      return NextResponse.json({ 
+        error: "Llogaria u krijua, por emaili dështoi. Shiko terminalin." 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Kodi OTP u dërgua me sukses!" }, { status: 201 });
 
   } catch (error: any) {
     console.error("❌ GABIM KRITIK NË REGJISTRIM:", error);

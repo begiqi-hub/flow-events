@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { 
   Check, X, Clock, Banknote, ShieldCheck, Mail, Instagram,
   Layers, Users, UtensilsCrossed, Info, FileText,
-  CreditCard, Calendar, Megaphone, ArrowRight, Download, Ticket, Zap, History, Printer, Copy, ShieldAlert, AlertTriangle
+  CreditCard, Calendar, Megaphone, ArrowRight, Download, Ticket, Zap, History, Printer, Copy, ShieldAlert, AlertTriangle, Gift, Loader2 // Shtuam Gift dhe Loader2
 } from "lucide-react";
-import { createPaymentIntent, cancelSubscriptionAction } from "./actions"; // <--- Shtuam aksionin e ri
+import { createPaymentIntent, cancelSubscriptionAction } from "./actions"; 
 import { format, addMonths, addYears, differenceInDays } from "date-fns";
 import { sq } from "date-fns/locale";
 import { useReactToPrint } from "react-to-print";
@@ -16,9 +16,9 @@ import { useTranslations } from "next-intl";
 import { initializePaddle, Paddle } from '@paddle/paddle-js';
 
 export default function AbonimiClient({ 
-  business, packages, locale, systemSettings, bankAccount, currentUsage 
+  business, packages, locale, systemSettings, bankAccount, currentUsage, isFirstSubscription 
 }: { 
-  business: any, packages: any[], locale: string, systemSettings: any, bankAccount: any, currentUsage: any
+  business: any, packages: any[], locale: string, systemSettings: any, bankAccount: any, currentUsage: any, isFirstSubscription?: boolean
 }) {
   const t = useTranslations("AbonimiClient");
   const router = useRouter(); 
@@ -31,9 +31,15 @@ export default function AbonimiClient({
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [historicalInvoice, setHistoricalInvoice] = useState<any>(null);
 
-  // SHTUAR: MODALI PËR ANULIMIN E ABONIMIT
+  // MODALI PËR ANULIMIN E ABONIMIT
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // STATE-ET PËR PROMO KODIN
+  const [promoInput, setPromoInput] = useState("");
+  const [loadingPromo, setLoadingPromo] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ type: string; value: number; code: string; promoId: string } | null>(null);
 
   const [paddle, setPaddle] = useState<Paddle | null>(null);
   const [paddleError, setPaddleError] = useState<string | null>(null);
@@ -43,7 +49,6 @@ export default function AbonimiClient({
   const [showPricing, setShowPricing] = useState(isTrial);
 
   useEffect(() => {
-    // VENDOSIM TOKENIN DIREKT PA PËRDORUR VERCEL (Për të shmangur problemet e cache)
     const tokenToUse = "live_e8917a133a0a0bdc8342fa7b958";
 
     initializePaddle({
@@ -64,7 +69,6 @@ export default function AbonimiClient({
   let unusedCredit = 0;
   let expiryDate = "Nuk ka datë";
 
-  // Rregulluar: Ditet i llogarisim edhe nëse është aktiv edhe nëse e ka anuluar paraprakisht (por prap ka ditë)
   if (business.trialEndsAt && (business.status === 'active' || isCancelled)) {
     const endObj = new Date(business.trialEndsAt);
     daysLeft = differenceInDays(endObj, new Date());
@@ -76,13 +80,30 @@ export default function AbonimiClient({
     }
   }
 
+  // =====================================
+  // LLOGARITJA E ÇMIMIT DHE PROMO KODIT
+  // =====================================
   let baseAmount = 0;
-  let finalToPay = 0;
+  let promoDiscountAmount = 0;
+  let amountAfterPromo = 0;
   let discountFromCredit = 0;
+  let finalToPay = 0;
   let isUpgrade = false;
 
   if (selectedPkg) {
     baseAmount = Number(billingCycle === 'monthly' ? selectedPkg.monthly_price : selectedPkg.yearly_price);
+    amountAfterPromo = baseAmount;
+
+    // Aplikimi i zbritjes së Promo Kodit
+    if (appliedPromo) {
+      if (appliedPromo.type === "PERCENTAGE") {
+        promoDiscountAmount = (baseAmount * appliedPromo.value) / 100;
+      } else if (appliedPromo.type === "FIXED") {
+        promoDiscountAmount = appliedPromo.value;
+      }
+      amountAfterPromo = Math.max(0, baseAmount - promoDiscountAmount);
+      promoDiscountAmount = baseAmount - amountAfterPromo; // Sigurim që nuk zbritet më shumë se 100%
+    }
     
     if (business.package) {
       const oldBase = Number(billingCycle === 'monthly' ? business.package.monthly_price : business.package.yearly_price);
@@ -91,8 +112,9 @@ export default function AbonimiClient({
       isUpgrade = true; 
     }
 
-    discountFromCredit = isUpgrade ? Math.min(unusedCredit, baseAmount) : 0;
-    finalToPay = baseAmount - discountFromCredit;
+    // Krediti zbritet në fund nga shuma pas promo kodit
+    discountFromCredit = isUpgrade ? Math.min(unusedCredit, amountAfterPromo) : 0;
+    finalToPay = amountAfterPromo - discountFromCredit;
   }
 
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -108,6 +130,44 @@ export default function AbonimiClient({
     documentTitle: `Fatura-${historicalInvoice?.invoice_number}`,
     pageStyle: `@page { size: A4; margin: 15mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: sans-serif; } }`
   });
+
+  // FUNKSIONET PËR PROMO KODIN
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setLoadingPromo(true);
+    setPromoError("");
+    setAppliedPromo(null);
+
+    try {
+      const res = await fetch("/api/verify-promo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoInput }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setAppliedPromo({
+          type: data.discountType,
+          value: data.discountValue,
+          code: promoInput.toUpperCase().trim(),
+          promoId: data.promoId
+        });
+        setPromoInput("");
+      } else {
+        setPromoError(data.error);
+      }
+    } catch (err) {
+      setPromoError("Ndodhi një gabim në verifikim.");
+    } finally {
+      setLoadingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoError("");
+  };
 
   const openPackageModal = (pkg: any) => {
     if (pkg.halls_limit !== -1 && currentUsage.halls > pkg.halls_limit) {
@@ -125,14 +185,21 @@ export default function AbonimiClient({
 
     setSelectedPkg(pkg);
     setGeneratedRef(""); 
+    setAppliedPromo(null); // Pastro promon e vjetër nëse ndërron pako
+    setPromoError("");
   };
 
   const handleConfirm = async () => {
     if (loadingId !== null || !selectedPkg) return;
     setLoadingId(selectedPkg.id); 
     
+    // Dërgojmë edhe promoCodeId (nëse backend do e përdorë)
     const res = await createPaymentIntent({
-      businessId: business.id, amount: finalToPay, locale: locale, packageId: selectedPkg.id 
+      businessId: business.id, 
+      amount: finalToPay, 
+      locale: locale, 
+      packageId: selectedPkg.id,
+      promoCodeId: appliedPromo?.promoId // SHTUAR PROMO ID
     });
 
     if (res.success && res.referenceCode) setGeneratedRef(res.referenceCode); 
@@ -148,7 +215,6 @@ export default function AbonimiClient({
     const pkgName = selectedPkg.name.toLowerCase();
     let priceId = "";
 
-    // SHKËPUTJE TOTALE NGA VERCEL ENV. Hardcode direkt me ID-të e vërteta.
     if (pkgName.includes("starter") || pkgName.includes("baza")) {
        priceId = billingCycle === 'monthly' 
            ? "pri_01kpv229q28k0mamvhrnq8e0qm" 
@@ -163,8 +229,6 @@ export default function AbonimiClient({
            : "pri_01kpv1vsyt0mrtdhzk4cpgf645";
     }
 
-    console.log("HARDCODE TEST -> Emri Pakos:", pkgName, "| Cikli:", billingCycle, "| ID Finale:", priceId);
-
     if (!priceId) {
        alert("Gabim kritik: Nuk u gjenerua asnjë ID.");
        setLoadingId(null);
@@ -178,7 +242,8 @@ export default function AbonimiClient({
             customData: { 
                 businessId: business.id.toString(), 
                 packageId: selectedPkg.id.toString(), 
-                billingCycle: billingCycle 
+                billingCycle: billingCycle,
+                promoCodeId: appliedPromo?.promoId || "" // SHTUAR PROMO ID
             }
         });
     } catch (err: any) { 
@@ -187,7 +252,6 @@ export default function AbonimiClient({
     setLoadingId(null); 
   };
   
-  // AKSIONI PËR ANULIMIN E ABONIMIT NGA UI
   const handleCancelSubscription = async () => {
     setIsCancelling(true);
     const res = await cancelSubscriptionAction({ businessId: business.id, locale: locale });
@@ -274,7 +338,6 @@ export default function AbonimiClient({
         </div>
       )}
 
-      {/* POPUP (MODAL) PËR ANULIMIN E ABONIMIT */}
       {showCancelModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 text-center animate-in zoom-in-95 duration-300 border border-gray-100">
@@ -357,8 +420,6 @@ export default function AbonimiClient({
               </div>
 
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                
-                {/* BUTONI I ANULIMIT TË ABONIMIT (VETËM NËSE ËSHTË AKTIV) */}
                 {business.status === 'active' ? (
                   <button 
                     onClick={() => setShowCancelModal(true)} 
@@ -526,6 +587,7 @@ export default function AbonimiClient({
         </div>
       )}
 
+      {/* MODALI I KONFIRMIMIT / PAGESËS (KËTU SHTUAM PROMO KODIN) */}
       {selectedPkg && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-md p-4 print:bg-white print:p-0">
           <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] print:max-h-none print:shadow-none print:rounded-none">
@@ -612,6 +674,14 @@ export default function AbonimiClient({
                            <span className="font-bold text-gray-900 font-mono">{baseAmount.toFixed(2)} €</span>
                         </div>
                         
+                        {/* Shfaqja e Zbritjes nga Promo në Faturë */}
+                        {appliedPromo && promoDiscountAmount > 0 && (
+                          <div className="flex justify-between py-2 text-sm border-b border-gray-100 text-emerald-600">
+                            <span className="font-bold uppercase tracking-wider flex items-center gap-1.5"><Gift size={14} /> Zbritje ({appliedPromo.code})</span>
+                            <span className="font-bold font-mono">- {promoDiscountAmount.toFixed(2)} €</span>
+                          </div>
+                        )}
+
                         {isUpgrade && discountFromCredit > 0 && (
                           <div className="flex justify-between py-2 text-sm border-b border-gray-100">
                             <span className="text-emerald-600 font-bold uppercase tracking-wider">Kredit nga pako e vjetër ({daysLeft} ditë)</span>
@@ -666,7 +736,68 @@ export default function AbonimiClient({
                   <div className="flex flex-col h-full text-center">
                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-100"><Check size={32} className="text-indigo-600" /></div>
                      <h5 className="text-2xl font-black text-gray-900 mb-2">{t("confirmModalTitle")}</h5>
-                     <p className="text-gray-500 font-medium mb-8 leading-relaxed">Si dëshironi të paguani për paketën {selectedPkg.name}?</p>
+                     <p className="text-gray-500 font-medium mb-4 leading-relaxed">Si dëshironi të paguani për paketën {selectedPkg.name}?</p>
+                     
+                     {/* BLLOKU I PROMO KODIT */}
+                     {isFirstSubscription && (
+                       <div className="mb-6 mt-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 rounded-2xl p-[2px] shadow-lg shadow-indigo-200 text-left">
+                         <div className="bg-white rounded-[14px] p-5">
+                           <div className="flex items-center gap-3 mb-4">
+                             <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">
+                               <Gift size={20} />
+                             </div>
+                             <div>
+                               <h3 className="text-base font-black text-gray-900">Keni Promo Kod?</h3>
+                             </div>
+                           </div>
+                           <div className="flex gap-2">
+                             <input 
+                               type="text" 
+                               placeholder="SHËNO KODIN" 
+                               className="w-full border border-gray-200 bg-gray-50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-500 font-black uppercase text-gray-900 placeholder:normal-case placeholder:font-medium transition-all text-sm"
+                               value={promoInput}
+                               onChange={(e) => setPromoInput(e.target.value)}
+                               disabled={!!appliedPromo}
+                             />
+                             {!appliedPromo ? (
+                               <button 
+                                 type="button"
+                                 onClick={handleApplyPromo}
+                                 disabled={loadingPromo || !promoInput.trim()}
+                                 className="bg-[#0F172A] hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center text-sm"
+                               >
+                                 {loadingPromo ? <Loader2 size={16} className="animate-spin" /> : "Apliko"}
+                               </button>
+                             ) : (
+                               <button 
+                                 type="button"
+                                 onClick={handleRemovePromo}
+                                 className="bg-red-50 hover:bg-red-100 text-red-600 px-5 py-2.5 rounded-xl font-bold transition-all text-sm"
+                               >
+                                 Hiq
+                               </button>
+                             )}
+                           </div>
+                           
+                           {promoError && (
+                             <div className="mt-3 flex items-center gap-2 text-red-600 bg-red-50 p-2.5 rounded-xl text-xs font-bold border border-red-100">
+                               <AlertTriangle size={14} /> {promoError}
+                             </div>
+                           )}
+                           
+                           {appliedPromo && (
+                             <div className="mt-3 flex items-center justify-between text-emerald-700 bg-emerald-50 p-2.5 rounded-xl text-xs font-bold border border-emerald-100">
+                               <div className="flex items-center gap-1.5">
+                                 <Check size={14} /> {appliedPromo.code} u aplikua!
+                               </div>
+                               <div className="bg-white px-2 py-0.5 rounded-md text-emerald-600 border border-emerald-100 shadow-sm">
+                                 -{appliedPromo.type === "PERCENTAGE" ? `${appliedPromo.value}%` : `€${appliedPromo.value.toFixed(2)}`}
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     )}
                      
                      <div className="flex flex-col gap-3 mt-auto">
                        {systemSettings?.enable_card_payments !== false && (

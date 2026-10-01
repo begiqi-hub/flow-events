@@ -46,42 +46,45 @@ export default async function SearchResultsPage({
   const capacity = typeof sp.capacity === 'string' ? sp.capacity : 'all';
   const event = typeof sp.event === 'string' ? sp.event : 'all';
 
-  // Ndërtimi i Query-t Dinamik për Prisma (I korrigjuar)
-const whereClause: any = {
-  status: "PUBLISHED",
-};
-
-// Filtri i qytetit (lidhja me tabelën business)
-if (city && city !== 'all') {
-  whereClause.business = {
-    city: { 
-      contains: city 
+  // Ndërtimi i Query-t Dinamik për Prisma (I SIGURT DHE I KORRIGJUAR)
+  const whereClause: any = {
+    // 1. Siguria e Listimit (Hapi 2)
+    status: "PUBLISHED", 
+    
+    // 2. Siguria e Sallës (Hapi 2 i thelluar - nëse çelësi i vogël është OFF)
+    hall: {
+      is_published: true, // Salla duhet të jetë Publike
+      status: 'active'    // Salla nuk duhet të jetë e fshirë/joaktive
+    },
+    
+    // 3. Siguria e Biznesit (Hapi 3 - Bizneset e bllokuara nuk shfaqen)
+    business: {
+      status: 'active' // <--- KËTU ZGJIDHET HAPI 3! Ndryshoje nëse e ke ndryshe (p.sh. is_banned: false)
     }
   };
-}
 
-// Filtri i llojit të eventit i përket tabelës listing (fusha 'type')
-if (event && event !== 'all') {
-  whereClause.type = { 
-    contains: event 
-    // mode: "insensitive" është fshirë gjithashtu këtu
-  };
-}
+  // Filtri i qytetit (Shtohet pa i fshirë statuset e sigurisë së biznesit)
+  if (city && city !== 'all') {
+    whereClause.business.city = { 
+      contains: city 
+    };
+  }
 
-const hallConditions: any = {};
+  // Filtri i llojit të eventit
+  if (event && event !== 'all') {
+    whereClause.type = { 
+      contains: event 
+    };
+  }
 
-// Filtri i kapacitetit i përket tabelës halls
-if (capacity && capacity !== 'all') {
-  if (capacity === '100') hallConditions.capacity = { lte: 100 };
-  if (capacity === '200') hallConditions.capacity = { gt: 100, lte: 200 };
-  if (capacity === '300') hallConditions.capacity = { gt: 200, lte: 300 };
-  if (capacity === '500') hallConditions.capacity = { gt: 300, lte: 500 };
-  if (capacity === '500+') hallConditions.capacity = { gt: 500 };
-}
-
-if (Object.keys(hallConditions).length > 0) {
-  whereClause.hall = hallConditions;
-}
+  // Filtri i kapacitetit (Shtohet pa i fshirë statuset e sigurisë së sallës)
+  if (capacity && capacity !== 'all') {
+    if (capacity === '100') whereClause.hall.capacity = { lte: 100 };
+    if (capacity === '200') whereClause.hall.capacity = { gt: 100, lte: 200 };
+    if (capacity === '300') whereClause.hall.capacity = { gt: 200, lte: 300 };
+    if (capacity === '500') whereClause.hall.capacity = { gt: 300, lte: 500 };
+    if (capacity === '500+') whereClause.hall.capacity = { gt: 500 };
+  }
 
   // Ekzekutimi i kërkimit në DB
   const listings = await prisma.listing.findMany({

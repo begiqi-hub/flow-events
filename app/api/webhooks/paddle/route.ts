@@ -18,6 +18,9 @@ export async function POST(req: Request) {
           const businessId = customData.businessId;
           const packageId = customData.packageId;
           const billingCycle = customData.billingCycle; // "monthly" ose "yearly"
+          
+          // KODI I RI: Kapim ID-në e Promo Kodit nga anës i klientit
+          const promoCodeId = customData.promoCodeId; 
 
           // Përcaktojmë datën e skadimit (1 muaj ose 1 vit nga sot)
           const now = new Date();
@@ -28,7 +31,7 @@ export async function POST(req: Request) {
             expiresAt.setMonth(now.getMonth() + 1);
           }
 
-          // PËRDITËSOJMË DATABAZËN TËNDE
+          // 1. PËRDITËSOJMË DATABAZËN PËR BIZNESIN
           await prisma.businesses.update({
              where: { id: businessId },
              data: {
@@ -37,6 +40,17 @@ export async function POST(req: Request) {
                 trialEndsAt: expiresAt,     // Përditësojmë datën e skadimit
              }
           });
+
+          // 2. KODI I RI: RRISIM NUMËRUESIN E PROMO KODIT (NËSE ËSHTË PËRDORUR)
+          if (promoCodeId) {
+            await prisma.promoCode.update({
+              where: { id: promoCodeId },
+              data: {
+                usedCount: { increment: 1 } // Rrit numëruesin automatikisht me +1
+              }
+            });
+            console.log(`🎁 Promo kodi me ID ${promoCodeId} u përdor me sukses!`);
+          }
 
           console.log(`✅ SUKSES: Biznesi me ID ${businessId} u aktivizua deri më ${expiresAt}!`);
        }

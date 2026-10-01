@@ -23,14 +23,22 @@ export default function ListingClientForm({
     setLoading(true);
     const newStatus = isPublished ? "DRAFT" : "PUBLISHED";
     
-    const res = await updateListing(listingId, { status: newStatus });
-    
-    if (res.success) {
-      router.refresh();
-    } else {
-      alert(res.error || "Ndodhi një gabim gjatë përditësimit të statusit.");
+    try {
+      const res = await updateListing(listingId, { status: newStatus });
+      
+      if (res.success) {
+        router.refresh();
+      } else {
+        alert(res.error || "Ndodhi një gabim gjatë përditësimit të statusit.");
+      }
+    } catch (error) {
+      // Ky bllok kap gabimet e rrjetit ose ndërprerjet nga navigimi i shpejtë.
+      // E lëmë të heshtur në mënyrë që të mos bllokojë UI-në nëse përdoruesi ndërron faqe.
+      console.warn("Kërkesa u ndërpre ose dështoi:", error);
+    } finally {
+      // Sigurohemi që loading të hiqet, por vetëm nëse kërkesa përfundon natyralisht
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

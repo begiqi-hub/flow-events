@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, Building2, LifeBuoy, Users, CreditCard, 
-  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, Banknote, FileText, ShieldCheck
+  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, Banknote, FileText, Ticket, ShieldCheck
 } from "lucide-react";
+
 
 export default function SuperadminLayoutUI({ user, locale, notifications, children }: any) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -54,6 +55,7 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
     { name: "Llogaritë Bankare", href: `/${locale}/superadmin/banka`, icon: Landmark },
     { name: "Audit Logs", href: `/${locale}/superadmin/logs`, icon: FileText }, 
     { name: "Konfigurimet", href: `/${locale}/superadmin/konfigurimet`, icon: Settings },
+    { name: "Promo Kodet", href: `/${locale}/superadmin/promocodes`, icon: Ticket },
     { name: "Njoftimet Globale", href: `/${locale}/superadmin/njoftimet`, icon: Megaphone },
   ];
 

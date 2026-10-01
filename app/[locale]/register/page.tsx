@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl"; 
 import { ChevronDown, Globe, ShieldCheck, ArrowRight, Briefcase, X, FileText } from "lucide-react";
-import { CITIES } from "@/lib/constants/cities"; // Importojmë listën zyrtare të Kosovës
+import { CITIES } from "@/lib/constants/cities";
 
 // KONFIGURIMET
 const GJUHET = [
@@ -25,9 +25,8 @@ const SHTETET = [
   { id: "GR", name: "Greqi", dialCode: "+30", flag: "gr" },
 ];
 
-// E kthejmë në Record<string, {id: string, name: string}[]> për t'u përputhur me CITIES
 const QYTETET: Record<string, { id: string; name: string }[]> = {
-  "XK": [...CITIES], // Kosova merr automatikisht të gjitha qytetet nga skedari yt statik
+  "XK": [...CITIES], 
   "AL": [
     { id: "tirane", name: "Tiranë" }, 
     { id: "durres", name: "Durrës" }, 
@@ -69,6 +68,8 @@ export default function RegisterPage() {
   
   const logoPath = "/logo-register.svg"; 
 
+  const [step, setStep] = useState<1 | 2>(1);
+  const [successMsg, setSuccessMsg] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(SHTETET[0]);
@@ -82,6 +83,11 @@ export default function RegisterPage() {
     name: "", nui: "", activityId: "", city: "", 
     email: "", password: "", confirmPassword: "", acceptedTerms: false
   });
+
+  // State për OTP-në me 6 kuti
+  const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
+  const [otpCode, setOtpCode] = useState("");
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const activityIds = ["1", "2", "3", "4"];
 
@@ -103,9 +109,41 @@ export default function RegisterPage() {
     setIsDropdownOpen(false);
   };
 
+  // Funksionet e OTP-së
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return; 
+    const newOtpValues = [...otpValues];
+    newOtpValues[index] = value.substring(value.length - 1); 
+    setOtpValues(newOtpValues);
+    setOtpCode(newOtpValues.join(""));
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").slice(0, 6).replace(/\D/g, ""); 
+    if (pastedData) {
+      const newOtpValues = [...otpValues];
+      for (let i = 0; i < pastedData.length; i++) {
+        if (i < 6) newOtpValues[i] = pastedData[i];
+      }
+      setOtpValues(newOtpValues);
+      setOtpCode(newOtpValues.join(""));
+      const focusIndex = Math.min(pastedData.length, 5);
+      if (inputRefs.current[focusIndex]) inputRefs.current[focusIndex]?.focus();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
 
     if (!formData.name || !formData.email || !formData.password || !phoneNumber || !formData.activityId || !formData.city) {
       setError(t("errorRequired"));
@@ -131,14 +169,72 @@ export default function RegisterPage() {
         body: JSON.stringify({ ...formData, phone: fullPhone }),
       });
 
-      if (res.ok) router.push(`/${locale}/login?registered=true`);
-      else {
-        const data = await res.json();
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccessMsg(data.message || "Kodi i verifikimit u dërgua me sukses!");
+        setStep(2); 
+      } else {
         setError(data.error || "Gabim!");
-        setLoading(false);
       }
     } catch (err) {
       setError("Gabim në server");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, otpCode: otpCode }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccessMsg("Llogaria u verifikua me sukses! Po ridrejtoheni...");
+        setTimeout(() => {
+          router.push(`/${locale}/login?registered=true`);
+        }, 2000);
+      } else {
+        setError(data.error || "Kodi është i pasaktë ose ka skaduar.");
+      }
+    } catch (err) {
+      setError("Gabim në lidhje me serverin.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError("");
+    setSuccessMsg("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }), 
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccessMsg("Kodi i ri u dërgua në emailin tuaj.");
+      } else {
+        setError(data.error || "Ndodhi një gabim gjatë ridërgimit.");
+      }
+    } catch (err) {
+      setError("Gabim në server.");
+    } finally {
       setLoading(false);
     }
   };
@@ -146,6 +242,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen w-full flex bg-white font-sans overflow-hidden text-gray-900">
       
+      {/* Modal i Kushteve të Përdorimit (I pandryshuar) */}
       {showTermsModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-[2rem] shadow-2xl flex flex-col relative animate-in zoom-in-95">
@@ -178,12 +275,10 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* SIDEBAR MAJTAS (Me ngjyrën e duhur dhe dritën e sfondit) */}
+      {/* ANËSORI I MAJTË - I PANDRYSHUAR */}
       <div className="hidden lg:flex lg:w-5/12 bg-[#0F172A] relative flex-col justify-between p-16 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse" />
         <div className="relative z-10">
-          
-          {/* Logoja në sfond të zi - E pastër brenda një karte të bardhë */}
           <Link href={`/${locale}`} className="inline-block bg-white rounded-2xl shadow-xl px-5 py-3 mb-16">
             <img src={logoPath} alt="HALLEVO" className="h-8 w-auto object-contain" />
           </Link>
@@ -200,8 +295,8 @@ export default function RegisterPage() {
         <div className="relative z-10 pt-10 border-t border-white/5"><p className="text-white/50 text-[10px] font-bold uppercase tracking-widest">© 2026 HALLEVO</p></div>
       </div>
 
-      {/* FORM SECTION DJATHTAS */}
-      <div className="w-full lg:w-7/12 h-screen overflow-y-auto bg-white flex flex-col items-center py-12 px-6 md:px-16 relative">
+      {/* ANËSORI I DJATHTË - ZVOGËLIM I FUSHAVE DHE STRUKTURË E RE */}
+      <div className="w-full lg:w-7/12 h-screen overflow-y-auto bg-white flex flex-col items-center py-10 px-6 md:px-12 relative">
         <div className="absolute top-8 right-8 z-[100]">
            <div className="relative">
               <button onClick={() => setIsLangOpen(!isLangOpen)} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-4 py-2 rounded-2xl font-bold text-xs hover:bg-gray-100 transition-all uppercase">
@@ -219,123 +314,184 @@ export default function RegisterPage() {
            </div>
         </div>
 
-        <div className="w-full max-w-[540px]">
+        <div className="w-full max-w-[560px]">
           
-          {/* Logo për Mobile - E pastër pa prapavijë */}
-          <div className="lg:hidden mb-12 flex justify-start">
+          <div className="lg:hidden mb-10 flex justify-start">
             <Link href={`/${locale}`}>
               <img src={logoPath} alt="HALLEVO" className="h-10 w-auto object-contain" />
             </Link>
           </div>
 
-          <div className="mb-10 text-left">
-            <h2 className="text-4xl font-black tracking-tight mb-3 text-gray-900">{t("title")}</h2>
+          {/* Titujt e rinj profesionalë dhe interesantë */}
+          <div className="mb-8 text-left">
+            <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-gray-900">
+              {step === 1 ? "Krijo llogarinë e biznesit" : "Verifikimi i sigurisë"}
+            </h2>
+            <p className="text-gray-500 font-medium text-sm md:text-base">
+              {step === 1 
+                ? "Bashkohuni me platformën lider dhe dixhitalizoni menaxhimin e eventeve në më pak se 2 minuta." 
+                : <>Kemi dërguar një kod unik 6-shifror në adresën: <br/><span className="text-gray-900 font-bold">{formData.email}</span></>
+              }
+            </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm mb-8 font-bold border border-red-100 flex items-center gap-2">
+            <div className="bg-red-50 text-red-600 p-3.5 rounded-xl text-sm mb-6 font-bold border border-red-100 flex items-center gap-2">
                <ShieldCheck size={18} /> {error}
             </div>
           )}
-
-          <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest mb-2"><Briefcase size={14} /> {t("busNameLabel")}</label>
-              <input type="text" placeholder={t("busNamePlaceholder")} className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+          {successMsg && (
+            <div className="bg-emerald-50 text-emerald-600 p-3.5 rounded-xl text-sm mb-6 font-bold border border-emerald-100 flex items-center gap-2">
+               <ShieldCheck size={18} /> {successMsg}
             </div>
+          )}
 
-            <div className="md:col-span-2">
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("activityLabel")}</label>
-              <select className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white transition-all font-bold text-gray-700 appearance-none cursor-pointer" value={formData.activityId} onChange={(e) => setFormData({...formData, activityId: e.target.value})}>
-                <option value="">{t("select")}</option>
-                {activityIds.map((id) => (
-                  <option key={id} value={id}>{tAct(id)}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-indigo-50/30 rounded-[2rem] border border-indigo-100/50">
+          {step === 1 ? (
+            <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Rreshti 1: Emri dhe Industria përkrah njëra tjetrës për të kursyer hapësirë */}
               <div>
-                <label className="block text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">{t("countryLabel")}</label>
-                <div className="relative">
-                  <button type="button" onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="w-full flex items-center justify-between bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <img src={`https://flagcdn.com/w20/${selectedCountry.flag}.png`} alt="" className="w-5 rounded-sm" />
-                      <span className="font-bold text-gray-800 text-sm">{selectedCountry.name}</span>
-                    </div>
-                    <ChevronDown size={14} className="text-indigo-400" />
+                <label className="flex items-center gap-2 text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5"><Briefcase size={12} /> {t("busNameLabel")}</label>
+                <input type="text" placeholder={t("busNamePlaceholder")} className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm placeholder:text-gray-400 placeholder:font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{t("activityLabel")}</label>
+                <select className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm appearance-none cursor-pointer" value={formData.activityId} onChange={(e) => setFormData({...formData, activityId: e.target.value})}>
+                  <option value="">{t("select")}</option>
+                  {activityIds.map((id) => (
+                    <option key={id} value={id}>{tAct(id)}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rreshti 2: Kutia e Shtetit dhe Telefonit (Më e vogël) */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/50">
+                <div>
+                  <label className="block text-[11px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">{t("countryLabel")}</label>
+                  <div className="relative">
+                    <button type="button" onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="w-full flex items-center justify-between bg-white px-3 py-2.5 rounded-xl border border-gray-200 shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all outline-none">
+                      <div className="flex items-center gap-2">
+                        <img src={`https://flagcdn.com/w20/${selectedCountry.flag}.png`} alt="" className="w-4 rounded-sm shadow-sm" />
+                        <span className="font-semibold text-gray-900 text-sm">{selectedCountry.name}</span>
+                      </div>
+                      <ChevronDown size={14} className="text-gray-400" />
+                    </button>
+                    {isDropdownOpen && (
+                      <div className="absolute top-[105%] left-0 w-full bg-white border border-gray-100 rounded-xl shadow-2xl z-50 py-2 max-h-48 overflow-y-auto">
+                        {SHTETET.map((s) => (
+                          <button key={s.id} type="button" className="w-full text-left px-4 py-2 hover:bg-indigo-50 flex items-center gap-3 text-sm font-semibold text-gray-700" onClick={() => handleCountryChange(s)}>
+                            <img src={`https://flagcdn.com/w20/${s.flag}.png`} className="w-4 rounded-sm shadow-sm" alt="" /> {s.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">{t("phoneLabel")}</label>
+                  <div className="flex bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-400/20 transition-all">
+                    <div className="bg-gray-50/80 px-3 flex items-center border-r border-gray-200 font-bold text-gray-600 text-sm">{selectedCountry.dialCode}</div>
+                    <input type="number" placeholder="4x xxx xxx" className="w-full px-3 py-2.5 outline-none font-semibold text-sm bg-transparent text-gray-900 placeholder:text-gray-400 placeholder:font-medium" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Rreshti 3: Qyteti & NIPT */}
+              <div>
+                <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{t("cityLabel")}</label>
+                <select className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm appearance-none cursor-pointer" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})}>
+                  <option value="">{t("select")}</option>
+                  {availableCities.map((city) => (
+                    <option key={city.id} value={city.id}>{city.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                  <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{t("nuiLabel")}</label>
+                  <input type="text" placeholder={t("nuiPlaceholder")} className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm placeholder:text-gray-400 placeholder:font-medium" value={formData.nui} onChange={(e) => setFormData({...formData, nui: e.target.value})} />
+              </div>
+
+              {/* Rreshti 4: Email */}
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{t("emailLabel")}</label>
+                <input type="email" placeholder={t("emailPlaceholder")} className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm placeholder:text-gray-400 placeholder:font-medium" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              </div>
+
+              {/* Rreshti 5: Fjalëkalimet përkrah njëri tjetrit */}
+              <div>
+                <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{t("passLabel")}</label>
+                <input type="password" placeholder="••••••••" className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm placeholder:text-gray-400" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{t("confPassLabel")}</label>
+                <input type="password" placeholder="••••••••" className="w-full border border-gray-200 bg-gray-50/50 px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white transition-all shadow-sm font-semibold text-gray-900 text-sm placeholder:text-gray-400" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
+              </div>
+
+              {/* Kushtet dhe Butoni */}
+              <div className="md:col-span-2 flex items-center gap-3 mt-2">
+                <input type="checkbox" id="terms" checked={formData.acceptedTerms} onChange={(e) => setFormData({...formData, acceptedTerms: e.target.checked})} className="w-4 h-4 rounded-md border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition-all" />
+                <label htmlFor="terms" className="text-[13px] text-gray-600 font-semibold cursor-pointer">
+                  {t("termsBefore")}{" "}
+                  <button type="button" onClick={() => setShowTermsModal(true)} className="text-indigo-600 hover:text-indigo-700 hover:underline mx-1 transition-colors">{t("termsLink")}</button>
+                  {" "}{t("termsAfter")}
+                </label>
+              </div>
+
+              <div className="md:col-span-2 mt-4">
+                <button type="submit" disabled={loading} className="w-full bg-[#0F172A] text-white font-black text-[15px] py-3.5 rounded-2xl hover:bg-black transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-70">
+                  {loading ? t("btnLoading") : t("btnText")}
+                  {!loading && <ArrowRight size={18} />}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifySubmit} className="space-y-6">
+              
+              {/* KUTITË 6-SHIFRORE OTP */}
+              <div className="flex justify-between sm:justify-center sm:gap-4 my-8" dir="ltr">
+                {otpValues.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => { inputRefs.current[index] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onPaste={handleOtpPaste}
+                    className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black text-gray-800 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 focus:bg-white transition-all outline-none shadow-sm"
+                    placeholder="0"
+                  />
+                ))}
+              </div>
+
+              <div className="mt-8">
+                <button type="submit" disabled={loading || otpCode.length !== 6} className="w-full bg-[#0F172A] text-white font-black text-[15px] py-4 rounded-2xl hover:bg-black transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 disabled:opacity-50">
+                  {loading ? "Po verifikohet..." : "Verifiko Llogarinë"}
+                  {!loading && <ShieldCheck size={20} />}
+                </button>
+              </div>
+
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">Nuk e morët kodin?</p>
+                  <button type="button" onClick={handleResendOtp} disabled={loading} className="text-blue-600 hover:underline text-sm font-bold mt-1 disabled:opacity-50 transition-colors">
+                    {loading ? "Duke dërguar..." : "Ridërgo Kodin"}
                   </button>
-                  {isDropdownOpen && (
-                    <div className="absolute top-[105%] left-0 w-full bg-white border border-gray-100 rounded-xl shadow-2xl z-50 py-2 max-h-60 overflow-y-auto">
-                      {SHTETET.map((s) => (
-                        <button key={s.id} type="button" className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center gap-3 text-sm font-bold" onClick={() => handleCountryChange(s)}>
-                          <img src={`https://flagcdn.com/w20/${s.flag}.png`} className="w-5 rounded-sm" alt="" /> {s.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
+                <button type="button" onClick={() => setStep(1)} className="text-[13px] font-bold text-gray-400 hover:text-gray-900 transition-colors">
+                  Kthehu mbrapa ose ndrysho email-in
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">{t("phoneLabel")}</label>
-                <div className="flex bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
-                  <div className="bg-indigo-50/50 px-3 flex items-center border-r border-indigo-100 font-black text-indigo-600 text-xs">{selectedCountry.dialCode}</div>
-                  <input type="number" placeholder="4x xxx xxx" className="w-full p-3.5 outline-none font-bold text-sm bg-transparent" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                </div>
-              </div>
-            </div>
+            </form>
+          )}
 
-            <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("cityLabel")}</label>
-              <select className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white font-medium cursor-pointer" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})}>
-                <option value="">{t("select")}</option>
-                {availableCities.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("nuiLabel")}</label>
-                <input type="text" placeholder={t("nuiPlaceholder")} className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none font-medium" value={formData.nui} onChange={(e) => setFormData({...formData, nui: e.target.value})} />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("emailLabel")}</label>
-              <input type="email" placeholder={t("emailPlaceholder")} className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none font-medium" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("passLabel")}</label>
-              <input type="password" placeholder="••••••••" className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none font-medium" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("confPassLabel")}</label>
-              <input type="password" placeholder="••••••••" className="w-full border border-gray-100 bg-gray-50/50 p-4 rounded-2xl outline-none font-medium" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
-            </div>
-
-            <div className="md:col-span-2 flex items-center gap-3 mt-4">
-              <input type="checkbox" id="terms" checked={formData.acceptedTerms} onChange={(e) => setFormData({...formData, acceptedTerms: e.target.checked})} className="w-5 h-5 rounded-lg accent-[#0F172A] cursor-pointer" />
-              <label htmlFor="terms" className="text-sm text-gray-500 font-bold cursor-pointer">
-                {t("termsBefore")}{" "}
-                <button type="button" onClick={() => setShowTermsModal(true)} className="text-indigo-600 hover:underline mx-1">{t("termsLink")}</button>
-                {" "}{t("termsAfter")}
-              </label>
-            </div>
-
-            <div className="md:col-span-2 mt-8">
-              <button type="submit" disabled={loading} className="w-full bg-[#0F172A] text-white font-black text-lg py-5 rounded-[2rem] hover:bg-black transition-all shadow-xl flex items-center justify-center gap-3">
-                {loading ? t("btnLoading") : t("btnText")}
-                {!loading && <ArrowRight size={20} />}
-              </button>
-            </div>
-          </form>
-          
-          <p className="text-center text-sm font-bold text-gray-400 mt-10 mb-10">
-            {t("loginText")} <Link href={`/${locale}/login`} className="text-indigo-600 font-bold">{t("loginLink")}</Link>
+          <p className="text-center text-[13px] font-bold text-gray-400 mt-8 mb-6">
+            {t("loginText")} <Link href={`/${locale}/login`} className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">{t("loginLink")}</Link>
           </p>
         </div>
       </div>

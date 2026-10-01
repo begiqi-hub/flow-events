@@ -25,7 +25,7 @@ import RequestForm from "./RequestForm";
 import HallGallery from "./HallGallery";
 import PublicHeader from "@/components/public/PublicHeader";
 import PublicFooter from "@/components/public/PublicFooter";
-import { CITIES } from "@/lib/constants/cities"; // Përshtatni rrugën (path) nëse ndryshon sipas strukturës suaj
+import { CITIES } from "@/lib/constants/cities"; 
 
 const getCityName = (cityId: string | null | undefined) => {
   if (!cityId) return "Kosovë";
@@ -38,8 +38,14 @@ export const revalidate = 3600;
 export async function generateMetadata({ params }: { params: Promise<{ hallId: string }> }) {
   const { hallId } = await params;
   
-  const listing = await prisma.listing.findUnique({
-    where: { hallId: hallId, status: "PUBLISHED" },
+  // ZËVENDËSUAR: findUnique me findFirst për të lejuar filtrat e relacioneve
+  const listing = await prisma.listing.findFirst({
+    where: { 
+      hallId: hallId, 
+      status: "PUBLISHED",
+      business: { status: 'active' }, // Mbron Metadata-n nga bizneset e bllokuara
+      hall: { is_published: true, status: 'active' } // Mbron nëse salla bëhet OFF
+    },
     include: { hall: true, business: true }
   });
 
@@ -79,7 +85,6 @@ export async function generateMetadata({ params }: { params: Promise<{ hallId: s
   };
 }
 
-// Font editorial luksoz për detaje (p.sh. teksti i footerit)
 const premiumItalicStyle: React.CSSProperties = { 
   fontFamily: '"Playfair Display", "Cormorant Garamond", Georgia, serif', 
   fontStyle: 'italic', 
@@ -89,25 +94,32 @@ const premiumItalicStyle: React.CSSProperties = {
 export default async function PublicHallDetails({ params }: { params: Promise<{ locale: string, hallId: string }> }) {
   const { locale, hallId } = await params;
 
-  // 1. Lexo të dhënat e listimit nga baza e të dhënave (LOGJIKA E PANDRYSHUAR)
-  const listing = await prisma.listing.findUnique({
-    where: { hallId: hallId },
+  // ZËVENDËSUAR: Përdorim findFirst me filtrat e plotë të sigurisë
+  const listing = await prisma.listing.findFirst({
+    where: { 
+      hallId: hallId,
+      status: "PUBLISHED",
+      business: { status: 'active' }, // BLLOKIMI: Kthen 404 nëse biznesi nuk është aktiv
+      hall: { is_published: true, status: 'active' } // BLLOKIMI: Kthen 404 nëse salla është bërë OFF
+    },
     include: {
       hall: true,
       business: true,
     }
   });
 
-  if (!listing || listing.status !== "PUBLISHED") {
+  // Nëse nuk gjendet (prej ID-së gabim ose për shkak se biznesi është i bllokuar), kthe 404
+  if (!listing) {
     notFound();
   }
 
-  // 2. Lexo salla të tjera nga i njëjti biznes (LOGJIKA E PANDRYSHUAR)
+  // Përditësojmë edhe kërkesën e sallave të tjera për t'u siguruar që asnjë sallë e fshehur nuk del
   const otherListings = await prisma.listing.findMany({
     where: {
       businessId: listing.businessId,
       status: "PUBLISHED",
-      hallId: { not: hallId } 
+      hallId: { not: hallId },
+      hall: { is_published: true, status: 'active' } // Sigurohemi që sallat e tjera janë vërtet publike
     },
     include: {
       hall: true
@@ -147,7 +159,6 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
         {/* Hero Content positioned at bottom */}
         <div className="absolute bottom-0 left-0 w-full px-6 lg:px-8 pb-10 md:pb-16 z-10">
           <div className="max-w-[1200px] mx-auto flex flex-col items-start">
-            
             
             {/* Business Badge */}
             <div className="flex items-center gap-3 mb-5 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 pr-5 rounded-full shadow-lg">
@@ -245,7 +256,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          {/* Premium Gallery Component (Pandryshuar Logjika e Komponentit, vetëm wrapper) */}
+          {/* Premium Gallery Component */}
           <div className="prose-gallery-wrapper">
              <HallGallery images={[listing.mainImage || listing.hall.image, ...galleryImages].filter(Boolean) as string[]} />
           </div>
@@ -277,10 +288,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
           
           {/* Primary CTA Form Wrapper */}
           <div className="bg-[#111827] border border-white/5 rounded-[24px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
-             {/* Dekore të lehta brenda formës */}
              <div className="absolute top-0 right-0 w-32 h-32 bg-[#8B5CF6]/10 blur-[50px] rounded-full pointer-events-none" />
-             
-             {/* Komponenti funksional i RequestForm mbetet i paprekur. Ky wrapper vetëm rregullon sfondin rreth tij. */}
              <RequestForm businessId={listing.businessId} hallId={listing.hallId} />
           </div>
 
@@ -385,9 +393,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
         </section>
       )}
 
-      {/* FOOTER PREMIUM */}
       <PublicFooter locale={locale} />
-
     </main>
   );
 }

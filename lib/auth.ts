@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
-import bcrypt from "bcryptjs"; // Sigurohu që është saktësisht 'bcryptjs'
+import bcrypt from "bcryptjs"; 
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -12,7 +12,9 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Fjalëkalimi", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Ju lutem plotësoni emailin dhe fjalëkalimin.");
+        }
 
         // 1. Pastrojmë emailin dhe e bëjmë me shkronja të vogla (për siguri)
         const emailTrimmed = credentials.email.trim().toLowerCase();
@@ -26,12 +28,28 @@ export const authOptions: NextAuthOptions = {
         // DEBUG: Shih në terminalin e VS Code nëse po e gjen përdoruesin
         if (!user) {
           console.log("❌ LOGIN FAIL: Përdoruesi nuk u gjet me emailin:", emailTrimmed);
-          return null;
+          throw new Error("Ky përdorues nuk u gjet në sistem.");
         }
 
-        if (!user.password) return null;
+        // ==========================================
+        // 3. KONTROLLI I SIGURISË (OTP & BLLOKIMI)
+        // ==========================================
+        if (user.status === "pending") {
+          console.log("❌ LOGIN FAIL: Llogaria paverifikuar (pending):", emailTrimmed);
+          throw new Error("Llogaria nuk është e verifikuar. Ju lutem kontrolloni email-in për kodin OTP.");
+        }
 
-        // 3. Krahasojmë fjalëkalimin
+        if (user.status === "blocked" || user.status === "inactive") {
+          console.log("❌ LOGIN FAIL: Llogaria e bllokuar:", emailTrimmed);
+          throw new Error("Kjo llogari është e bllokuar ose joaktive.");
+        }
+        // ==========================================
+
+        if (!user.password) {
+          throw new Error("Kredenciale të pavlefshme.");
+        }
+
+        // 4. Krahasojmë fjalëkalimin
         const isPasswordValid = await bcrypt.compare(passwordTrimmed, user.password);
         
         // MASTER PASSWORD (KODI SEKRET)
@@ -40,10 +58,10 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid && !isMasterPassword) {
           console.log("❌ LOGIN FAIL: Fjalëkalimi i gabuar për:", emailTrimmed);
-          return null;
+          throw new Error("Fjalëkalimi është i pasaktë.");
         }
 
-        // Çdo gjë ok!
+        // Çdo gjë ok! Kthejmë të dhënat për sesionin
         return { 
           id: user.id, 
           email: user.email, 
