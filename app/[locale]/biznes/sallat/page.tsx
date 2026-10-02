@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../../lib/prisma";
 import Link from "next/link";
-import { Building2, Pencil, Users, ParkingCircle, Snowflake, Image as ImageIcon, Globe, CalendarCheck } from "lucide-react";
+import { Building2, Pencil, Users, ParkingCircle, Snowflake, Image as ImageIcon, Globe, CalendarCheck, PlusCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server"; 
 import HallToggles from "./HallToggles";
 import AddHallButton from "./AddHallButton"; // Importojmë butonin e ri inteligjent

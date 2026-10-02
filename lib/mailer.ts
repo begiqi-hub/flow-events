@@ -80,7 +80,7 @@ const baseHtmlTemplate = (content: string) => `
       ${content}
     </div>
     <div class="footer">
-      <p>Keni pyetje? Na kontaktoni në support@hallevo.com</p>
+      <p>Keni pyetje? Na kontaktoni në hello@hallevo.com</p>
       <p>&copy; ${new Date().getFullYear()} Hallevo. Të gjitha të drejtat e rezervuara.</p>
     </div>
   </div>

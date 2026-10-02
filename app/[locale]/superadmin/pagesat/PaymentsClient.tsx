@@ -231,7 +231,7 @@ export default function PaymentsClient({
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Furnitori (Lëshuesi):</p>
                 <p className="text-xl font-black mb-1">{systemSettings.platform_name || "HALLEVO"}</p>
                 {systemSettings.address && <p className="text-sm text-gray-600 font-medium">{systemSettings.address}</p>}
-                <p className="text-sm text-gray-600 font-medium font-mono mt-1">{systemSettings.contact_email || "support@hallevo.com"}</p>
+                <p className="text-sm text-gray-600 font-medium font-mono mt-1">{systemSettings.contact_email || "hello@hallevo.com"}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Klienti (Paguesi):</p>
