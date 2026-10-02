@@ -5,11 +5,11 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { 
   Building2, Users, ArrowLeft, Save, Image as ImageIcon, 
   Car, Wind, AlignLeft, CheckCircle2, AlertCircle, Sparkles,
-  Crown, Zap, Check 
+  Crown, Zap, Check, PlusCircle // <-- Shtuam PlusCircle këtu
 } from "lucide-react";
 import Link from "next/link";
 import { saveHallAction } from "../actions"; 
-import { useTranslations } from "next-intl"; // Shtuam këtë nëse ke nevojë, ose përdor tekstet e tua
+import { useTranslations } from "next-intl";
 
 export default function AddHallPage() {
   const router = useRouter();
