@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toggleHallManagement, toggleHallPublication } from "./actions";
 import { Globe, CalendarCheck, AlertCircle, FileText, Zap } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
@@ -23,6 +23,13 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
 
+  // SHTESË PËR TË ZGJIDHUR PROBLEMIN:
+  // Detyron butonat të marrin vlerën e saktë (OFF) nga databaza pas krijimit
+  useEffect(() => {
+    setIsPublished(initialIsPublished);
+    setIsManaged(initialIsManaged);
+  }, [initialIsPublished, initialIsManaged]);
+
   const handleTogglePublished = async () => {
     const newState = !isPublished;
     setIsPublished(newState); 
@@ -31,7 +38,7 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
       const res = await toggleHallPublication(hallId, newState);
       
       if (!res.success) {
-        setIsPublished(!newState); // Kthe mbrapsht ndryshimin nëse dështon
+        setIsPublished(!newState); 
         
         if (res.error === "INCOMPLETE_PROFILE") {
           setShowIncompleteModal(true); 
@@ -39,6 +46,7 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
           alert("Gabim gjatë përditësimit të publikimit!");
         }
       } else {
+        router.refresh(); // Përditëson të dhënat pas ndryshimit
         if (newState === true) {
           router.push(`/${locale}/biznes/listing/${hallId}`);
         }
@@ -59,13 +67,15 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
       const res = await toggleHallManagement(hallId, businessId, newState);
       
       if (!res.success) {
-        setIsManaged(!newState); // Kthe mbrapsht ndryshimin nëse dështon
+        setIsManaged(!newState); 
         
         if (res.error === "LIMIT_REACHED") {
           setShowLimitModal(true); 
         } else {
           alert("Gabim: " + res.error);
         }
+      } else {
+        router.refresh(); // Përditëson të dhënat pas ndryshimit
       }
     } catch (error) {
       console.warn("Kërkesa e menaxhimit u ndërpre nga navigimi i shpejtë:", error);
@@ -77,7 +87,6 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
   return (
     <>
       <div className="flex flex-col gap-3 py-3 w-full">
-        {/* Çelësi 1: Listimi Publik */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Globe size={16} className={isPublished ? "text-blue-500" : "text-gray-400"} />
@@ -91,7 +100,6 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
           </button>
         </div>
 
-        {/* Çelësi 2: Menaxhimi SaaS */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarCheck size={16} className={isManaged ? "text-emerald-500" : "text-gray-400"} />
@@ -107,7 +115,6 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
         </div>
       </div>
 
-      {/* MODALI 1: Limiti i Pakos */}
       {showLimitModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white max-w-md w-full rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95">
@@ -132,27 +139,22 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
         </div>
       )}
 
-      {/* MODALI 2: Të Dhëna të Mangëta */}
       {showIncompleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-white max-w-[400px] w-full rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 relative p-8">
-            
             <div className="absolute -top-10 -right-10 text-indigo-50 opacity-60 rotate-12 pointer-events-none">
               <FileText size={180} strokeWidth={1} />
             </div>
-
             <div className="text-center relative z-10">
               <div className="w-20 h-20 bg-indigo-50 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6">
                 <FileText size={32} className="text-indigo-600" />
               </div>
-              
               <h3 className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">
                 Salla nuk është gati!
               </h3>
               <p className="text-sm text-slate-500 mb-8 leading-relaxed px-2">
                 Për ta bërë këtë sallë publike, duhet të plotësoni përshkrimin dhe foton kryesore. Ju ftojmë t'i plotësoni ato tani.
               </p>
-              
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => {
@@ -168,7 +170,6 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
                   <Zap size={18} className="text-yellow-400 fill-yellow-400" />
                   Plotëso të dhënat
                 </button>
-                
                 <button 
                   onClick={() => setShowIncompleteModal(false)} 
                   className="w-full bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold py-4 px-4 rounded-[1rem] transition-colors"
@@ -177,7 +178,6 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
