@@ -203,7 +203,7 @@ model halls {
 
   // SHTUAR PËR METODËN E ÇELËSAVE (TOGGLES)
   // ==========================================
-  is_published Boolean @default(true)  // Kontrollon nëse salla shfaqet në Listimin Publik
+  is_published Boolean @default(false)  // Kontrollon nëse salla shfaqet në Listimin Publik
   is_managed   Boolean @default(false) // Kontrollon nëse salla ka të drejtë të përdorë Sistemin e Menaxhimit (Kalendarin, etj.)
 
   bookings      bookings[]

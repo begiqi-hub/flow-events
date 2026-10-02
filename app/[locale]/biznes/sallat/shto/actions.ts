@@ -42,6 +42,8 @@ export async function saveHallAction(data: any) {
         ac: data.ac ?? true,
         image: data.image || null,
         business_id: business.id,
+        is_published: false, // <-- KJO FIK LISTIMIN PUBLIK AUTOMATIKISHT (DRAFT)
+        is_managed: false,   // <-- KJO FIK MENAXHIMIN E KALENDARIT AUTOMATIKISHT
       },
     });
 
