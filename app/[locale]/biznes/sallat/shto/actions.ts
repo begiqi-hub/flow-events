@@ -32,6 +32,10 @@ export async function saveHallAction(data: any) {
     // =======================================================================
     // 2. Krijojmë sallën e re të vërtetë (Nëse e kaloi limitin)
     // =======================================================================
+
+    console.log("KRIJIM SALLE - DUHET TE JET FALSE:", { is_published: false, is_managed: false });
+
+    
     await prisma.halls.create({
       data: {
         id: crypto.randomUUID(),
