@@ -41,25 +41,20 @@ export default async function SearchResultsPage({
   const { locale } = await params;
   const sp = await searchParams;
   
-  // Leximi i parametrave nga URL
+  // 1. Leximi i parametrave nga URL
   const city = typeof sp.city === 'string' ? sp.city : 'all';
   const capacity = typeof sp.capacity === 'string' ? sp.capacity : 'all';
   const event = typeof sp.event === 'string' ? sp.event : 'all';
 
-  // Ndërtimi i Query-t Dinamik për Prisma (I SIGURT DHE I KORRIGJUAR)
+  // 2. Ndërtimi i Query-t Dinamik për Prisma (Baza e Sigurisë)
   const whereClause: any = {
-    // 1. Siguria e Listimit (Hapi 2)
     status: "PUBLISHED", 
-    
-    // 2. Siguria e Sallës (Hapi 2 i thelluar - nëse çelësi i vogël është OFF)
     hall: {
-      is_published: true, // Salla duhet të jetë Publike
-      status: 'active'    // Salla nuk duhet të jetë e fshirë/joaktive
+      is_published: true, 
+      status: 'active'    
     },
-    
-    // 3. Siguria e Biznesit (Hapi 3 - Bizneset e bllokuara nuk shfaqen)
     business: {
-      status: 'active' // <--- KËTU ZGJIDHET HAPI 3! Ndryshoje nëse e ke ndryshe (p.sh. is_banned: false)
+      status: 'active' 
     }
   };
 
@@ -77,24 +72,26 @@ export default async function SearchResultsPage({
     };
   }
 
-  // Filtri i kapacitetit (Shtohet pa i fshirë statuset e sigurisë së sallës)
-  if (capacity && capacity !== 'all') {
+  // Filtri i Kapacitetit (I korrigjuar me operatorin 'gte')
+  if (capacity !== 'all') {
     if (capacity === '100') whereClause.hall.capacity = { lte: 100 };
-    if (capacity === '200') whereClause.hall.capacity = { gt: 100, lte: 200 };
-    if (capacity === '300') whereClause.hall.capacity = { gt: 200, lte: 300 };
-    if (capacity === '500') whereClause.hall.capacity = { gt: 300, lte: 500 };
-    if (capacity === '500+') whereClause.hall.capacity = { gt: 500 };
+    
+    // Përdorim 'gte' në vend të 'gt' që të përfshijmë edhe vlerat ekzakte
+    if (capacity === '200') whereClause.hall.capacity = { gte: 100, lte: 200 };
+    if (capacity === '300') whereClause.hall.capacity = { gte: 200, lte: 300 };
+    if (capacity === '500') whereClause.hall.capacity = { gte: 300, lte: 500 };
+    if (capacity === '500+') whereClause.hall.capacity = { gte: 500 };
   }
 
   // Ekzekutimi i kërkimit në DB
   const listings = await prisma.listing.findMany({
-    where: whereClause,
-    include: {
-      hall: true,
-      business: true,
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  where: whereClause,
+  include: {
+    hall: true,
+    business: true,
+  },
+  orderBy: { createdAt: 'desc' }
+});
 
   return (
     <main className="min-h-screen bg-[#060d18] text-slate-200 selection:bg-[#8B5CF6] selection:text-white relative font-sans overflow-x-hidden">
@@ -168,24 +165,30 @@ export default async function SearchResultsPage({
                       </div>
                     )}
                     
-                    <div className="absolute top-4 left-4 bg-[#B2549C]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 z-20 shadow-lg border border-white/10">
-                      <PartyPopper className="w-3.5 h-3.5 text-white" />
-                      <span className="text-white text-xs font-bold">{listing.type || "Dasma"}</span>
+                    {/* ETIKETAT LART (Badges individuale të ndara) */}
+                    <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20 max-w-[70%]">
+                      {(listing.type ? listing.type.split(',') : ["Dasma"]).slice(0, 2).map((typeItem: string, idx: number) => (
+                        <div key={idx} className="bg-[#B2549C]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/10">
+                          {idx === 0 && <PartyPopper className="w-3.5 h-3.5 text-white shrink-0"/>}
+                          <span className="text-white text-xs font-bold whitespace-nowrap truncate">{typeItem.trim()}</span>
+                        </div>
+                      ))}
                     </div>
 
-                    <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#242730]/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors z-20">
-                      <Heart className="w-4 h-4" />
-                    </button>
+                    {/* Hequr ikona e zemrës (Heart) */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#101724] via-transparent to-transparent opacity-40" />
                   </div>
                   
                   {/* Trupi i Kartës */}
                   <div className="p-5 flex-1 flex flex-col z-10 bg-[#101724]">
-                    <div>
-                      <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
-                        {listing.hall?.name || "Sallë Eventesh"}
-                      </h3>
-                      <div className="flex flex-col gap-2.5 text-sm font-medium text-[#94A3B8] mb-6">
+                    <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
+                      {listing.hall?.name || "Sallë Eventesh"}
+                    </h3>
+                    
+                    {/* Kontenieri Flex për detajet dhe shigjetën - Të njëjta si në Kryefaqe */}
+                    <div className="flex items-end justify-between mt-auto">
+                      {/* Detajet (Qyteti, Kapaciteti) */}
+                      <div className="flex flex-col gap-2.5 text-sm font-medium text-[#94A3B8]">
                         <span className="flex items-center gap-2.5">
                           <MapPin className="w-4 h-4 shrink-0"/> {getCityName(listing.business?.city)}
                         </span>
@@ -193,19 +196,11 @@ export default async function SearchResultsPage({
                           <Users className="w-4 h-4 shrink-0" /> Deri në {listing.hall?.capacity || 200} persona
                         </span>
                       </div>
-                    </div>
-                    <div className="mt-auto flex items-center justify-between">
-                       <div className="flex flex-wrap gap-2 overflow-hidden max-h-[30px]">
-                         <span className="bg-[#1E2332] text-[#94A3B8] text-[11px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">
-                           Dasma
-                         </span>
-                         <span className="bg-[#1E2332] text-[#94A3B8] text-[11px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">
-                           Fejesa
-                         </span>
-                       </div>
-                       <div className="w-9 h-9 shrink-0 rounded-full bg-[#1E2332] flex items-center justify-center group-hover:bg-[#8B5CF6] transition-colors ml-2">
-                         <ArrowRight className="w-4 h-4 text-white" />
-                       </div>
+
+                      {/* Shigjeta e vendosur djathtas */}
+                      <div className="w-9 h-9 shrink-0 rounded-full bg-[#1E2332] flex items-center justify-center group-hover:bg-[#8B5CF6] transition-colors">
+                        <ArrowRight className="w-4 h-4 text-white" />
+                      </div>
                     </div>
                   </div>
                 </Link>

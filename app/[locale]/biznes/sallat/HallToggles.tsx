@@ -86,24 +86,10 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
 
   return (
     <>
-      <div className="flex flex-col gap-3 py-3 w-full">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Globe size={16} className={isPublished ? "text-blue-500" : "text-gray-400"} />
-            <span className="text-sm font-bold text-gray-700">Listimi Publik</span>
-          </div>
-          <button 
-            onClick={handleTogglePublished}
-            className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${isPublished ? 'bg-blue-500' : 'bg-gray-200'}`}
-          >
-            <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarCheck size={16} className={isManaged ? "text-emerald-500" : "text-gray-400"} />
-            <span className="text-sm font-bold text-gray-700">Menaxhimi (Kalendari)</span>
+            <span className="text-sm font-bold text-gray-700">Vetëm për Rezërvime</span>
           </div>
           <button 
             onClick={handleToggleManaged}
@@ -111,6 +97,20 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
             className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${isLoading ? 'opacity-50 cursor-not-allowed' : ''} ${isManaged ? 'bg-emerald-500' : 'bg-gray-200'}`}
           >
             <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${isManaged ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3 py-3 w-full">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe size={16} className={isPublished ? "text-blue-500" : "text-gray-400"} />
+            <span className="text-sm font-bold text-gray-700">Listimi Publik (në platform)</span>
+          </div>
+          <button 
+            onClick={handleTogglePublished}
+            className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${isPublished ? 'bg-blue-500' : 'bg-gray-200'}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
       </div>
@@ -124,7 +124,7 @@ export default function HallToggles({ hallId, businessId, initialIsPublished, in
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Limiti i Pakos u Arrit</h3>
               <p className="text-sm text-gray-500 mb-6">
-                Pakoja juaj aktuale nuk lejon menaxhimin e sallave të tjera. Për të zhbllokuar kalendarin dhe rezervimet për këtë sallë, ju lutem bëni Upgrade.
+                Pakoja juaj aktuale nuk lejon menaxhimin e sallave të tjera. Për të zhbllokuar kalendarin dhe rezervimet për këtë sallë, ju lutem bëni ndryshoni Pakon e Abonimit.
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setShowLimitModal(false)} className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">

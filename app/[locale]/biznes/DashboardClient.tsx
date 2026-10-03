@@ -35,6 +35,7 @@ export default function DashboardClient({
   const [dayModal, setDayModal] = useState<{isOpen: boolean, date: number | null, bookings: any[]}>({isOpen: false, date: null, bookings: []});
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [showPromoModal, setShowPromoModal] = useState(false);
   
   useEffect(() => {
     setIsMounted(true);
@@ -68,7 +69,7 @@ export default function DashboardClient({
   
   const blanks = Array.from({ length: emptyCells }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
+  
   const renderStatus = (status: string) => {
     switch(status) {
       case 'confirmed':
@@ -96,8 +97,32 @@ export default function DashboardClient({
 
   if (!isMounted) return null;
 
+  
   return (
     <div className="w-full relative z-0">
+
+      {/* SHTUAR: MODALI I PROMOS KUR SHTYPIN SHTO REZERVIM DHE SKA ABONIM */}
+      {showPromoModal && (
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-amber-100">
+              <AlertCircle size={40} />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-3">Prova ka përfunduar!</h3>
+            <p className="text-gray-500 font-medium mb-8 leading-relaxed text-sm">
+              Koha juaj e provës 14-ditore ka skaduar. Ju mund të vazhdoni të listoni sallat tuaja, por për të përdorur sistemin e menaxhimit dhe për të shtuar rezervime të reja, ju duhet të aktivizoni një pako.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link href={`/${locale}/biznes/abonimi`} className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white py-3.5 rounded-xl font-black text-sm transition-all shadow-lg flex items-center justify-center gap-2">
+                <Sparkles size={18} /> Zgjidh një Pako Abonimi
+              </Link>
+              <button onClick={() => setShowPromoModal(false)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl font-bold text-sm transition-all">
+                Anulo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* POPUP I DETAJEVE - RREGULLUAR z-index */}
       {selectedBooking && (
@@ -240,7 +265,16 @@ export default function DashboardClient({
       <div className={`grid grid-cols-1 sm:grid-cols-2 ${userRole !== 'manager' ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-6 mb-10 w-full`}>
         
         {/* Karta 1: Shto Rezervim (E zezë, elegante) */}
-        <Link href={`/${locale}/biznes/rezervimet/shto`} className="group bg-[#0A0A0A] rounded-[2rem] p-7 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[160px] border border-gray-800">
+        <Link 
+          href={`/${locale}/biznes/rezervimet/shto`} 
+          onClick={(e) => {
+            if (business?.isTrialExpired) {
+              e.preventDefault();
+              setShowPromoModal(true);
+            }
+          }}
+          className="group bg-[#0A0A0A] rounded-[2rem] p-7 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[160px] border border-gray-800"
+        >
           <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/20 to-transparent rounded-bl-full pointer-events-none"></div>
           <div className="flex justify-between items-start relative z-10">
             <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/5 backdrop-blur-sm group-hover:scale-110 transition-transform">

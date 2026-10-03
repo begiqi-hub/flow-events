@@ -26,6 +26,7 @@ import HallGallery from "./HallGallery";
 import PublicHeader from "@/components/public/PublicHeader";
 import PublicFooter from "@/components/public/PublicFooter";
 import { CITIES } from "@/lib/constants/cities"; 
+import ShareButtons from "./ShareButtons"; // <-- IMPORTI I RI SHTUAR KËTU
 
 const getCityName = (cityId: string | null | undefined) => {
   if (!cityId) return "Kosovë";
@@ -128,7 +129,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
   });
 
   const displayTitle = listing.marketing_name || listing.hall.name;
-  const displayAddress = listing.address || listing.business.city || "Adresa e pacaktuar";
+  const displayAddress = listing.address ? listing.address : getCityName(listing.business.city);
   const galleryImages = (listing.gallery as string[]) || [];
 
   return (
@@ -177,16 +178,24 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
               {displayTitle}
             </h1>
 
-            {/* Location & Capacity Metadata */}
-            <div className="flex flex-wrap items-center gap-6 text-sm md:text-base font-light text-slate-300">
-              <span className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4 text-[#C4B5FD]" /> 
-                {displayAddress}
-              </span>
-              <span className="flex items-center gap-2.5">
-                <Users className="w-4 h-4 text-[#C4B5FD]" /> 
-                Deri në {listing.hall.capacity} persona
-              </span>
+            {/* Location, Capacity & Share Buttons (NDRYSHIMI KËTU) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-6">
+              <div className="flex flex-wrap items-center gap-6 text-sm md:text-base font-light text-slate-300">
+                <span className="flex items-center gap-2.5">
+                  <MapPin className="w-4 h-4 text-[#C4B5FD]" /> 
+                  {displayAddress}
+                </span>
+                <span className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-[#C4B5FD]" /> 
+                  Deri në {listing.hall.capacity} persona
+                </span>
+              </div>
+              
+              {/* Komponenti i ri për shpërndarje */}
+              <ShareButtons 
+                url={`https://hallevo.com/${locale}/salla/${hallId}`} 
+                title={displayTitle} 
+              />
             </div>
 
           </div>

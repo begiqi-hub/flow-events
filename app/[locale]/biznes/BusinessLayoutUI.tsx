@@ -42,6 +42,9 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
 
   const currentLang = GJUHET.find(g => g.code === locale) || GJUHET[0];
 
+  // Marrim logjikën e abonimit që kaluam nga Layout i Serverit
+  const isSubscribed = business?.isSubscribed;
+
   const trialEndDate = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
   const today = new Date();
   let daysRemaining = 0;
@@ -50,9 +53,9 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
     daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
   
-  const isTrial = business.status !== 'active';
-  const isGracePeriod = isTrial && daysRemaining <= 0 && daysRemaining >= -3; 
-  const isHardLocked = (business.status === 'inactive') || (isTrial && daysRemaining < -3); 
+  // Bllokimi Total: Aplikohet VETËM nëse Admini ka bllokuar llogarinë (inactive). 
+  // NUK e bllokon për shkak të provës, kështu që mund të bëjnë listime sërish.
+  const isHardLocked = business.status === 'inactive'; 
 
   const isAbonimiPage = pathname.includes('/biznes/abonimi');
   const isNdihmaPage = pathname.includes('/biznes/ndihma');
@@ -127,9 +130,11 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
     <div className="flex flex-col h-screen w-full bg-[#F8F9FA] overflow-hidden relative">
       
       {/* ========================================== */}
-      {/* SHTUAR WIDGET-I KËTU */}
+      {/* SHTUAR WIDGET-I KËTU (Shfaqet vetëm për ata pa abonim/në provë) */}
       {/* ========================================== */}
-      <WelcomePromoWidget promoCode="HALLEVO50" discountText="50%" />
+      {!isSubscribed && (
+        <WelcomePromoWidget promoCode="HALLEVO50" discountText="50%" />
+      )}
 
       {/* ========================================== */}
       {/* LAYOUT-I JUAJ EKZISTUES VAZHDON MË POSHTË */}
@@ -341,17 +346,20 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 pointer-events-auto">
-              {isTrial && userRole !== 'manager' && !showGlobalBlocker && (
-                <Link href={`/${locale}/biznes/abonimi`} className={`hidden sm:flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all group shadow-sm shrink-0 ${isGracePeriod ? 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700 animate-pulse' : 'bg-amber-50 hover:bg-amber-100 border-amber-200'} border`}>
-                  {isGracePeriod ? <AlertTriangle size={16} className="text-red-500 group-hover:scale-110 transition-transform" /> : <AlertCircle size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />}
+              
+              {/* SHTUAR KUSHTI !isSubscribed PËR TË FSHEHUR BUTONIN TOP HEADER PËR ABONENTËT */}
+              {!isSubscribed && userRole !== 'manager' && !showGlobalBlocker && (
+                <Link href={`/${locale}/biznes/abonimi`} className={`hidden sm:flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all group shadow-sm shrink-0 ${daysRemaining <= 0 ? 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700 animate-pulse' : 'bg-amber-50 hover:bg-amber-100 border-amber-200'} border`}>
+                  {daysRemaining <= 0 ? <AlertTriangle size={16} className="text-red-500 group-hover:scale-110 transition-transform" /> : <AlertCircle size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />}
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] md:text-xs font-bold whitespace-nowrap hidden md:block ${isGracePeriod ? 'text-red-700' : 'text-amber-700'}`}>
-                      {daysRemaining > 0 ? `${daysRemaining} ${uiTranslations.trialDays || "ditë provë"}` : (daysRemaining === 0 ? "Skadon Sot" : "I Skaduar")}
+                    <span className={`text-[10px] md:text-xs font-bold whitespace-nowrap hidden md:block ${daysRemaining <= 0 ? 'text-red-700' : 'text-amber-700'}`}>
+                      {daysRemaining > 0 ? `${daysRemaining} ${uiTranslations.trialDays || "ditë provë"}` : "Prova ka skaduar"}
                     </span>
-                    <span className={`text-[10px] md:text-xs font-black uppercase tracking-tight whitespace-nowrap ${isGracePeriod ? 'text-red-600' : 'text-amber-600'}`}>Rinovo Abonimin</span>
+                    <span className={`text-[10px] md:text-xs font-black uppercase tracking-tight whitespace-nowrap ${daysRemaining <= 0 ? 'text-red-600' : 'text-amber-600'}`}>Abonohu Tani</span>
                   </div>
                 </Link>
               )}
+
               {userRole !== 'manager' && (
                 <Link href={`/${locale}/recepsioni`} className="hidden sm:flex items-center gap-2 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-colors shadow-sm shrink-0" title="Hap pamjen e Recepsionit">
                   <Monitor size={18} /> <span className="text-xs font-bold uppercase tracking-wider hidden md:block">Recepsioni</span>
@@ -472,15 +480,7 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
 
           <main className="flex-1 overflow-y-auto relative p-4 md:p-8">
             <div className="max-w-[1600px] mx-auto w-full"> 
-              {isGracePeriod && !isSafePage && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl mb-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-top-2">
-                   <div>
-                      <h3 className="text-red-800 font-bold flex items-center gap-2"><AlertTriangle size={18} /> Kujdes: Abonimi juaj ka skaduar!</h3>
-                      <p className="text-red-600 text-sm mt-1 font-medium">Sistemi juaj do të bllokohet plotësisht pas {3 + daysRemaining} ditësh. Ju lutem rinovoni për të mos humbur qasjen.</p>
-                   </div>
-                   <Link href={`/${locale}/biznes/abonimi`} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap shadow-sm">Rinovo Tani</Link>
-                </div>
-              )}
+              {/* MESAZH BOX-I U HOQ PLOTËSISHT NGA KËTU PËR TË MOS I FRIKËSUAR ATA QË BËJNË VETËM LISTIME */}
               {children}
             </div>
           </main>

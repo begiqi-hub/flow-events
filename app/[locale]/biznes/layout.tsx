@@ -21,9 +21,8 @@ export default async function BiznesLayout({
   
   const messages = await getMessages();
   const tNotif = await getTranslations("Notifications");
-  const tSidebar = await getTranslations("Sidebar"); // E lexojmë nga Serveri
+  const tSidebar = await getTranslations("Sidebar"); 
 
-  // Paketuam përkthimet për t'ia dërguar Klientit gati
   const uiTranslations = {
     brandName: tSidebar("brandName"),
     brandDesc: tSidebar("brandDesc"),
@@ -59,13 +58,13 @@ export default async function BiznesLayout({
   let userRole = "admin"; 
   let staffName = null; 
   let business = await prisma.businesses.findUnique({
-    where: { email: session.user.email as string }, // <--- SHTUAR as string
+    where: { email: session.user.email as string }, 
     include: { bookings: { include: { creator: true } } } 
   });
 
   if (!business) {
     const staffUser = await prisma.users.findUnique({
-      where: { email: session.user.email as string } // <--- SHTUAR as string
+      where: { email: session.user.email as string } 
     });
     if (staffUser && staffUser.business_id) {
       userRole = staffUser.role; 
@@ -78,6 +77,13 @@ export default async function BiznesLayout({
   }
 
   if (!business) redirect(`/${locale}/login`);
+
+  // =======================================================================
+  // KONTROLLI I PROVËS DHE ABONIMIT PËR LAYOUT
+  // =======================================================================
+  const isSubscribed = Boolean(business.package_id && business.status === 'active');
+  const trialEndsAt = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
+  const isTrialExpired = Boolean(trialEndsAt && new Date() > trialEndsAt && !isSubscribed);
 
   const activeAlert = await prisma.global_alerts.findFirst({
     where: { 
@@ -187,7 +193,9 @@ export default async function BiznesLayout({
 
   const finalBusiness = {
     ...business,
-    current_staff_name: staffName 
+    current_staff_name: staffName,
+    isSubscribed,
+    isTrialExpired
   };
 
   const safeBusiness = JSON.parse(JSON.stringify(finalBusiness));

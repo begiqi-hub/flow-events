@@ -147,61 +147,62 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
         </div>
 
         {/* Pjesa e parë e sallave (8 salla maksimum) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {firstBatch.map((listing: any) => (
-            <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
-              <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
-                {listing.mainImage || listing.hall?.image ? (
-                  <img 
-                    src={listing.mainImage || listing.hall.image || ""} 
-                    alt={listing.hall?.name || "Salla"} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="w-8 h-8 text-slate-700"/>
-                  </div>
-                )}
-                
-                <div className="absolute top-4 left-4 bg-[#B2549C]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 z-20 shadow-lg border border-white/10">
-                  <PartyPopper className="w-3.5 h-3.5 text-white"/>
-                  <span className="text-white text-xs font-bold">{listing.type || "Dasma"}</span>
-                </div>
-
-                <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#242730]/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors z-20">
-                  <Heart className="w-4 h-4"/>
-                </button>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-40" />
-              </div>
-              
-              <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
-                    {listing.hall?.name || "Sallë Eventesh"}
-                  </h3>
-                  <div className="flex flex-col gap-2.5 text-sm font-medium text-[#94A3B8] mb-6">
-                    <span className="flex items-center gap-2.5">
-                      <MapPin className="w-4 h-4 shrink-0"/> {getCityName(listing.business?.city)}
-                    </span>
-                    <span className="flex items-center gap-2.5">
-                      <Users className="w-4 h-4 shrink-0"/> Deri në {listing.hall?.capacity || 200} persona
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-auto flex items-center justify-between">
-                   <div className="flex flex-wrap gap-2 overflow-hidden max-h-[30px]">
-                     <span className="bg-[#1E2332] text-[#94A3B8] text-[11px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">
-                       {listing.type || "Dasma"}
-                     </span>
-                   </div>
-                   <div className="w-9 h-9 shrink-0 rounded-full bg-[#1E2332] flex items-center justify-center group-hover:bg-[#8B5CF6] transition-colors ml-2">
-                     <ArrowRight className="w-4 h-4 text-white"/>
-                   </div>
-                </div>
-              </div>
-            </Link>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  {firstBatch.map((listing: any) => (
+    <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
+      <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
+        {listing.mainImage || listing.hall?.image ? (
+          <img 
+            src={listing.mainImage || listing.hall.image || ""} 
+            alt={listing.hall?.name || "Salla"} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ImageIcon className="w-8 h-8 text-slate-700"/>
+          </div>
+        )}
+        
+        {/* ETIKETAT LART (Badges individuale) */}
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20 max-w-[70%]">
+          {(listing.type ? listing.type.split(',') : ["Dasma"]).slice(0, 2).map((typeItem: string, idx: number) => (
+            <div key={idx} className="bg-[#B2549C]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/10">
+              {idx === 0 && <PartyPopper className="w-3.5 h-3.5 text-white shrink-0"/>}
+              <span className="text-white text-xs font-bold whitespace-nowrap truncate">{typeItem.trim()}</span>
+            </div>
           ))}
         </div>
+
+        {/* Butoni i zemrës është hequr */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-40" />
+      </div>
+      
+      <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
+        <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
+          {listing.hall?.name || "Sallë Eventesh"}
+        </h3>
+        
+        {/* Kontenieri Flex për detajet dhe shigjetën */}
+        <div className="flex items-end justify-between mt-auto">
+          {/* Detajet (Qyteti, Kapaciteti) */}
+          <div className="flex flex-col gap-2.5 text-sm font-medium text-[#94A3B8]">
+            <span className="flex items-center gap-2.5">
+              <MapPin className="w-4 h-4 shrink-0"/> {getCityName(listing.business?.city)}
+            </span>
+            <span className="flex items-center gap-2.5">
+              <Users className="w-4 h-4 shrink-0"/> Deri në {listing.hall?.capacity || 200} persona
+            </span>
+          </div>
+
+          {/* Shigjeta e vendosur djathtas */}
+          <div className="w-9 h-9 shrink-0 rounded-full bg-[#1E2332] flex items-center justify-center group-hover:bg-[#8B5CF6] transition-colors">
+            <ArrowRight className="w-4 h-4 text-white"/>
+          </div>
+        </div>
+      </div>
+    </Link>
+  ))}
+</div>
 
         {/* MEGABANNER 2 - NË MES TË LISTËS */}
         {displayListings.length > 8 && (
@@ -215,58 +216,59 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {secondBatch.map((listing: any) => (
               <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
-                <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
-                  {listing.mainImage || listing.hall?.image ? (
-                    <img 
-                      src={listing.mainImage || listing.hall.image || ""} 
-                      alt={listing.hall?.name || "Salla"} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="w-8 h-8 text-slate-700"/>
-                    </div>
-                  )}
-                  
-                  <div className="absolute top-4 left-4 bg-[#B2549C]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 z-20 shadow-lg border border-white/10">
-                    <PartyPopper className="w-3.5 h-3.5 text-white"/>
-                    <span className="text-white text-xs font-bold">{listing.type || "Dasma"}</span>
-                  </div>
-
-                  <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#242730]/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors z-20">
-                    <Heart className="w-4 h-4"/>
-                  </button>
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-40" />
-                </div>
-                
-                <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
-                      {listing.hall?.name || "Sallë Eventesh"}
-                    </h3>
-                    <div className="flex flex-col gap-2.5 text-sm font-medium text-[#94A3B8] mb-6">
-                      <span className="flex items-center gap-2.5">
-                        <MapPin className="w-4 h-4 shrink-0"/> {listing.business?.city || "Prishtinë"}
-                      </span>
-                      <span className="flex items-center gap-2.5">
-                        <Users className="w-4 h-4 shrink-0"/> Deri në {listing.hall?.capacity || 200} persona
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-auto flex items-center justify-between">
-                     <div className="flex flex-wrap gap-2 overflow-hidden max-h-[30px]">
-                       <span className="bg-[#1E2332] text-[#94A3B8] text-[11px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap">
-                         {listing.type || "Dasma"}
-                       </span>
-                     </div>
-                     <div className="w-9 h-9 shrink-0 rounded-full bg-[#1E2332] flex items-center justify-center group-hover:bg-[#8B5CF6] transition-colors ml-2">
-                       <ArrowRight className="w-4 h-4 text-white"/>
-                     </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+      <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
+        {listing.mainImage || listing.hall?.image ? (
+          <img 
+            src={listing.mainImage || listing.hall.image || ""} 
+            alt={listing.hall?.name || "Salla"} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ImageIcon className="w-8 h-8 text-slate-700"/>
           </div>
+        )}
+        
+        {/* ETIKETAT LART (Badges individuale) */}
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20 max-w-[70%]">
+          {(listing.type ? listing.type.split(',') : ["Dasma"]).slice(0, 2).map((typeItem: string, idx: number) => (
+            <div key={idx} className="bg-[#B2549C]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/10">
+              {idx === 0 && <PartyPopper className="w-3.5 h-3.5 text-white shrink-0"/>}
+              <span className="text-white text-xs font-bold whitespace-nowrap truncate">{typeItem.trim()}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Butoni i zemrës është hequr */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f1a2d] via-transparent to-transparent opacity-40" />
+      </div>
+      
+      <div className="p-5 flex-1 flex flex-col z-10 bg-[#0f1a2d]">
+        <h3 className="text-lg font-bold text-white mb-3 line-clamp-1 group-hover:text-[#C4B5FD] transition-colors">
+          {listing.hall?.name || "Sallë Eventesh"}
+        </h3>
+        
+        {/* Kontenieri Flex për detajet dhe shigjetën */}
+        <div className="flex items-end justify-between mt-auto">
+          {/* Detajet (Qyteti, Kapaciteti) */}
+          <div className="flex flex-col gap-2.5 text-sm font-medium text-[#94A3B8]">
+            <span className="flex items-center gap-2.5">
+              <MapPin className="w-4 h-4 shrink-0"/> {getCityName(listing.business?.city)}
+            </span>
+            <span className="flex items-center gap-2.5">
+              <Users className="w-4 h-4 shrink-0"/> Deri në {listing.hall?.capacity || 200} persona
+            </span>
+          </div>
+
+          {/* Shigjeta e vendosur djathtas */}
+          <div className="w-9 h-9 shrink-0 rounded-full bg-[#1E2332] flex items-center justify-center group-hover:bg-[#8B5CF6] transition-colors">
+            <ArrowRight className="w-4 h-4 text-white"/>
+          </div>
+        </div>
+      </div>
+    </Link>
+  ))}
+</div>
         )}
       </section>
 

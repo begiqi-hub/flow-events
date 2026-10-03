@@ -70,7 +70,7 @@ export default async function ListingManagementPage({ params }: { params: Promis
           <Globe className="w-4 h-4" />
           HALLEVO.COM
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Listimi Publik</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Listimi Publik (në platform)</h1>
         <p className="mt-2 text-slate-500 font-medium max-w-2xl">
           Menaxho se si shfaqen sallat e tua në platformën publike. Plotëso të dhënat dhe publiko sallat për të pranuar rezervime të reja.
         </p>

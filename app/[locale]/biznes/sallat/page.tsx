@@ -99,7 +99,7 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-center">
           <div className="flex justify-between items-end mb-2">
             <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
-              <CalendarCheck size={16} className="text-emerald-500" /> Kalendarë Aktivë
+              <CalendarCheck size={16} className="text-emerald-500" /> Sallë për rezervime
             </span>
             <span className="text-sm font-black text-gray-900">{currentManagedHalls} / {LIMIT_MANAGEMENT}</span>
           </div>
@@ -117,14 +117,14 @@ export default async function HallsPage({ params }: { params: Promise<{ locale: 
             <div className="w-8 h-4 mt-0.5 bg-blue-500 rounded-full flex items-center px-0.5 shrink-0"><div className="w-3 h-3 bg-white rounded-full translate-x-4"></div></div>
             <div>
               <p className="text-xs font-bold text-gray-800">Listimi Publik (HALLEVO)</p>
-              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">E bën sallën të dukshme për klientët në treg. Mund të keni deri në 5 salla publike.</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">Salla do të jet e dukshme vetëm ne Platfomen HALLEVO. Mund të keni deri në 5 salla publike.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-8 h-4 mt-0.5 bg-emerald-500 rounded-full flex items-center px-0.5 shrink-0"><div className="w-3 h-3 bg-white rounded-full translate-x-4"></div></div>
             <div>
-              <p className="text-xs font-bold text-gray-800">Menaxhimi i Brendshëm</p>
-              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">Aktivizon kalendarin për stafin tuaj. Limiti varet nga pakoja që keni zgjedhur.</p>
+              <p className="text-xs font-bold text-gray-800">Vetëm për Rezërvime</p>
+              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">Salla do të aktive vetëm për Menaxhim të Biznesit. Limiti varet nga pakoja që keni zgjedhur.</p>
             </div>
           </div>
         </div>

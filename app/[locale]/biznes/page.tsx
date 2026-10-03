@@ -9,16 +9,12 @@ import { getTranslations } from "next-intl/server";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Ky është tashmë i vetmi "export default" në këtë faqe
 export default async function BusinessDashboard({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const session = await getServerSession();
 
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  // =====================================
-  // LEXIMI I PËRKTHIMEVE NGA SERVERI
-  // =====================================
   const t = await getTranslations("DashboardClient");
   
   const uiTranslations = {
@@ -41,9 +37,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
     noEventsMsg: t("noEventsMsg")
   };
 
-  // =======================================================================
-  // LOGJIKA E RE PËR TË GJETUR BIZNESIN APO STAFIN
-  // =======================================================================
   let userRole = "admin"; 
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email }
@@ -63,9 +56,17 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
 
   if (!business) redirect(`/${locale}/login`);
 
-  // LLOGARITJA E DITËVE TË PROVËS
+  // =======================================================================
+  // KONTROLLI I PROVËS (TRIAL) DHE ABONIMIT
+  // =======================================================================
   const trialEndDate = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
   const today = new Date();
+  
+  // Kontrollon nëse biznesi ka pako aktive (nuk është as në trial as i skaduar)
+  const isSubscribed = Boolean(business.package_id && business.status === 'active');
+  // Kontrollon nëse koha e provës ka përfunduar
+  const isTrialExpired = Boolean(trialEndDate && today > trialEndDate && !isSubscribed);
+
   let daysRemaining = 0;
   if (trialEndDate) {
     const diffTime = trialEndDate.getTime() - today.getTime();
@@ -73,10 +74,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   }
   const isTrial = business.status === 'trial';
 
-  // =======================================================================
-  // 1. LOGJIKA E WIZARD-IT TË KONFIGURIMIT (ONBOARDING)
-  // =======================================================================
-  
   const realHalls = await prisma.halls.count({
     where: { business_id: business.id, name: { not: "Salla VIP (Demo)" } }
   });
@@ -100,10 +97,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
   const completedTasks = tasks.filter(t => t.isCompleted).length;
   const progressPercent = Math.round((completedTasks / tasks.length) * 100);
 
-  // =======================================================================
-  // 2. DATA FETCHING PËR DASHBOARD CLIENT
-  // =======================================================================
-  
   const allBookingsRaw = await prisma.bookings.findMany({
     where: { business_id: business.id, status: { notIn: ['cancelled', 'draft'] } },
     include: { clients: true, halls: true, payments: true, booking_extras: { include: { extras: true } } }
@@ -135,23 +128,28 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
     monthPending += (total - paid);
   });
 
-  const safeBusiness = JSON.parse(JSON.stringify(business));
+  // Përfshijmë statusin në objektin e biznesit për t'ia dërguar Klientit
+  const safeBusiness = JSON.parse(JSON.stringify({
+    ...business,
+    isSubscribed,
+    isTrialExpired
+  }));
+  
   const serializedMonthBookings = JSON.parse(JSON.stringify(monthBookings));
 
   return (
     <>
       <div className="w-full mb-6">
-      
-        {/* WIZARD-I I KONFIGURIMIT */}
         {progressPercent < 100 && (
           <div className="bg-white border border-indigo-100 rounded-[2rem] p-6 md:p-8 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
                 <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
                   <Sparkles className="text-indigo-500" size={24} /> 
-                  Mirësevini! Konfiguroni biznesin tuaj
+                  Mirësevini! Plotësoni profilin e biznesit
                 </h2>
-                <p className="text-gray-500 text-sm mt-1 font-medium">Plotësoni këto hapa për të nisur punën me kapacitet të plotë.</p>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Për të listuar sallën tuaj në platformën HALLEVO, mjafton të plotësoni informacionet bazë te Profili i Biznesit dhe të shtoni sallën e parë.</p>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Hapat e tjerë nevojiten vetëm nëse dëshironi të përdorni sistemin për menaxhimin e plotë të rezervimeve.</p>
               </div>
               <div className="flex items-center gap-4 w-full md:w-1/3">
                 <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
@@ -198,7 +196,6 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
         )}
       </div>
 
-      {/* KLIENTI I DASHBOARD-IT QË MBAN KALENDARIN DHE KARTAT */}
       <DashboardClient 
         business={safeBusiness} 
         locale={locale} 

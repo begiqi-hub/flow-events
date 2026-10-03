@@ -116,6 +116,17 @@ export async function saveReservationAction(data: any) {
     if (!user || !user.business_id) return { error: "Biznesi nuk u gjet." };
     const businessId = user.business_id;
 
+    const currentBiz = await prisma.businesses.findUnique({ where: { id: businessId } });
+    if (currentBiz) {
+      const isSubscribed = Boolean(currentBiz.package_id && currentBiz.status === 'active');
+      const trialEndsAt = currentBiz.trialEndsAt ? new Date(currentBiz.trialEndsAt) : null;
+      const isTrialExpired = Boolean(trialEndsAt && new Date() > trialEndsAt && !isSubscribed);
+      
+      if (isTrialExpired) {
+        return { error: "Koha juaj e provës 14-ditore ka përfunduar! Nuk mund të krijoni rezervime të reja pa një abonim aktiv." };
+      }
+    }
+
     const reqDate = normalizeDate(data.event_date);
     const reqStartMin = timeToMinutes(data.start_time);
     const reqEndMin = timeToMinutes(data.end_time);

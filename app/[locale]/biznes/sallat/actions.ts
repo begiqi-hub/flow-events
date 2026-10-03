@@ -44,7 +44,7 @@ export async function saveHallAction(data: any) {
         ac: data.ac ?? true,
         image: data.image || null,
         business_id: business.id,
-        is_published: true,  // Salla bëhet automatikisht publike kur krijohet
+        is_published: false,  // Salla bëhet automatikisht publike kur krijohet
         is_managed: false,   // Menaxhimi SaaS mbetet OFF derisa ta ndezë përdoruesi nga butoni
       },
     });
@@ -93,18 +93,37 @@ export async function deleteHallAction(id: string) {
     const session = await getServerSession();
     if (!session?.user?.email) return { error: "Nuk jeni i loguar!" };
 
-    // Fshijmë sallën
+    // 1. KONTROLLI I REZERVIMEVE
+    // Kontrollojmë nëse ka rezervime të lidhura me këtë sallë
+    const existingBookings = await prisma.bookings.count({
+      where: { hall_id: id }
+    });
+
+    if (existingBookings > 0) {
+      // Ky gabim do të kapet nga DeleteHallBtn dhe do të shfaqet në Popup-in tënd
+      return { 
+        error: "Kjo sallë nuk mund të fshihet sepse ka rezervime aktive ose historik rezervimesh. Ju lutem anuloni rezervimet fillimisht." 
+      };
+    }
+
+    // 2. FSHIRJA NGA DATABAZA
+    // Nëse nuk ka rezervime, e fshijmë. (Tabela Listing fshihet automatikisht nga Cascade)
     await prisma.halls.delete({
       where: { id: id }
     });
 
+    // 3. PASTRIMI I CACHE-IT
     revalidatePath("/biznes/sallat");
     revalidatePath("/biznes");
+    
+    // KJO ËSHTË ZGJIDHJA PËR KRYEFAQEN:
+    // Pastron tërësisht memorien e faqeve publike në të gjitha gjuhët.
+    revalidatePath("/", "layout"); 
     
     return { success: true };
   } catch (error: any) {
     console.error("GABIM GJATË FSHIRJES:", error);
-    return { error: "Nuk mund të fshihet salla. " + error.message };
+    return { error: "Nuk mund të fshihet salla. Gabim i brendshëm në server." };
   }
 }
 
