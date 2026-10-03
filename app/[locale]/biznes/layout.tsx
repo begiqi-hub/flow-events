@@ -66,14 +66,30 @@ export default async function BiznesLayout({
     const staffUser = await prisma.users.findUnique({
       where: { email: session.user.email as string } 
     });
-    if (staffUser && staffUser.business_id) {
+    
+    // Këtu kontrollojmë nëse ekziston përdoruesi para se të kërkojmë business_id
+    if (staffUser) {
       userRole = staffUser.role; 
       staffName = staffUser.full_name; 
-      business = await prisma.businesses.findUnique({
-        where: { id: staffUser.business_id },
-        include: { bookings: { include: { creator: true } } } 
-      });
+      if (staffUser.business_id) {
+        business = await prisma.businesses.findUnique({
+          where: { id: staffUser.business_id },
+          include: { bookings: { include: { creator: true } } } 
+        });
+      }
     }
+  }
+
+  // BLLOKU BYPASS PËR SUPERADMIN
+  if (!business && userRole === 'superadmin') {
+    business = {
+      id: 'superadmin-bypass',
+      name: 'Super Administrator',
+      email: session.user.email,
+      currency: 'EUR',
+      status: 'active',
+      bookings: [], // Array e thatë për të mos shkaktuar error te njoftimet
+    } as any;
   }
 
   if (!business) redirect(`/${locale}/login`);

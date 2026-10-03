@@ -21,9 +21,29 @@ export const authOptions: NextAuthOptions = {
         const passwordTrimmed = credentials.password.trim();
 
         // 2. Gjejmë përdoruesin
-        const user = await prisma.users.findUnique({
+        let user: any = await prisma.users.findUnique({
           where: { email: emailTrimmed }
         });
+
+        if (!user) {
+          const businessUser = await prisma.businesses.findUnique({
+            where: { email: emailTrimmed }
+          });
+
+
+          if (businessUser) {
+            // Transformojmë të dhënat e biznesit në objekt "user" për sesionin
+            user = {
+              id: businessUser.id,
+              email: businessUser.email,
+              password: businessUser.password, // Supozohet që keni fushë password te businesses
+              status: businessUser.status,
+              full_name: businessUser.name,
+              role: "admin", // Bizneset që kyçen vetë janë 'admin'
+              business_id: businessUser.id
+            };
+          }
+        }
 
         // DEBUG: Shih në terminalin e VS Code nëse po e gjen përdoruesin
         if (!user) {

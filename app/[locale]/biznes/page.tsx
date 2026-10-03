@@ -46,12 +46,29 @@ export default async function BusinessDashboard({ params }: { params: Promise<{ 
     const staffUser = await prisma.users.findUnique({
       where: { email: session.user.email }
     });
-    if (staffUser && staffUser.business_id) {
+    
+    // Këtu kontrollojmë nëse ekziston përdoruesi para se të kërkojmë business_id
+    if (staffUser) {
       userRole = staffUser.role; 
-      business = await prisma.businesses.findUnique({
-        where: { id: staffUser.business_id }
-      });
+      if (staffUser.business_id) {
+        business = await prisma.businesses.findUnique({
+          where: { id: staffUser.business_id }
+        });
+      }
     }
+  }
+
+  // BLLOKU BYPASS PËR SUPERADMIN
+  if (!business && userRole === 'superadmin') {
+    business = {
+      id: 'superadmin-bypass',
+      name: 'Super Administrator',
+      email: session.user.email,
+      currency: 'EUR',
+      status: 'active',
+      package_id: 'pro', // Simulojmë që ka një pako që të mos bllokohet UI
+      trialEndsAt: null,
+    } as any;
   }
 
   if (!business) redirect(`/${locale}/login`);

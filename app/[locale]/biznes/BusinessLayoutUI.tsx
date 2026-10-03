@@ -45,17 +45,19 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
   // Marrim logjikën e abonimit që kaluam nga Layout i Serverit
   const isSubscribed = business?.isSubscribed;
 
-  const trialEndDate = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
+  // SHTUAR: Pikëpyetja '?' pas business mbron superadminin nga crash-i
+  const trialEndDate = business?.trialEndsAt ? new Date(business.trialEndsAt) : null;
+  
   const today = new Date();
   let daysRemaining = 0;
   if (trialEndDate) {
     const diffTime = trialEndDate.getTime() - today.getTime();
     daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
-  
+
   // Bllokimi Total: Aplikohet VETËM nëse Admini ka bllokuar llogarinë (inactive). 
   // NUK e bllokon për shkak të provës, kështu që mund të bëjnë listime sërish.
-  const isHardLocked = business.status === 'inactive'; 
+  const isHardLocked = business?.status === 'inactive';
 
   const isAbonimiPage = pathname.includes('/biznes/abonimi');
   const isNdihmaPage = pathname.includes('/biznes/ndihma');
@@ -132,7 +134,7 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
       {/* ========================================== */}
       {/* SHTUAR WIDGET-I KËTU (Shfaqet vetëm për ata pa abonim/në provë) */}
       {/* ========================================== */}
-      {!isSubscribed && (
+      {!isSubscribed && business && (
         <WelcomePromoWidget promoCode="HALLEVO50" discountText="50%" />
       )}
 
@@ -348,7 +350,7 @@ export default function BusinessLayoutUI({ business, notifications = [], userRol
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 pointer-events-auto">
               
               {/* SHTUAR KUSHTI !isSubscribed PËR TË FSHEHUR BUTONIN TOP HEADER PËR ABONENTËT */}
-              {!isSubscribed && userRole !== 'manager' && !showGlobalBlocker && (
+              {!isSubscribed && userRole !== 'manager' && userRole !== 'superadmin' && !showGlobalBlocker && business && (
                 <Link href={`/${locale}/biznes/abonimi`} className={`hidden sm:flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all group shadow-sm shrink-0 ${daysRemaining <= 0 ? 'bg-red-50 hover:bg-red-100 border-red-200 text-red-700 animate-pulse' : 'bg-amber-50 hover:bg-amber-100 border-amber-200'} border`}>
                   {daysRemaining <= 0 ? <AlertTriangle size={16} className="text-red-500 group-hover:scale-110 transition-transform" /> : <AlertCircle size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />}
                   <div className="flex items-center gap-2">

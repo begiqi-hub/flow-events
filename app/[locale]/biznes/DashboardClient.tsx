@@ -110,11 +110,11 @@ export default function DashboardClient({
             </div>
             <h3 className="text-2xl font-black text-gray-900 mb-3">Prova ka përfunduar!</h3>
             <p className="text-gray-500 font-medium mb-8 leading-relaxed text-sm">
-              Koha juaj e provës 14-ditore ka skaduar. Ju mund të vazhdoni të listoni sallat tuaja, por për të përdorur sistemin e menaxhimit dhe për të shtuar rezervime të reja, ju duhet të aktivizoni një pako.
+              Koha juaj e provës ka skaduar. Mund të listoni salla, por për të shtuar rezervime duhet një pako aktive.
             </p>
             <div className="flex flex-col gap-3">
               <Link href={`/${locale}/biznes/abonimi`} className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white py-3.5 rounded-xl font-black text-sm transition-all shadow-lg flex items-center justify-center gap-2">
-                <Sparkles size={18} /> Zgjidh një Pako Abonimi
+                <Sparkles size={18} /> Zgjidh një Pako
               </Link>
               <button onClick={() => setShowPromoModal(false)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl font-bold text-sm transition-all">
                 Anulo
@@ -266,13 +266,14 @@ export default function DashboardClient({
         
         {/* Karta 1: Shto Rezervim (E zezë, elegante) */}
         <Link 
-          href={`/${locale}/biznes/rezervimet/shto`} 
-          onClick={(e) => {
-            if (business?.isTrialExpired) {
-              e.preventDefault();
-              setShowPromoModal(true);
-            }
-          }}
+        href={`/${locale}/biznes/rezervimet/shto`} 
+        onClick={(e) => {
+          // Nëse i ka skaduar prova, ndalo kalimin në faqe dhe hap modalin
+          if (business?.isTrialExpired) {
+            e.preventDefault();
+            setShowPromoModal(true);
+          }
+        }}
           className="group bg-[#0A0A0A] rounded-[2rem] p-7 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[160px] border border-gray-800"
         >
           <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/20 to-transparent rounded-bl-full pointer-events-none"></div>
