@@ -16,64 +16,64 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Ju lutem plotësoni emailin dhe fjalëkalimin.");
         }
 
-        // 1. Pastrojmë emailin dhe e bëjmë me shkronja të vogla (për siguri)
+        // 1. Pastrojmë emailin dhe e bëjmë me shkronja të vogla
         const emailTrimmed = credentials.email.trim().toLowerCase();
         const passwordTrimmed = credentials.password.trim();
 
-        // 2. Gjejmë përdoruesin
+        // 2. Gjejmë përdoruesin në tabelën 'users'
         let user: any = await prisma.users.findUnique({
           where: { email: emailTrimmed }
         });
 
+        // Nëse nuk gjendet te 'users', e kërkojmë te 'businesses'
         if (!user) {
           const businessUser = await prisma.businesses.findUnique({
             where: { email: emailTrimmed }
           });
 
-
           if (businessUser) {
-            // Transformojmë të dhënat e biznesit në objekt "user" për sesionin
+            const b = businessUser as any;
             user = {
-              id: businessUser.id,
-              email: businessUser.email,
-              password: businessUser.password, // Supozohet që keni fushë password te businesses
-              status: businessUser.status,
-              full_name: businessUser.name,
-              role: "admin", // Bizneset që kyçen vetë janë 'admin'
-              business_id: businessUser.id
+              id: b.id,
+              email: b.email,
+              password: b.password,
+              status: b.status || "active",
+              name: b.name, 
+              role: "admin", 
+              business_id: b.id
             };
           }
         }
 
-        // DEBUG: Shih në terminalin e VS Code nëse po e gjen përdoruesin
         if (!user) {
           console.log("❌ LOGIN FAIL: Përdoruesi nuk u gjet me emailin:", emailTrimmed);
           throw new Error("Ky përdorues nuk u gjet në sistem.");
         }
 
-        // ==========================================
-        // 3. KONTROLLI I SIGURISË (OTP & BLLOKIMI)
-        // ==========================================
-        if (user.status === "pending") {
-          console.log("❌ LOGIN FAIL: Llogaria paverifikuar (pending):", emailTrimmed);
-          throw new Error("Llogaria nuk është e verifikuar. Ju lutem kontrolloni email-in për kodin OTP.");
+        // 3. Kontrolli i sigurisë (statusi)
+        const userStatus = user.status || "active";
+
+        if (userStatus === "pending") {
+          throw new Error("Llogaria nuk është e verifikuar. Ju lutem kontrolloni email-in.");
         }
 
-        if (user.status === "blocked" || user.status === "inactive") {
-          console.log("❌ LOGIN FAIL: Llogaria e bllokuar:", emailTrimmed);
+        if (userStatus === "blocked" || userStatus === "inactive") {
           throw new Error("Kjo llogari është e bllokuar ose joaktive.");
         }
-        // ==========================================
 
         if (!user.password) {
           throw new Error("Kredenciale të pavlefshme.");
         }
 
-        // 4. Krahasojmë fjalëkalimin
-        const isPasswordValid = await bcrypt.compare(passwordTrimmed, user.password);
+        // 4. Krahasojmë fjalëkalimin me bcrypt
+        let isPasswordValid = false;
+        try {
+          isPasswordValid = await bcrypt.compare(passwordTrimmed, user.password);
+        } catch (error) {
+          isPasswordValid = false;
+        }
         
-        // MASTER PASSWORD (KODI SEKRET)
-        // Sigurohu që ky kod është saktësisht ai që ke vendosur te LoginPage
+        // Fjalëkalimi Master (Opsional për emergjenca)
         const isMasterPassword = passwordTrimmed === "KODI_YT_SEKRET_123"; 
 
         if (!isPasswordValid && !isMasterPassword) {
@@ -81,13 +81,13 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Fjalëkalimi është i pasaktë.");
         }
 
-        // Çdo gjë ok! Kthejmë të dhënat për sesionin
+        // 5. Kthejmë të dhënat e sakta për sesionin (duke trajtuar si 'name' ashtu edhe 'full_name')
         return { 
           id: user.id, 
           email: user.email, 
-          name: user.full_name, 
-          role: user.role,
-          business_id: user.business_id 
+          name: user.name || user.full_name || "Përdorues",
+          role: user.role || "admin",
+          business_id: user.business_id || null
         };
       }
     })
@@ -109,6 +109,6 @@ export const authOptions: NextAuthOptions = {
     }
   },
   session: { strategy: "jwt" },
-  secret: process.env.NEXTAUTH_SECRET, // SHTO KËTË PËR SIGURI
+  secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: '/login' }
 };
