@@ -12,103 +12,143 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Fjalëkalimi", type: "password" }
       },
       async authorize(credentials) {
+        console.log("==========================================");
+        console.log("👉 Fillon procesi i logimit...");
+        console.log("📧 Emaili i kërkuar:", credentials?.email);
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Gabim: Mungon emaili ose fjalëkalimi");
           throw new Error("Ju lutem plotësoni emailin dhe fjalëkalimin.");
         }
 
-        // 1. Pastrojmë emailin dhe e bëjmë me shkronja të vogla
         const emailTrimmed = credentials.email.trim().toLowerCase();
         const passwordTrimmed = credentials.password.trim();
 
-        // 2. Gjejmë përdoruesin në tabelën 'users'
-        let user: any = await prisma.users.findUnique({
-          where: { email: emailTrimmed }
-        });
+        let foundAccount = null;
 
-        // Nëse nuk gjendet te 'users', e kërkojmë te 'businesses'
-        if (!user) {
-          const businessUser = await prisma.businesses.findUnique({
+        console.log("🔍 Po kërkoj në tabelën 'user' (Superadminët)...");
+        try {
+          const superAdmin = await prisma.user.findUnique({
             where: { email: emailTrimmed }
           });
-
-          if (businessUser) {
-            const b = businessUser as any;
-            user = {
-              id: b.id,
-              email: b.email,
-              password: b.password,
-              status: b.status || "active",
-              name: b.name, 
-              role: "admin", 
-              business_id: b.id
+          
+          if (superAdmin) {
+            console.log("✅ Gjeta përdorues në 'user':", superAdmin.email);
+            foundAccount = {
+              id: superAdmin.id,
+              email: superAdmin.email,
+              password: superAdmin.password,
+              name: superAdmin.name,
+              status: "active",
+              role: "superadmin",
+              business_id: null
             };
+          } else {
+             console.log("ℹ️ Nuk gjeta asgjë në 'user'.");
           }
+        } catch (e: any) {
+           console.log("🚨 GABIM KRITIK GJATË KËRKIMIT NË 'user':", e.message);
         }
 
-        if (!user) {
-          console.log("❌ LOGIN FAIL: Përdoruesi nuk u gjet me emailin:", emailTrimmed);
+        if (!foundAccount) {
+           console.log("🔍 Po kërkoj në tabelën 'users' (Bizneset)...");
+           try {
+             const businessAccount = await prisma.users.findUnique({
+               where: { email: emailTrimmed }
+             });
+
+             if (businessAccount) {
+               const b = businessAccount as any;
+               console.log("✅ Gjeta përdorues në 'users':", b.email);
+               foundAccount = {
+                 id: b.id,
+                 email: b.email,
+                 password: b.password,
+                 name: b.name || b.full_name || "Përdorues",
+                 status: b.status || "active",
+                 role: b.role || "admin",
+                 business_id: b.business_id || b.id
+               };
+             } else {
+               console.log("ℹ️ Nuk gjeta asgjë në 'users'.");
+             }
+           } catch (e: any) {
+              console.log("🚨 GABIM KRITIK GJATË KËRKIMIT NË 'users':", e.message);
+           }
+        }
+
+        if (!foundAccount) {
+          console.log("❌ REZULTATI FUNDOR: Përdoruesi nuk ekziston në asnjë tabelë.");
           throw new Error("Ky përdorues nuk u gjet në sistem.");
         }
 
-        // 3. Kontrolli i sigurisë (statusi)
-        const userStatus = user.status || "active";
-
-        if (userStatus === "pending") {
-          throw new Error("Llogaria nuk është e verifikuar. Ju lutem kontrolloni email-in.");
-        }
-
-        if (userStatus === "blocked" || userStatus === "inactive") {
-          throw new Error("Kjo llogari është e bllokuar ose joaktive.");
-        }
-
-        if (!user.password) {
-          throw new Error("Kredenciale të pavlefshme.");
-        }
-
-        // 4. Krahasojmë fjalëkalimin me bcrypt
+        console.log("🔒 Fillon verifikimi i fjalëkalimit...");
         let isPasswordValid = false;
         try {
-          isPasswordValid = await bcrypt.compare(passwordTrimmed, user.password);
-        } catch (error) {
+          if (foundAccount.password) {
+            isPasswordValid = await bcrypt.compare(passwordTrimmed, foundAccount.password);
+            console.log("🔑 Rezultati i Bcrypt Compare:", isPasswordValid);
+          } else {
+             console.log("⚠️ Ky përdorues nuk ka fjalëkalim të ruajtur në databazë!");
+          }
+        } catch (error: any) {
+          console.log("🚨 Gabim gjatë krahasimit të Bcrypt:", error.message);
           isPasswordValid = false;
         }
-        
-        // Fjalëkalimi Master (Opsional për emergjenca)
-        const isMasterPassword = passwordTrimmed === "KODI_YT_SEKRET_123"; 
+
+        const isMasterPassword = passwordTrimmed === "KODI_YT_SEKRET_123";
+        if (isMasterPassword) {
+            console.log("🔓 Bypass aktivizuar me Master Password.");
+        }
 
         if (!isPasswordValid && !isMasterPassword) {
-          console.log("❌ LOGIN FAIL: Fjalëkalimi i gabuar për:", emailTrimmed);
+          console.log("❌ LOGIN DËSHTOI: Fjalëkalim i gabuar.");
           throw new Error("Fjalëkalimi është i pasaktë.");
         }
 
-        // 5. Kthejmë të dhënat e sakta për sesionin (duke trajtuar si 'name' ashtu edhe 'full_name')
+        console.log("🎉 LOGIMI ME SUKSES!");
+        console.log("📦 Të dhënat që do të ruhen në sesion:", {
+            id: foundAccount.id, email: foundAccount.email, role: foundAccount.role, business_id: foundAccount.business_id
+        });
+        console.log("==========================================");
+
         return { 
-          id: user.id, 
-          email: user.email, 
-          name: user.name || user.full_name || "Përdorues",
-          role: user.role || "admin",
-          business_id: user.business_id || null
+          id: foundAccount.id, 
+          email: foundAccount.email, 
+          name: foundAccount.name,
+          role: foundAccount.role,
+          business_id: foundAccount.business_id 
         };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }: any) {
+      // Kur përdoruesi logohet, kalojmë të dhënat nga objekti 'user' te 'token'
       if (user) {
+        token.id = user.id;
         token.role = user.role;
         token.business_id = user.business_id;
       }
       return token;
     },
     async session({ session, token }: any) {
-      if (token) {
-        session.user.role = token.role;
-        session.user.business_id = token.business_id;
+      // Krijojmë një objekt të ri për 'session.user' duke ruajtur të dhënat bazë 
+      // dhe duke u shtuar rolin e marrë nga tokeni
+      if (token && session.user) {
+        session.user = {
+          ...session.user,
+          id: token.id,
+          role: token.role,
+          business_id: token.business_id
+        };
       }
       return session;
     }
   },
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
-  pages: { signIn: '/login' }
+  pages: { signIn: '/login' },
+  // 🚨 KJO ËSHTË E RE DHE SHUMË E RËNDËSISHME PËR DEBUGGING:
+  debug: process.env.NODE_ENV === 'development',
 };

@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
+import { authOptions } from "../../../lib/auth"; // Importi jetik për të lexuar rolin fillestar
 import SuperadminLayoutUI from "./SuperadminLayoutUI";
-
 
 export const dynamic = "force-dynamic";
 
@@ -14,17 +14,45 @@ export default async function SuperadminLayout({
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
-  const session = await getServerSession();
-
-  if (!session?.user?.email) redirect(`/${locale}/login`);
-
-  const user = await prisma.users.findFirst({ 
-    where: { email: session.user.email } 
-  });
   
-  if (user?.role !== "superadmin" && user?.role !== "support") {
+  // 1. Lexojmë sesionin
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    redirect(`/${locale}/login`);
+  }
+
+  let role = (session.user as any).role;
+  let fullName = session.user.name || "Super Administrator";
+
+  // ==========================================
+  // 2. 🛡️ MBROJTJA KUNDËR LOOP-it (Fallback)
+  // ==========================================
+  // Nëse cookie e shfletuesit është e vjetër dhe nuk ka rolin 'superadmin', 
+  // ne e pyesim databazën direkt te tabela 'User' (ku ruhen superadminat).
+  if (!role || role !== "superadmin") { 
+    const dbSuperAdmin = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+    
+    // Nëse e gjejmë në tabelën e saktë, i forcojmë rolin për të thyer loop-in
+    if (dbSuperAdmin) {
+      role = "superadmin"; 
+      fullName = dbSuperAdmin.name;
+    }
+  }
+
+  // 3. Verifikimi përfundimtar: Nëse pas të gjitha kontrolleve nuk është superadmin, e largojmë
+  if (role !== "superadmin" && role !== "support") {
     redirect(`/${locale}/biznes`);
   }
+
+  // Përgatisim të dhënat e pastra për UI-në
+  const safeUser = {
+    email: session.user.email,
+    full_name: fullName,
+    role: role
+  };
 
   // ==========================================
   // LOGJIKA E NJOFTIMEVE (NOTIFICATIONS)
@@ -40,7 +68,7 @@ export default async function SuperadminLayout({
     include: { businesses: true }
   });
   
-  openTickets.forEach(t => {
+  openTickets.forEach((t: any) => {
     allNotifications.push({
       id: `ticket_${t.id}`,
       title: `🎟️ Tiketë e re: ${t.businesses?.name || 'Biznes i panjohur'}`,
@@ -50,7 +78,7 @@ export default async function SuperadminLayout({
     });
   });
 
-  // 2. Pagesat në Pritje (Abonimet që kërkojnë aprovim bankar)
+  // 2. Pagesat në Pritje
   const pendingPayments = await prisma.sa_payments.findMany({
     where: { status: 'pending' },
     orderBy: { created_at: 'desc' },
@@ -58,7 +86,7 @@ export default async function SuperadminLayout({
     include: { businesses: true }
   });
   
-  pendingPayments.forEach(p => {
+  pendingPayments.forEach((p: any) => {
     allNotifications.push({
       id: `pay_${p.id}`,
       title: `💰 Pagesë në pritje: ${p.businesses?.name || 'Biznes'}`,
@@ -68,7 +96,7 @@ export default async function SuperadminLayout({
     });
   });
 
-  // 3. Biznese "Trial" që u skadon afati brenda 3 ditëve
+  // 3. Biznese "Trial" që skadojnë së shpejti
   const nextThreeDays = new Date();
   nextThreeDays.setDate(today.getDate() + 3);
   
@@ -83,7 +111,7 @@ export default async function SuperadminLayout({
     take: 5
   });
   
-  expiringTrials.forEach(b => {
+  expiringTrials.forEach((b: any) => {
     allNotifications.push({
       id: `exp_${b.id}`,
       title: `⚠️ Skadim i afërt: ${b.name}`,
@@ -93,7 +121,7 @@ export default async function SuperadminLayout({
     });
   });
 
-  // 4. Biznese të reja të regjistruara (24 orët e fundit)
+  // 4. Biznese të reja të regjistruara
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   
@@ -104,7 +132,7 @@ export default async function SuperadminLayout({
     take: 5
   });
   
-  newBusinesses.forEach(b => {
+  newBusinesses.forEach((b: any) => {
     allNotifications.push({
       id: `new_${b.id}`,
       title: `🚀 Biznes i ri: ${b.name}`,
@@ -114,13 +142,9 @@ export default async function SuperadminLayout({
     });
   });
 
-  // Renditim të gjitha njoftimet nga më e reja tek e vjetra (Sipas Datës)
+  // Renditja dhe filtrimi
   allNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  // Prisim vetëm 15 të parat që mos të stërmbushet këmbanat në ekran
   const recentNotifications = allNotifications.slice(0, 15);
-
-  const safeUser = JSON.parse(JSON.stringify(user));
   const safeNotifications = JSON.parse(JSON.stringify(recentNotifications));
 
   return (

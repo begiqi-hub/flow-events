@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
+import { authOptions } from "../../../lib/auth"; // E DETYRUESHME PËR TË LEXUAR ROLIN
 import BusinessLayoutUI from "./BusinessLayoutUI";
 import { NextIntlClientProvider } from "next-intl"; 
 import { getMessages, getTranslations } from "next-intl/server";
@@ -52,10 +53,20 @@ export default async function BiznesLayout({
     notifNoNotifs: tNotif("noNotifs"),
   };
 
-  const session = await getServerSession();
+  // 1. MARRIM SESIONIN ME TË DHËNAT E PLOTA (PËRFSHIRË ROLIN)
+  const session = await getServerSession(authOptions);
+  
   if (!session?.user?.email) redirect(`/${locale}/login`);
 
-  let userRole = "admin"; 
+  const role = (session.user as any).role;
+
+  // 2. KONTROLLI ABSOLUT I SUPERADMINIT
+  // Nëse është superadmin, nuk ka çfarë kërkon te Layout-i i Biznesit. E kthejmë te paneli i tij.
+  if (role === "superadmin" || role === "support") {
+    redirect(`/${locale}/superadmin/bizneset`);
+  }
+
+  let userRole = role || "admin"; 
   let staffName = null; 
   let business = await prisma.businesses.findUnique({
     where: { email: session.user.email as string }, 
@@ -67,7 +78,6 @@ export default async function BiznesLayout({
       where: { email: session.user.email as string } 
     });
     
-    // Këtu kontrollojmë nëse ekziston përdoruesi para se të kërkojmë business_id
     if (staffUser) {
       userRole = staffUser.role; 
       staffName = staffUser.full_name; 
@@ -80,18 +90,7 @@ export default async function BiznesLayout({
     }
   }
 
-  // BLLOKU BYPASS PËR SUPERADMIN
-  if (!business && userRole === 'superadmin') {
-    business = {
-      id: 'superadmin-bypass',
-      name: 'Super Administrator',
-      email: session.user.email,
-      currency: 'EUR',
-      status: 'active',
-      bookings: [], // Array e thatë për të mos shkaktuar error te njoftimet
-    } as any;
-  }
-
+  // Nëse pas gjithë kërkimeve përdoruesi nuk lidhet me asnjë biznes, kthehet te login
   if (!business) redirect(`/${locale}/login`);
 
   // =======================================================================
@@ -228,7 +227,6 @@ export default async function BiznesLayout({
         />
       )}
 
-      {/* Shtojmë uiTranslations */}
       <BusinessLayoutUI business={safeBusiness} notifications={safeNotifications} userRole={userRole} uiTranslations={uiTranslations}>
         {children}
         <FlowAssistant locale={locale} userRole={userRole} />

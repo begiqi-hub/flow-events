@@ -1,5 +1,8 @@
+// app/api/auth/[...nextauth]/route.ts
+
 import NextAuth from "next-auth";
-import { authOptions } from "../../../../lib/auth"; // Kontrollo rrugën nëse është saktë
+// Përdorimi i '@/' e gjen gjithmonë dosjen 'lib' pavarësisht sa thellë është ky skedar
+import { authOptions } from "@/lib/auth"; 
 
 const handler = NextAuth(authOptions);
 

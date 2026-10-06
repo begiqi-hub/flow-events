@@ -8,17 +8,17 @@ datasource db {
 }
 
 model audit_logs {
-  id           String      @id @default(uuid()) @db.VarChar(36)
-  business_id  String      @db.VarChar(36)
-  user_id      String?     @db.VarChar(36)
-  action       String      @db.VarChar(255)
-  entity       String      @db.VarChar(100)
-  entity_id    String      @db.VarChar(36)
-  before_state String?     @db.LongText
-  after_state  String?     @db.LongText
-  created_at   DateTime?   @default(now()) @db.Timestamp(0)
-  businesses   businesses  @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "audit_logs_ibfk_1")
-  users        users?      @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "audit_logs_ibfk_2")
+  id           String     @id @default(uuid()) @db.VarChar(36)
+  business_id  String     @db.VarChar(36)
+  user_id      String?    @db.VarChar(36)
+  action       String     @db.VarChar(255)
+  entity       String     @db.VarChar(100)
+  entity_id    String     @db.VarChar(36)
+  before_state String?    @db.LongText
+  after_state  String?    @db.LongText
+  created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  businesses   businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "audit_logs_ibfk_1")
+  users        users?     @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "audit_logs_ibfk_2")
 
   @@index([business_id], map: "business_id")
   @@index([user_id], map: "user_id")
@@ -33,7 +33,7 @@ model booking_extras {
   line_total Decimal? @db.Decimal(10, 2)
   bookings   bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "booking_extras_ibfk_1")
   extras     extras   @relation(fields: [extra_id], references: [id], onUpdate: Restrict, map: "booking_extras_ibfk_2")
-  
+
   @@index([booking_id], map: "booking_id")
   @@index([extra_id], map: "extra_id")
 }
@@ -41,103 +41,96 @@ model booking_extras {
 model bookings {
   id                   String           @id @default(uuid()) @db.VarChar(36)
   business_id          String           @db.VarChar(36)
-  hall_id              String?          @db.VarChar(36) 
-  layout_id            String?          @db.VarChar(36) // SHTUAR: Lidhja me skicën e zgjedhur
+  hall_id              String?          @db.VarChar(36)
   client_id            String           @db.VarChar(36)
-  menu_id              String?          @db.VarChar(36)
-  event_type           String?          @db.VarChar(255)
   event_date           DateTime         @db.Date
   start_time           DateTime         @db.Time(0)
   end_time             DateTime         @db.Time(0)
   participants         Int              @default(0)
-  
-  setup_type           String?          @db.VarChar(50) 
-  billing_model        String           @default("per_person") @db.VarChar(50) 
-  hall_rent            Decimal?         @db.Decimal(10, 2) 
-  
   status               bookings_status? @default(pending)
-  payment_status       String           @default("pending")
-  cancel_reason        String?
   total_amount         Decimal          @default(0.00) @db.Decimal(10, 2)
-  discount_amount      Decimal?         @default(0.00) @db.Decimal(10, 2) 
   created_at           DateTime?        @default(now()) @db.Timestamp(0)
+  cancel_reason        String?
+  payment_status       String           @default("pending")
+  event_type           String?          @db.VarChar(255)
+  menu_id              String?          @db.VarChar(36)
   updated_at           DateTime?        @updatedAt
   created_by           String?          @db.VarChar(36)
-  creator              users?           @relation(fields: [created_by], references: [id])
   client_signature_url String?          @db.LongText
-  staff_notes          String?          @db.Text
   admin_notes          String?          @db.Text
-
-  booking_extras booking_extras[]
-  businesses     businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookings_ibfk_1")
-  halls          halls?           @relation(fields: [hall_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
-  clients        clients          @relation(fields: [client_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_3")
-  venue_layouts  venue_layouts?   @relation(fields: [layout_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_4") // SHTUAR
-  documents      documents[]
-  payments       payments[]
-  guests         guests[] // SHTUAR: Lidhja me listën e mysafirëve
-  layout_snapshot Json?  // SHTUAR: Ruan kopjen e ngrirë të sallës kur konfirmohet rezervimi
-  guest_list Json?  // Ruan listën e mysafirëve sipas tavolinave në format JSON
+  staff_notes          String?          @db.Text
+  discount_amount      Decimal?         @default(0.00) @db.Decimal(10, 2)
+  billing_model        String           @default("per_person") @db.VarChar(50)
+  hall_rent            Decimal?         @db.Decimal(10, 2)
+  setup_type           String?          @db.VarChar(50)
+  layout_id            String?          @db.VarChar(36)
+  layout_snapshot      String?          @db.LongText
+  guest_list           String?          @db.LongText
+  booking_extras       booking_extras[]
+  creator              users?           @relation(fields: [created_by], references: [id])
+  businesses           businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookings_ibfk_1")
+  halls                halls?           @relation(fields: [hall_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
+  clients              clients          @relation(fields: [client_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_3")
+  venue_layouts        venue_layouts?   @relation(fields: [layout_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_4")
+  documents            documents[]
+  guests               guests[]
+  payments             payments[]
 
   @@index([business_id], map: "business_id")
   @@index([client_id], map: "client_id")
   @@index([hall_id], map: "hall_id")
-  @@index([layout_id], map: "layout_id") // SHTUAR
+  @@index([layout_id], map: "layout_id")
+  @@index([created_by], map: "bookings_created_by_fkey")
 }
 
 model businesses {
-  id                 String    @id @default(uuid()) @db.VarChar(36)
-  name               String    @db.VarChar(255)
-  nui                String    @unique @db.VarChar(50)
-  vat_number         String?   @db.VarChar(50)
-  vat_rate           Decimal?  @default(0.00) @db.Decimal(5, 2)
-  business_type      String?   @db.VarChar(100)
-  responsible_person String?   @db.VarChar(255)
-  email              String    @unique @db.VarChar(255)
-  phone              String    @db.VarChar(50)
-  website            String?   @db.VarChar(255)
-  country            String?   @db.VarChar(100)
-  city               String?   @db.VarChar(100)
-  address            String?   @db.VarChar(255)
-  logo_url           String?   @db.LongText
-  currency           String    @default("EUR") @db.VarChar(10)
-  contract_template  String?   @db.Text
-  stamp_url          String?   @db.LongText
-  stamp_description  String?   @db.Text
-  signature_url      String?   @db.LongText
-  sa_payments        sa_payments[]
-
-  bank_name          String? @db.VarChar(255)
-  account_holder     String? @db.VarChar(255)
-  iban               String? @db.VarChar(50)
-  swift              String? @db.VarChar(50)
-
-  deposit_percent    Decimal? @db.Decimal(5, 2)
-  cancel_penalty     Int      @default(0)
-  cancel_days        Int      @default(0)
-
-  activityId         String?   @db.VarChar(36)
-  activity           Activity? @relation(fields: [activityId], references: [id])
-
-  packageId          String?  @db.VarChar(36)
-  package            Package? @relation(fields: [packageId], references: [id])
-  status             String   @default("trial") @db.VarChar(50)
+  id                 String          @id @default(uuid()) @db.VarChar(36)
+  name               String          @db.VarChar(255)
+  nui                String          @unique @db.VarChar(50)
+  email              String          @unique @db.VarChar(255)
+  phone              String          @db.VarChar(50)
+  deposit_percent    Decimal?        @db.Decimal(5, 2)
+  created_at         DateTime?       @default(now()) @db.Timestamp(0)
+  activityId         String?         @db.VarChar(36)
+  city               String?         @db.VarChar(100)
+  packageId          String?         @db.VarChar(36)
+  status             String          @default("trial") @db.VarChar(50)
   trialEndsAt        DateTime?
+  cancel_days        Int             @default(0)
+  cancel_penalty     Int             @default(0)
+  address            String?         @db.VarChar(255)
+  business_type      String?         @db.VarChar(100)
+  country            String?         @db.VarChar(100)
+  currency           String          @default("EUR") @db.VarChar(10)
+  logo_url           String?         @db.LongText
+  responsible_person String?         @db.VarChar(255)
+  vat_number         String?         @db.VarChar(50)
+  website            String?         @db.VarChar(255)
+  vat_rate           Decimal?        @default(0.00) @db.Decimal(5, 2)
+  account_holder     String?         @db.VarChar(255)
+  bank_name          String?         @db.VarChar(255)
+  iban               String?         @db.VarChar(50)
+  swift              String?         @db.VarChar(50)
+  contract_template  String?         @db.Text
+  signature_url      String?         @db.LongText
+  stamp_description  String?         @db.Text
+  stamp_url          String?         @db.LongText
+  advertisements     Advertisement[]
+  listings           Listing[]
+  audit_logs         audit_logs[]
+  bookings           bookings[]
+  activity           Activity?       @relation(fields: [activityId], references: [id])
+  package            Package?        @relation(fields: [packageId], references: [id])
+  clients            clients[]
+  extras             extras[]
+  halls              halls[]
+  menus              menus[]
+  sa_payments        sa_payments[]
+  tickets            tickets[]
+  users              users[]
 
-  created_at         DateTime? @default(now()) @db.Timestamp(0)
-
-  audit_logs audit_logs[]
-  bookings   bookings[]
-  clients    clients[]
-  extras     extras[]
-  halls      halls[]
-  menus      menus[]
-  users      users[]
-  tickets    tickets[]
-  
-  // SHTUAR PER V3 MARKETPLACE:
-  listings       Listing[]
-  advertisements Advertisement[]
+  @@index([activityId], map: "businesses_activityId_fkey")
+  @@index([packageId], map: "businesses_packageId_fkey")
 }
 
 model clients {
@@ -146,13 +139,13 @@ model clients {
   name         String     @db.VarChar(255)
   phone        String     @db.VarChar(50)
   email        String?    @db.VarChar(255)
-  personal_id  String?
-  gender       String?
-  city         String?
-  client_type  String     @default("individual")
-  business_num String?
-  address      String?
   created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  city         String?
+  gender       String?
+  personal_id  String?
+  address      String?
+  business_num String?
+  client_type  String     @default("individual")
   bookings     bookings[]
   businesses   businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "clients_ibfk_1")
 
@@ -172,15 +165,14 @@ model documents {
 }
 
 model extras {
-  id            String    @id @default(uuid()) @db.VarChar(36)
-  business_id   String    @db.VarChar(36)
-  name          String    @db.VarChar(255)
-  price         Decimal   @db.Decimal(10, 2)
-  internal_cost Decimal?  @db.Decimal(10, 2)
-  is_active     Boolean?  @default(true)
-  created_at    DateTime? @default(now()) @db.Timestamp(0)
-  updated_at    DateTime? @updatedAt
-
+  id             String           @id @default(uuid()) @db.VarChar(36)
+  business_id    String           @db.VarChar(36)
+  name           String           @db.VarChar(255)
+  is_active      Boolean?         @default(true)
+  created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  price          Decimal          @db.Decimal(10, 2)
+  updated_at     DateTime?        @updatedAt
+  internal_cost  Decimal?         @db.Decimal(10, 2)
   booking_extras booking_extras[]
   businesses     businesses       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "extras_ibfk_1")
 
@@ -188,48 +180,41 @@ model extras {
 }
 
 model halls {
-  id          String        @id @default(uuid()) @db.VarChar(36)
-  business_id String        @db.VarChar(36)
-  name        String        @db.VarChar(255)
-  capacity    Int
-  description String?       @db.Text
-  price       Float?
-  parking     Boolean       @default(true)
-  ac          Boolean       @default(true)
-  image       String?       @db.LongText
-  status      halls_status? @default(active)
-  created_at  DateTime?     @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?     @updatedAt
-
-  // SHTUAR PËR METODËN E ÇELËSAVE (TOGGLES)
-  // ==========================================
-  is_published Boolean @default(false)  // Kontrollon nëse salla shfaqet në Listimin Publik
-  is_managed   Boolean @default(false) // Kontrollon nëse salla ka të drejtë të përdorë Sistemin e Menaxhimit (Kalendarin, etj.)
-
+  id            String          @id @default(uuid()) @db.VarChar(36)
+  business_id   String          @db.VarChar(36)
+  name          String          @db.VarChar(255)
+  capacity      Int
+  status        halls_status?   @default(active)
+  created_at    DateTime?       @default(now()) @db.Timestamp(0)
+  ac            Boolean         @default(true)
+  description   String?         @db.Text
+  image         String?         @db.LongText
+  parking       Boolean         @default(true)
+  price         Float?
+  updated_at    DateTime?       @updatedAt
+  is_managed    Boolean         @default(false)
+  is_published  Boolean         @default(false)
+  listing       Listing?
   bookings      bookings[]
   businesses    businesses      @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "halls_ibfk_1")
   user_halls    user_halls[]
-  venue_layouts venue_layouts[] // SHTUAR: Lidhja me skicat e kësaj salle
-
-  // SHTUAR PER V3 MARKETPLACE:
-  listing       Listing?
+  venue_layouts venue_layouts[]
 
   @@index([business_id], map: "business_id")
 }
 
 model menus {
-  id               String    @id @default(uuid()) @db.VarChar(36)
-  business_id      String    @db.VarChar(36)
-  name             String    @db.VarChar(255)
-  description      String?   @db.Text
-  price_per_person Decimal   @db.Decimal(10, 2)
-  internal_cost    Decimal?  @db.Decimal(10, 2)
-  image            String?   @db.LongText
-  is_active        Boolean?  @default(true)
-  created_at       DateTime? @default(now()) @db.Timestamp(0)
-  updated_at       DateTime? @updatedAt
-
-  businesses businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menus_ibfk_1")
+  id               String     @id @default(uuid()) @db.VarChar(36)
+  business_id      String     @db.VarChar(36)
+  name             String     @db.VarChar(255)
+  description      String?    @db.Text
+  price_per_person Decimal    @db.Decimal(10, 2)
+  is_active        Boolean?   @default(true)
+  created_at       DateTime?  @default(now()) @db.Timestamp(0)
+  image            String?    @db.LongText
+  updated_at       DateTime?  @updatedAt
+  internal_cost    Decimal?   @db.Decimal(10, 2)
+  businesses       businesses @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menus_ibfk_1")
 
   @@index([business_id], map: "business_id")
 }
@@ -239,9 +224,9 @@ model payments {
   booking_id  String          @db.VarChar(36)
   amount      Decimal         @db.Decimal(10, 2)
   method      payments_method
-  type        payment_type    @default(payment) 
   paid_at     DateTime?       @default(now()) @db.Timestamp(0)
   recorded_by String?         @db.VarChar(36)
+  type        payment_type    @default(payment)
   bookings    bookings        @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "payments_ibfk_1")
   users       users?          @relation(fields: [recorded_by], references: [id], onUpdate: Restrict, map: "payments_ibfk_2")
 
@@ -260,26 +245,23 @@ model user_halls {
 }
 
 model users {
-  id          String            @id @default(uuid()) @db.VarChar(36)
-  business_id String?           @db.VarChar(36) 
-  email       String            @unique(map: "email") @db.VarChar(255)
-  full_name   String            @db.VarChar(255)
-  password    String?           @db.VarChar(255)
-  role        users_role
-  hall_scope  users_hall_scope? @default(all)
-  status      users_status?     @default(active)
-  created_at  DateTime?         @default(now()) @db.Timestamp(0)
-
-  audit_logs audit_logs[]
-  payments   payments[]
-  user_halls user_halls[]
-  bookings   bookings[]
-
+  id             String            @id @default(uuid()) @db.VarChar(36)
+  business_id    String?           @db.VarChar(36)
+  email          String            @unique(map: "email") @db.VarChar(255)
+  full_name      String            @db.VarChar(255)
+  role           users_role
+  hall_scope     users_hall_scope? @default(all)
+  status         users_status?     @default(active)
+  created_at     DateTime?         @default(now()) @db.Timestamp(0)
+  password       String?           @db.VarChar(255)
   email_verified DateTime?
-  otp_code       String?         @db.VarChar(50)
+  otp_code       String?           @db.VarChar(50)
   otp_expires_at DateTime?
-
-  businesses businesses? @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "users_ibfk_1")
+  audit_logs     audit_logs[]
+  bookings       bookings[]
+  payments       payments[]
+  user_halls     user_halls[]
+  businesses     businesses?       @relation(fields: [business_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "users_ibfk_1")
 
   @@index([business_id], map: "business_id")
 }
@@ -301,16 +283,15 @@ model Activity {
 }
 
 model tickets {
-  id          String          @id @default(uuid()) @db.VarChar(36)
-  business_id String          @db.VarChar(36)
-  subject     String          @db.VarChar(255)
-  status      ticket_status   @default(open)
-  priority    ticket_priority @default(normal)
-  created_at  DateTime?       @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?       @updatedAt
-
-  businesses  businesses      @relation(fields: [business_id], references: [id], onDelete: Cascade)
+  id          String            @id @default(uuid()) @db.VarChar(36)
+  business_id String            @db.VarChar(36)
+  subject     String            @db.VarChar(255)
+  status      ticket_status     @default(open)
+  priority    ticket_priority   @default(normal)
+  created_at  DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?         @updatedAt
   messages    ticket_messages[]
+  businesses  businesses        @relation(fields: [business_id], references: [id], onDelete: Cascade)
 
   @@index([business_id], map: "idx_ticket_business_id")
 }
@@ -318,13 +299,12 @@ model tickets {
 model ticket_messages {
   id          String         @id @default(uuid()) @db.VarChar(36)
   ticket_id   String         @db.VarChar(36)
-  sender_type message_sender 
-  sender_id   String?        @db.VarChar(36) 
+  sender_type message_sender
+  sender_id   String?        @db.VarChar(36)
   message     String         @db.Text
-  image_url   String?        @db.LongText
   is_read     Boolean        @default(false)
   created_at  DateTime?      @default(now()) @db.Timestamp(0)
-
+  image_url   String?        @db.LongText
   ticket      tickets        @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
 
   @@index([ticket_id], map: "idx_message_ticket_id")
@@ -342,24 +322,24 @@ model bank_accounts {
 }
 
 model system_settings {
-  id                   Int      @id @default(1)
-  platform_name        String   @default("Flow Events") @db.VarChar(100)
-  platform_slogan      String?  @db.VarChar(255)
-  contact_email        String?  @db.VarChar(100)
-  contact_phone        String?  @db.VarChar(50)
-  address              String?  @db.Text
-  vat_rate             Decimal  @default(18.00) @db.Decimal(5, 2)
-  currency             String   @default("EUR") @db.VarChar(3)
-  facebook_url         String?  @db.VarChar(255)
-  instagram_url        String?  @db.VarChar(255)
-  website_url          String?  @db.VarChar(255)
-  maintenance_mode     Boolean  @default(false)
-  allow_registration   Boolean  @default(true)
-  updated_at           DateTime @updatedAt
-  platform_logo        String?  @db.LongText
-  platform_nui         String?  @db.VarChar(50)
-  enable_card_payments Boolean  @default(true)
+  id                    Int      @id @default(1)
+  platform_name         String   @default("Flow Events") @db.VarChar(100)
+  contact_email         String?  @db.VarChar(100)
+  contact_phone         String?  @db.VarChar(50)
+  address               String?  @db.Text
+  vat_rate              Decimal  @default(18.00) @db.Decimal(5, 2)
+  currency              String   @default("EUR") @db.VarChar(3)
+  updated_at            DateTime @updatedAt
+  allow_registration    Boolean  @default(true)
+  facebook_url          String?  @db.VarChar(255)
+  instagram_url         String?  @db.VarChar(255)
+  maintenance_mode      Boolean  @default(false)
+  platform_slogan       String?  @db.VarChar(255)
+  website_url           String?  @db.VarChar(255)
   enable_bank_transfers Boolean  @default(true)
+  enable_card_payments  Boolean  @default(true)
+  platform_logo         String?  @db.LongText
+  platform_nui          String?  @db.VarChar(50)
 }
 
 model sa_payments {
@@ -368,83 +348,77 @@ model sa_payments {
   amount         Decimal           @db.Decimal(10, 2)
   currency       String            @default("EUR") @db.VarChar(3)
   status         sa_payment_status @default(pending)
-  payment_method String?           @db.VarChar(50) 
+  payment_method String?           @db.VarChar(50)
   invoice_number String            @unique @db.VarChar(50)
   description    String?           @db.Text
   paid_at        DateTime?         @db.Timestamp(0)
   created_at     DateTime          @default(now()) @db.Timestamp(0)
-
   businesses     businesses        @relation(fields: [business_id], references: [id], onDelete: Cascade)
+
+  @@index([business_id], map: "sa_payments_business_id_fkey")
 }
 
 model global_alerts {
   id           String    @id @default(uuid()) @db.VarChar(36)
-  translations Json?     
-  type         String    @default("info") 
+  type         String    @default("info")
   is_active    Boolean   @default(true)
   expires_at   DateTime?
   created_at   DateTime  @default(now())
+  translations String?   @db.LongText
 }
 
 model Package {
   id              String       @id @default(uuid()) @db.VarChar(36)
   name            String       @db.VarChar(100)
-  slug            String       @unique
-  halls_limit     Int          @default(1)
-  menus_limit     Int          @default(5)
-  extras_limit    Int          @default(5)
-  users_limit     Int          @default(2)
-  monthly_price   Decimal      @db.Decimal(10, 2)
-  yearly_price    Decimal      @db.Decimal(10, 2)
   discount_3month Decimal?     @db.Decimal(10, 2)
+  extras_limit    Int          @default(5)
+  halls_limit     Int          @default(1)
   is_active       Boolean      @default(true)
+  menus_limit     Int          @default(5)
+  monthly_price   Decimal      @db.Decimal(10, 2)
+  slug            String       @unique
+  users_limit     Int          @default(2)
+  yearly_price    Decimal      @db.Decimal(10, 2)
   businesses      businesses[]
 }
 
-// ==========================================
-// MODELET PËR SKICAT, TAVOLINAT DHE FTESAT
-// ==========================================
-
 model venue_layouts {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  hall_id     String   @db.VarChar(36)
-  name        String   @db.VarChar(255) // p.sh. "Skema e Dasmës", "Konferencë"
-  canvas_data Json?    // Për ruajtjen e elementeve vizuale shtesë (opsionale)
-  created_at  DateTime @default(now()) @db.Timestamp(0)
-  updated_at  DateTime @updatedAt
-
-  halls    halls      @relation(fields: [hall_id], references: [id], onDelete: Cascade)
-  tables   tables[]   // Tavolinat në këtë skicë
-  bookings bookings[] // Eventet që përdorin këtë skicë
+  id          String     @id @default(uuid()) @db.VarChar(36)
+  hall_id     String     @db.VarChar(36)
+  name        String     @db.VarChar(255)
+  canvas_data String?    @db.LongText
+  created_at  DateTime   @default(now()) @db.Timestamp(0)
+  updated_at  DateTime   @updatedAt
+  bookings    bookings[]
+  tables      tables[]
+  halls       halls      @relation(fields: [hall_id], references: [id], onDelete: Cascade)
 
   @@index([hall_id], map: "idx_layout_hall_id")
 }
 
 model tables {
-  id        String @id @default(uuid()) @db.VarChar(36)
-  layout_id String @db.VarChar(36)
-  name      String @db.VarChar(100)
-  seats     Int
-  type      String @default("circle") @db.VarChar(50)
-  pos_x     Float
-  pos_y     Float
-  rotation  Float  @default(0)
-
+  id            String        @id @default(uuid()) @db.VarChar(36)
+  layout_id     String        @db.VarChar(36)
+  name          String        @db.VarChar(100)
+  seats         Int
+  type          String        @default("circle") @db.VarChar(50)
+  pos_x         Float
+  pos_y         Float
+  rotation      Float         @default(0)
+  guests        guests[]
   venue_layouts venue_layouts @relation(fields: [layout_id], references: [id], onDelete: Cascade)
-  guests        guests[]      
 
   @@index([layout_id], map: "idx_table_layout_id")
 }
 
 model guests {
-  id         String  @id @default(uuid()) @db.VarChar(36)
-  booking_id String  @db.VarChar(36)
-  table_id   String? @db.VarChar(36) // Mund të jetë NULL nëse s'i është caktuar ende tavolina
-  full_name  String  @db.VarChar(255)
-  notes      String? @db.Text
-
-  bookings bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade)
-  tables   tables?  @relation(fields: [table_id], references: [id], onDelete: SetNull)
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  booking_id String   @db.VarChar(36)
+  table_id   String?  @db.VarChar(36)
+  full_name  String   @db.VarChar(255)
+  notes      String?  @db.Text
+  bookings   bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  tables     tables?  @relation(fields: [table_id], references: [id])
 
   @@index([booking_id], map: "idx_guest_booking_id")
   @@index([table_id], map: "idx_guest_table_id")
@@ -452,7 +426,7 @@ model guests {
 
 model invitations {
   id           String   @id @default(uuid()) @db.VarChar(36)
-  email        String?  @db.VarChar(255) // Për lead generation nga përdorues publikë
+  email        String?  @db.VarChar(255)
   couple_names String?  @db.VarChar(255)
   event_date   String?  @db.VarChar(100)
   venue_name   String?  @db.VarChar(255)
@@ -460,9 +434,127 @@ model invitations {
   created_at   DateTime @default(now()) @db.Timestamp(0)
 }
 
-// ==========================================
-// ENUMS (EKZISTUESE)
-// ==========================================
+model superadmin_logs {
+  id         String   @id @default(cuid())
+  user_email String
+  action     String
+  entity     String
+  details    String?  @db.Text
+  created_at DateTime @default(now())
+}
+
+model event_invitation_templates {
+  id          String              @id @default(cuid())
+  name        String
+  event_type  String
+  category    String
+  thumbnail   String?
+  canvas_data String              @db.LongText
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+  invitations event_invitations[]
+}
+
+model event_invitations {
+  id          String                      @id @default(cuid())
+  token       String                      @unique @default(cuid())
+  business_id String?
+  booking_id  String?
+  template_id String?
+  event_type  String
+  event_name  String?
+  host_name   String?
+  venue_name  String?
+  event_date  DateTime?
+  start_time  String?
+  canvas_data String                      @db.LongText
+  status      String                      @default("draft")
+  created_at  DateTime                    @default(now())
+  updated_at  DateTime                    @updatedAt
+  guests      event_invitation_guests[]
+  template    event_invitation_templates? @relation(fields: [template_id], references: [id])
+
+  @@index([template_id], map: "event_invitations_template_id_fkey")
+}
+
+model event_invitation_guests {
+  id            String            @id @default(cuid())
+  invitation_id String
+  name          String
+  phone         String?
+  rsvp_status   String            @default("pending")
+  guest_count   Int               @default(1)
+  created_at    DateTime          @default(now())
+  invitation    event_invitations @relation(fields: [invitation_id], references: [id], onDelete: Cascade)
+
+  @@index([invitation_id], map: "event_invitation_guests_invitation_id_fkey")
+}
+
+model Listing {
+  id                    String        @id @default(uuid()) @db.VarChar(36)
+  hallId                String        @unique @db.VarChar(36)
+  businessId            String        @db.VarChar(36)
+  status                ListingStatus @default(DRAFT)
+  mainImage             String?       @db.LongText
+  createdAt             DateTime      @default(now()) @db.Timestamp(0)
+  updatedAt             DateTime      @updatedAt
+  address               String?       @db.Text
+  gallery               String?       @db.LongText
+  marketing_name        String?       @db.VarChar(255)
+  youtube_url           String?       @db.Text
+  marketing_description String?       @db.Text
+  type                  String?       @default("Dasma")
+  business              businesses    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  hall                  halls         @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([businessId])
+}
+
+model Advertisement {
+  id           String     @id @default(uuid()) @db.VarChar(36)
+  businessId   String     @db.VarChar(36)
+  name         String     @db.VarChar(255)
+  type         AdType
+  status       AdStatus   @default(DRAFT)
+  desktopImage String     @db.LongText
+  mobileImage  String?    @db.LongText
+  targetUrl    String     @db.VarChar(255)
+  targetCities String?    @db.LongText
+  placement    String?    @db.VarChar(100)
+  priority     Int        @default(0)
+  startDate    DateTime?  @db.Timestamp(0)
+  endDate      DateTime?  @db.Timestamp(0)
+  createdAt    DateTime   @default(now()) @db.Timestamp(0)
+  updatedAt    DateTime   @updatedAt
+  business     businesses @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([type])
+  @@index([businessId], map: "Advertisement_businessId_fkey")
+}
+
+model PromoCode {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  discountType  String
+  discountValue Float
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  expiresAt     DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+
+  @@unique([email, token])
+}
 
 enum documents_type {
   agreement
@@ -475,7 +567,7 @@ enum payments_method {
   pos
 }
 
-enum payment_type { 
+enum payment_type {
   payment
   refund
 }
@@ -540,128 +632,10 @@ enum sa_payment_status {
   rejected
 }
 
-model superadmin_logs {
-  id         String   @id @default(cuid())
-  user_email String   
-  action     String   
-  entity     String   
-  details    String?  @db.Text
-  created_at DateTime @default(now())
-}
-
-// ==========================================
-// INVITATION ENGINE MODELS
-// ==========================================
-
-model event_invitation_templates {
-  id          String   @id @default(cuid())
-  name        String
-  event_type  String   // p.sh., "Dasma", "Ditelindje"
-  category    String   // p.sh., "Elegant", "Minimalist"
-  thumbnail   String?  // Linku i imazhit parashikues
-  canvas_data Json     // Struktura e dizajnit (Fabric.js JSON)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  invitations event_invitations[]
-}
-
-model event_invitations {
-  id            String   @id @default(cuid())
-  token         String   @unique @default(cuid()) // URL token per qasje publike
-  business_id   String?  // Lidhja me biznesin nese ftesa krijohet nga paneli
-  booking_id    String?  // Lidhja me nje rezervim ekzistues
-  template_id   String?  // Shablloni baze
-  
-  // Te dhenat e eventit
-  event_type    String
-  event_name    String?
-  host_name     String?
-  venue_name    String?
-  event_date    DateTime?
-  start_time    String?
-  
-  canvas_data   Json     // Dizajni i personalizuar
-  status        String   @default("draft") // "draft" ose "published"
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-
-  template      event_invitation_templates? @relation(fields: [template_id], references: [id])
-  guests        event_invitation_guests[]
-}
-
-model event_invitation_guests {
-  id            String   @id @default(cuid())
-  invitation_id String
-  name          String
-  phone         String?
-  rsvp_status   String   @default("pending") // "attending", "not_attending", "pending"
-  guest_count   Int      @default(1)
-  created_at    DateTime @default(now())
-
-  invitation    event_invitations @relation(fields: [invitation_id], references: [id], onDelete: Cascade)
-}
-
-// ==========================================
-// V3 PUBLIC MARKETPLACE & ADVERTISING (MODELET E REJA)
-// ==========================================
-
-model Listing {
-  id                    String        @id @default(uuid()) @db.VarChar(36)
-  hallId                String        @unique @db.VarChar(36)
-  hall                  halls         @relation(fields: [hallId], references: [id], onDelete: Cascade)
-  businessId            String        @db.VarChar(36)
-  business              businesses    @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  status                ListingStatus @default(DRAFT)
-  
-  marketing_name        String?       @db.VarChar(255)
-  marketing_description String?       @db.Text // FUSHA E RE PËR PËRSHKRIMIN
-  address               String?       @db.Text
-  youtube_url           String?       @db.Text
-  mainImage             String?       @db.LongText 
-  gallery               Json?     
-  type                  String?  @default("Dasma")    
-
-  createdAt             DateTime      @default(now()) @db.Timestamp(0)
-  updatedAt             DateTime      @updatedAt
-
-  @@index([status])
-  @@index([businessId])
-}
-
 enum ListingStatus {
   DRAFT
   PUBLISHED
   INACTIVE
-}
-
-model Advertisement {
-  id            String   @id @default(uuid()) @db.VarChar(36)
-  
-  businessId    String   @db.VarChar(36)
-  business      businesses @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  name          String   @db.VarChar(255)
-  type          AdType
-  status        AdStatus @default(DRAFT)
-
-  desktopImage  String   @db.LongText
-  mobileImage   String?  @db.LongText
-  targetUrl     String   @db.VarChar(255)
-
-  // Ruhet në format JSON (p.sh. ["Prishtine", "Tirane"]) sepse MySQL nuk suporton arrays native (String[])
-  targetCities  Json?    
-  placement     String?  @db.VarChar(100)
-  priority      Int      @default(0)
-
-  startDate     DateTime? @db.Timestamp(0)
-  endDate       DateTime? @db.Timestamp(0)
-
-  createdAt     DateTime @default(now()) @db.Timestamp(0)
-  updatedAt     DateTime @updatedAt
-
-  @@index([status])
-  @@index([type])
 }
 
 enum AdType {
@@ -674,27 +648,4 @@ enum AdStatus {
   ACTIVE
   PAUSED
   EXPIRED
-}
-
-model PromoCode {
-  id            String    @id @default(cuid())
-  code          String    @unique // P.sh., "HALLEVO2026"
-  discountType  String    // 'PERCENTAGE' ose 'FIXED'
-  discountValue Float     // P.sh., 20 (për 20%) ose 50 (për 50€)
-  maxUses       Int?      // Limiti i përdorimeve (null = pa limit)
-  usedCount     Int       @default(0) // Sa herë është përdorur deri tani
-  expiresAt     DateTime? // Data e skadencës
-  isActive      Boolean   @default(true) // Për ta ndalur manualisht
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  email     String
-  token     String   @unique
-  expiresAt DateTime
-
-  @@unique([email, token])
 }

@@ -37,16 +37,28 @@ export default function LoginPage() {
       setError(t("errorInvalid")); 
       setLoading(false);
     } else {
-      const session = await getSession();
-      
-      // KËTU ËSHTË ZGJIDHJA: U shtua dhe 'support' për ta dërguar te paneli qendror
-      if (session?.user?.role === "superadmin" || session?.user?.role === "support") {
-        router.push(`/${locale}/superadmin/bizneset`);
-      } else {
-        router.push(`/${locale}/biznes`);
-      }
-      
+      // 1. Përditësojmë gjendjen e rrugëve për Next.js
       router.refresh();
+
+      // 2. Vendosim vonesën 300ms që cookie të shkruhet plotësisht
+      setTimeout(async () => {
+        try {
+          const sessionRes = await fetch('/api/auth/session');
+          const sessionData = await sessionRes.json();
+          
+          console.log("🔍 SESIONI I LEXUAR NË FRONTEND:", sessionData);
+
+          if (sessionData?.user?.role === "superadmin" || sessionData?.user?.role === "support") {
+            window.location.href = `/${locale}/superadmin/bizneset`;
+          } else if (sessionData?.user?.role) {
+            window.location.href = `/${locale}/biznes`;
+          } else {
+            console.error("🚨 GABIM: Roli mungon plotësisht në sesionin e frontend-it!", sessionData);
+          }
+        } catch (err) {
+          console.error("🚨 GABIM FETCH:", err);
+        }
+      }, 300);
     }
   };
 
