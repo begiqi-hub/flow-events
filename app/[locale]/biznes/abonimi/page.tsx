@@ -54,7 +54,7 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
   // ==========================================
   // KODI I RI: Kontrolli nëse është abonimi i parë
   // ==========================================
-  const isFirstSubscription = business.sa_payments.length === 0;
+  const isFirstSubscription = business.sa_payments.filter((p: any) => p.status === 'completed').length === 0;
 
   const allPackages = await prisma.package.findMany({
     orderBy: { monthly_price: 'asc' }
