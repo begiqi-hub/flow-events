@@ -8,7 +8,8 @@ export async function createPaymentIntent(data: {
   amount: number;
   locale: string;
   packageId?: string; 
-  promoCodeId?: string; // <--- SHTUAR: Pranojmë ID-në e kodit promocional
+  promoCodeId?: string; 
+  billingCycle?: string; // <--- SHTUAR: Pranojmë llojin e abonimit (monthly/yearly) nga frontend
 }) {
   try {
     const prefixes: Record<string, string> = {
@@ -20,29 +21,29 @@ export async function createPaymentIntent(data: {
     };
 
     const prefix = prefixes[data.locale] || "INV";
-    
     const invoiceNum = `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
-    // 1. Krijimi i faturës siç e kishit
+    // Formatimi inteligjent: Nëse është vjetore, e ruajmë si "bank_yearly", përndryshe "bank_monthly"
+    const methodWithCycle = data.billingCycle ? `bank_${data.billingCycle}` : "bank";
+
+    // 1. Krijimi i faturës me ciklin e faturimit të inkorporuar
     const newPayment = await prisma.sa_payments.create({
       data: {
         business_id: data.businessId,
         amount: data.amount,
         status: "pending", 
         invoice_number: invoiceNum, 
-        payment_method: "bank",
-        description: data.packageId || "Abonim i thjeshtë", 
+        payment_method: methodWithCycle, // <--- RUAJMË CIKLIN KËTU
+        description: data.packageId || "Abonim i thjeshtë", // E lëmë të pastër që mos të prishet frontend-i
       }
     });
 
-    // ==========================================
-    // KODI I RI: Rrit numëruesin e Promo Kodit
-    // ==========================================
+    // 2. Rrit numëruesin e Promo Kodit (nëse ka)
     if (data.promoCodeId) {
       await prisma.promoCode.update({
         where: { id: data.promoCodeId },
         data: {
-          usedCount: { increment: 1 } // Rrit automatikisht numrin e përdorimeve në databazë
+          usedCount: { increment: 1 } 
         }
       });
       console.log(`🎁 Promo kodi u regjistrua me sukses për faturën ${invoiceNum}`);
@@ -57,12 +58,10 @@ export async function createPaymentIntent(data: {
 }
 
 // ==========================================
-// FUNKSIONI I RI PËR ANULIMIN E ABONIMIT
+// FUNKSIONI PËR ANULIMIN E ABONIMIT
 // ==========================================
 export async function cancelSubscriptionAction(data: { businessId: string; locale: string }) {
   try {
-    // Ruajmë statusin si 'cancelled_subscription'. Përdoruesi ende mund ta përdorë deri
-    // në 'trialEndsAt', por platforma di që ky nuk do të rinovojë më.
     await prisma.businesses.update({
       where: { id: data.businessId },
       data: {
@@ -71,7 +70,7 @@ export async function cancelSubscriptionAction(data: { businessId: string; local
     });
 
     revalidatePath(`/${data.locale}/biznes/abonimi`);
-    revalidatePath(`/${data.locale}/biznes`); // Rifresko edhe dashboardin
+    revalidatePath(`/${data.locale}/biznes`); 
     return { success: true };
   } catch (error) {
     console.error(error);

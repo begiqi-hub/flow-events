@@ -17,8 +17,8 @@ export default function SuperadminDashboardClient({ locale, stats, recentBusines
       {/* HEADER I SUPERADMINIT */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 animate-in fade-in">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mission Control</h1>
-          <p className="text-gray-500 font-medium mt-1">Mirësevjen Superadmin! Ja si po performon platforma sot.</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Pulti</h1>
+          <p className="text-gray-500 font-medium mt-1">Mirësevjen Begiqi! Ja si po performon platforma sot.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href={`/${locale}/superadmin/bizneset/shto`} className="bg-gray-900 hover:bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md flex items-center gap-2">

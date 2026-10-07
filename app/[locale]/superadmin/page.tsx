@@ -1,5 +1,3 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import SuperadminDashboardClient from "./SuperadminDashboardClient";
 
@@ -7,17 +5,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SuperadminPage(props: { params: Promise<{ locale: string }> }) {
   const { locale } = await props.params;
-  const session = await getServerSession();
   
-  if (!session?.user?.email) redirect(`/${locale}/login`);
-
-  // Përdorim findFirst për siguri dhe shtojmë supportin te kushti
-  const user = await prisma.users.findFirst({ where: { email: session.user.email } });
-  
-  // ZGJIDHJA: Lejojmë superadmin dhe support. Të tjerët i kthejmë te biznesi.
-  if (user?.role !== "superadmin" && user?.role !== "support") {
-    redirect(`/${locale}/biznes`);
-  }
+  // Verifikimi i sesionit dhe logjika e ridrejtimit (redirect) janë hequr.
+  // Mbrojtja e kësaj faqeje menaxhohet tërësisht nga layout.tsx i superadminit.
 
   // 1. STATISTIKAT KRYESORE
   const totalBusinesses = await prisma.businesses.count();

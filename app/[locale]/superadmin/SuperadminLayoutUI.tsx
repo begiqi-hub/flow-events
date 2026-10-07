@@ -6,11 +6,20 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, Building2, LifeBuoy, Users, CreditCard, 
-  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, Banknote, FileText, Ticket, ShieldCheck
+  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, Banknote, FileText, Ticket
 } from "lucide-react";
 
-
-export default function SuperadminLayoutUI({ user, locale, notifications, children }: any) {
+export default function SuperadminLayoutUI({ 
+  user, 
+  locale, 
+  notifications = [], // ZGJIDHJA: Paracaktojmë një array të zbrazët për të shmangur error-in
+  children 
+}: { 
+  user: any; 
+  locale: string; 
+  notifications: any[]; 
+  children: React.ReactNode 
+}) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -37,12 +46,12 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // ZGJIDHJA BULLETPROOF: Konvertojmë ID-në në String gjithmonë para se të përdorim startsWith
-  const ticketBadgeCount = notifications?.filter((n: any) => String(n.id).startsWith('ticket_')).length || 0;
-  const paymentBadgeCount = notifications?.filter((n: any) => String(n.id).startsWith('pay_')).length || 0;
+  // Numërimi i njoftimeve i sigurt duke u bazuar te parametri 'notifications'
+  const ticketBadgeCount = notifications.filter((n: any) => String(n.id).startsWith('ticket_')).length;
+  const paymentBadgeCount = notifications.filter((n: any) => String(n.id).startsWith('pay_')).length;
 
   const navItems = [
-    { name: "Mission Control", href: `/${locale}/superadmin`, icon: LayoutDashboard },
+    { name: "Pulti", href: `/${locale}/superadmin`, icon: LayoutDashboard },
     { name: "Bizneset", href: `/${locale}/superadmin/bizneset`, icon: Building2 },
     { name: "Raportet Financiare", href: `/${locale}/superadmin/raportet`, icon: BarChart3 },
     { name: "Kërkesat (Tickets)", href: `/${locale}/superadmin/ndihma`, icon: LifeBuoy, badge: ticketBadgeCount },
@@ -106,9 +115,9 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
                   <item.icon size={20} className={isActive ? "text-indigo-500 shrink-0" : "text-slate-500 group-hover:text-slate-300 shrink-0"} />
                   <span className="truncate">{item.name}</span>
                 </div>
-                {item.badge > 0 && (
+                {item.badge && item.badge > 0 ? (
                   <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ml-2">{item.badge}</span>
-                )}
+                ) : null}
               </Link>
             )
           })}
@@ -159,19 +168,19 @@ export default function SuperadminLayoutUI({ user, locale, notifications, childr
                 className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-50 border border-gray-100 hover:border-indigo-200 text-gray-600 transition-all"
               >
                 <Bell size={18} className="sm:w-5 sm:h-5" />
-                {notifications?.length > 0 && <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm animate-pulse"></span>}
+                {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm animate-pulse"></span>}
               </button>
               {isNotifOpen && (
                 <div className="absolute right-0 mt-3 w-[300px] max-w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 animate-in slide-in-from-top-2 z-[99] origin-top-right">
                   <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Kërkesa në pritje</h3>
                   <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
-                    {notifications?.map((n: any) => (
+                    {notifications.map((n: any) => (
                       <Link key={n.id} href={n.link} onClick={() => setIsNotifOpen(false)} className="block p-3 hover:bg-amber-50 rounded-xl border border-transparent hover:border-amber-100 mb-1 transition-all">
                         <p className="font-bold text-amber-700 text-xs sm:text-sm truncate">{n.title}</p>
                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 line-clamp-1">{n.message}</p>
                       </Link>
                     ))}
-                    {(!notifications || notifications.length === 0) && <p className="text-xs sm:text-sm text-gray-400 text-center py-4">Nuk ka asnjë kërkesë të re.</p>}
+                    {notifications.length === 0 && <p className="text-xs sm:text-sm text-gray-400 text-center py-4">Nuk ka asnjë kërkesë të re.</p>}
                   </div>
                 </div>
               )}

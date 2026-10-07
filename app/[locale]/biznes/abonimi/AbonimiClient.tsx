@@ -199,7 +199,8 @@ export default function AbonimiClient({
       amount: finalToPay, 
       locale: locale, 
       packageId: selectedPkg.id,
-      promoCodeId: appliedPromo?.promoId // SHTUAR PROMO ID
+      promoCodeId: appliedPromo?.promoId, 
+      billingCycle: billingCycle // <--- KJO MUNGONTE! Tani backend e di nëse është Vjetore
     });
 
     if (res.success && res.referenceCode) setGeneratedRef(res.referenceCode); 

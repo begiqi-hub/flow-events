@@ -93,11 +93,9 @@ export default async function BiznesLayout({
   // Nëse pas gjithë kërkimeve përdoruesi nuk lidhet me asnjë biznes, kthehet te login
   if (!business) redirect(`/${locale}/login`);
 
-  // =======================================================================
-  // KONTROLLI I PROVËS DHE ABONIMIT PËR LAYOUT
-  // =======================================================================
-  const isSubscribed = Boolean(business.package_id && business.status === 'active');
-  const trialEndsAt = business.trialEndsAt ? new Date(business.trialEndsAt) : null;
+  //const isSubscribed = Boolean(business.packageId && business.status === 'active');
+  const isSubscribed = Boolean(business?.packageId && business?.status === 'active');
+  const trialEndsAt = business?.trialEndsAt ? new Date(business.trialEndsAt) : null;
   const isTrialExpired = Boolean(trialEndsAt && new Date() > trialEndsAt && !isSubscribed);
 
   const activeAlert = await prisma.global_alerts.findFirst({
@@ -110,6 +108,13 @@ export default async function BiznesLayout({
     },
     orderBy: { created_at: 'desc' }
   });
+
+  const safeBusinessParams = {
+    ...business,
+    current_staff_name: staffName,
+    isSubscribed,     // Tani nuk do të japë më undefined
+    isTrialExpired
+  };
 
   const symbol = { "EUR": "€", "USD": "$", "GBP": "£", "CHF": "CHF", "ALL": "L" }[business.currency] || "€";
   const notifications: any[] = [];

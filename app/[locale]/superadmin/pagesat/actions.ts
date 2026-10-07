@@ -2,8 +2,6 @@
 
 import { prisma } from "../../../../lib/prisma";
 import { revalidatePath } from "next/cache";
-import { createAuditLog } from "../logs/actions";
-
 
 export async function approvePayment(paymentId: string, locale: string) {
   try {
@@ -18,10 +16,17 @@ export async function approvePayment(paymentId: string, locale: string) {
       where: { id: payment.description || "" }
     });
 
-    // Logjika inteligjente e Skadencës (Mujore vs Vjetore)
-    let monthsToAdd = 1;
-    if (pkg && Number(payment.amount) > (Number(pkg.monthly_price) * 6)) {
-       // Nëse ka paguar më shumë se 6 muaj, llogaritet si abonim Vjetor
+    // ==========================================
+    // LOGJIKA E SAKTË E SKADENCËS PËR ABONIMET
+    // ==========================================
+    let monthsToAdd = 1; // Default është 1 muaj
+
+    // Kontrolli 1: Lexojmë vlerën që lamë si "gjurmë" te payment_method (bank_yearly)
+    if (payment.payment_method === "bank_yearly") {
+       monthsToAdd = 12;
+    } 
+    // Kontrolli 2 (Backup): Kontrollojmë shumën matematikisht nëse nuk ka gjurmë
+    else if (pkg && Number(payment.amount) > (Number(pkg.monthly_price) * 6)) {
        monthsToAdd = 12;
     }
 
@@ -44,9 +49,8 @@ export async function approvePayment(paymentId: string, locale: string) {
       }
     });
 
-    // 3. Dërgojmë Njoftim te Biznesi (Nëse ke tabelë njoftimesh)
+    // 3. Dërgojmë Njoftim te Biznesi (Nëse moduli ekziston)
     try {
-      // Ky është bllok standard. Përshtate nëse emri i tabelës sate është ndryshe.
       await prisma.notifications.create({
          data: {
            business_id: payment.business_id,
@@ -56,7 +60,7 @@ export async function approvePayment(paymentId: string, locale: string) {
            is_read: false
          }
       });
-    } catch (e) { console.log("Moduli i njoftimeve mungon ose ka emër tjetër."); }
+    } catch (e) { /* Ignored */ }
 
     revalidatePath(`/${locale}/superadmin/pagesat`);
     return { success: true };
@@ -87,7 +91,7 @@ export async function rejectPayment(paymentId: string, locale: string) {
            is_read: false
          }
       });
-    } catch (e) {}
+    } catch (e) { /* Ignored */ }
 
     revalidatePath(`/${locale}/superadmin/pagesat`);
     return { success: true };

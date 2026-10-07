@@ -1,5 +1,4 @@
 import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import { prisma } from "../../../../lib/prisma";
 import StaffClient from "./StaffClient";
 
@@ -7,12 +6,12 @@ export const dynamic = "force-dynamic";
 
 export default async function SuperadminUsersPage(props: { params: Promise<{ locale: string }> }) {
   const { locale } = await props.params;
-  const session = await getServerSession();
   
-  if (!session?.user?.email) redirect(`/${locale}/login`);
-
-  const currentUser = await prisma.users.findUnique({ where: { email: session.user.email } });
-  if (currentUser?.role !== "superadmin") redirect(`/${locale}/biznes`); 
+  // Sasia minimale e sigurisë: Sesioni merret vetëm për të ushqyer prop-in 'currentUserEmail'.
+  // Çdo logjikë ridrejtimi (redirect) dhe thirrje në databazë për verifikim roli është hequr, 
+  // pasi superadmin/layout.tsx tashmë e garanton që përdoruesi ka akses.
+  const session = await getServerSession();
+  const currentUserEmail = session?.user?.email || "";
 
   // Marrim VETËM stafin e platformës (Superadminët)
   const users = await prisma.users.findMany({
@@ -26,5 +25,5 @@ export default async function SuperadminUsersPage(props: { params: Promise<{ loc
 
   const safeUsers = JSON.parse(JSON.stringify(users));
 
-  return <StaffClient locale={locale} users={safeUsers} currentUserEmail={session.user.email} />;
+  return <StaffClient locale={locale} users={safeUsers} currentUserEmail={currentUserEmail} />;
 }

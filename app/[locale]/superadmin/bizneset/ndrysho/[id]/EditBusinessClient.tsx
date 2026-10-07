@@ -71,9 +71,9 @@ export default function EditBusinessClient({ locale, business, packages }: { loc
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-gray-900">Menaxho: {business.name}</h1>
-            <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5 mt-0.5">
-              ID: <span className="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{business.id}</span>
+            <h1 className="text-2xl font-black text-gray-900">Biznesi: {business.name}</h1>
+            <p className="text-sm text-gray-500 mt-1 font-medium">
+              NUI: {business.nui || business.nipt || 'Nuk është specifikuar'}
             </p>
           </div>
         </div>
