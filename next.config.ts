@@ -1,10 +1,12 @@
 import createNextIntlPlugin from 'next-intl/plugin';
-import withPWAInit from '@ducanh2912/next-pwa';
+// 1. ÇAKTIVIZUAR: Importi i PWA është komentuar
+// import withPWAInit from '@ducanh2912/next-pwa';
 import type { NextConfig } from 'next';
 
 // ==========================================
-// 1. Konfigurimi i PWA
+// 1. Konfigurimi i PWA (I KOMENTUAR PËR TESTIM)
 // ==========================================
+/*
 const withPWA = withPWAInit({
   dest: "public",
   cacheOnFrontEndNav: true,
@@ -13,6 +15,7 @@ const withPWA = withPWAInit({
   swcMinify: true,
   disable: process.env.NODE_ENV === "development",
 });
+*/
 
 // ==========================================
 // 2. Konfigurimi i i18n
@@ -30,10 +33,10 @@ const nextConfig: NextConfig = {
     Krijon një version të pavarur të serverit që nuk varet nga Vercel 
   */
   output: 'standalone', 
-
 };
 
 // ==========================================
-// 3. Bashkimi (PWA mbështjell i18n mbështjell Config)
+// 3. Bashkimi (Eksportojmë VETËM i18n + Config)
 // ==========================================
-export default withPWA(withNextIntl(nextConfig));
+// 2. ÇAKTIVIZUAR: Kemi hequr withPWA() nga mbështjellësi
+export default withNextIntl(nextConfig);
