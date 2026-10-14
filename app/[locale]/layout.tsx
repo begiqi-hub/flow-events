@@ -66,15 +66,15 @@ export default async function RootLayout({
   const messages = await getMessages({ locale });
 
   return (
-    <html lang={locale}>
-      <body 
-        suppressHydrationWarning 
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}
-      >
-        <NextIntlClientProvider messages={messages}>
-          {children}
-        </NextIntlClientProvider>
-      </body>
-    </html>
-  );
+  <html lang={locale}>
+    <body
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
+    >
+      <NextIntlClientProvider messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    </body>
+  </html>
+);
 }

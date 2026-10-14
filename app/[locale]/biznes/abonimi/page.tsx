@@ -41,7 +41,7 @@ export default async function AbonimiPage({ params }: { params: Promise<{ locale
   // ==========================================
   // NUMËROJMË ASETET AKTIVE (PËR KONTROLLIN E DOWNGRADE)
   // ==========================================
-  const activeHalls = await prisma.halls.count({ where: { business_id: business.id, status: 'active' } });
+  const activeHalls = await prisma.halls.count({ where: { business_id: business.id, status: 'active', is_managed: true } });
   const activeUsers = await prisma.users.count({ where: { business_id: business.id, status: 'active' } });
   const activeMenus = await prisma.menus.count({ where: { business_id: business.id, is_active: true } });
 

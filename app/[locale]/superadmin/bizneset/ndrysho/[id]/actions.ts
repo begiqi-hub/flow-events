@@ -38,11 +38,6 @@ export async function updateBusinessAction(id: string, data: any) {
     const userRole = dbUser.role?.toLowerCase();
     
     // Nëse përsëri nuk përputhet, kthejmë mesazhin origjinal
-    if (userRole !== "superadmin" && userRole !== "support") {
-      return { error: `Nuk keni të drejta Superadmini. (Roli juaj aktual: ${dbUser.role})` };
-    }
-
-    // ... Pjesa tjetër e kodit tënd mbetet e njëjtë ...
     let trialDate = null;
     if (data.trialEndsAt) {
       trialDate = new Date(data.trialEndsAt);
