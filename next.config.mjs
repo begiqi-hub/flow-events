@@ -12,12 +12,13 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 const withSerwist = withSerwistInit({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
-  // Çaktivizon PWA-në gjatë zhvillimit për të evituar bllokimin e portit 3000
   disable: process.env.NODE_ENV === 'development',
-  // Shton mbështetje më të mirë për rifreskimin e aplikacionit kur rikthehet interneti
   reloadOnOnline: true, 
 });
 
+// ==========================================
+// 3. Konfigurimi Kryesor i Next.js
+// ==========================================
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* Formati i pavarur i optimizuar për serverat VPS si Hostinger */
@@ -28,13 +29,15 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  /* Shtohet për të parandaluar bllokimet nga paralajmërimet e ESLint gjatë Build-it */
-  eslint: {
-    ignoreDuringBuilds: true,
-  }
+  /* Lejimi i imazheve të jashtme për komponentin <Image /> */
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+    ],
+  },
 };
 
 // ==========================================
-// 3. Eksportimi përfundimtar
+// 4. Eksportimi përfundimtar
 // ==========================================
 export default withSerwist(withNextIntl(nextConfig));
