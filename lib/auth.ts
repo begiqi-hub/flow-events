@@ -123,8 +123,40 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    async signIn({ user }: any) {
+      if (!user?.email) return false;
+
+      try {
+        const dbUser = await prisma.users.findUnique({
+          where: { email: user.email }
+        });
+
+        if (dbUser) {
+          // Zgjidhja e vijës së kuqe: Përdorim (dbUser as any) për të shmangur gabimet e TypeScript
+          const userStatus = (dbUser as any).status;
+          if (userStatus === "BLOCKED" || userStatus === "suspended") {
+            return "/sq/bllokuar";
+          }
+
+          // Kontrolli kryesor: Statusi i biznesit
+          if (dbUser.business_id) {
+            const dbBusiness = await prisma.businesses.findUnique({
+              where: { id: dbUser.business_id }
+            });
+
+            if (dbBusiness?.status === "suspended") {
+              return "/sq/bllokuar"; 
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Gabim gjatë kontrollit të statusit të bllokimit:", error);
+      }
+
+      return true; 
+    },
+
     async jwt({ token, user }: any) {
-      // Kur përdoruesi logohet, kalojmë të dhënat nga objekti 'user' te 'token'
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -132,9 +164,8 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
+
     async session({ session, token }: any) {
-      // Krijojmë një objekt të ri për 'session.user' duke ruajtur të dhënat bazë 
-      // dhe duke u shtuar rolin e marrë nga tokeni
       if (token && session.user) {
         session.user = {
           ...session.user,

@@ -13,18 +13,19 @@ export async function updateListing(
     mainImage: string;
     gallery: string[];
     status: "DRAFT" | "PUBLISHED" | "INACTIVE";
-    type: string; // SHTUAR: Fusha për llojin e eventit
+    type: string; 
   }
 ) {
   try {
-    let cleanYoutube = data.youtube_url;
-    if (cleanYoutube.includes("watch?v=")) {
+    // Shtojmë mbrojtje nëse youtube_url vjen e zbrazët (null/undefined)
+    let cleanYoutube = data.youtube_url || ""; 
+    
+    if (cleanYoutube && cleanYoutube.includes("watch?v=")) {
       cleanYoutube = cleanYoutube.replace("watch?v=", "embed/");
-    } else if (cleanYoutube.includes("youtu.be/")) {
+    } else if (cleanYoutube && cleanYoutube.includes("youtu.be/")) {
       cleanYoutube = cleanYoutube.replace("youtu.be/", "www.youtube.com/embed/");
     }
 
-    // 1. Gjejmë listimin për të marrë ID-në e sallës (hallId)
     const existingListing = await prisma.listing.findUnique({
       where: { id: listingId },
       select: { hallId: true }
@@ -34,7 +35,6 @@ export async function updateListing(
       return { success: false, error: "Listimi nuk u gjet." };
     }
 
-    // 2. Përditësojmë të dhënat e listimit
     await prisma.listing.update({
       where: { id: listingId },
       data: {
@@ -43,26 +43,30 @@ export async function updateListing(
         address: data.address,
         youtube_url: cleanYoutube,
         mainImage: data.mainImage,
-        gallery: data.gallery,
+        gallery: data.gallery ? JSON.stringify(data.gallery) : "[]", // Konverton listën në tekst
         status: data.status,
-        type: data.type, // SHTUAR: Ruajtja e llojit të eventit në databazë
+        type: data.type, 
       }
     });
 
-    // 3. Sinkronizojmë çelësin e publikimit te salla përkatëse
     await prisma.halls.update({
       where: { id: existingListing.hallId },
       data: {
         is_published: data.status === "PUBLISHED"
       }
     });
-  revalidatePath("/(public)/salla/[hallId]", "page");
 
-  revalidatePath("/[locale]/biznes/listing", "page"); 
+    revalidatePath("/(public)/salla/[hallId]", "page");
+    revalidatePath("/[locale]/biznes/listing", "page"); 
     
     return { success: true };
-  } catch (error) {
-    console.error("Gabim gjatë përditësimit të listimit:", error);
-    return { success: false, error: "Nuk u arrit ruajtja e të dhënave." };
+  } catch (error: any) {
+    console.error("Gabim i detajuar nga Prisma:", error);
+    
+    // KËTU ËSHTË NDRYSHIMI: Tani po kthejmë gabimin e vërtetë teknik në Frontend
+    return { 
+      success: false, 
+      error: `Gabim Database: ${error.message || "Gabim i panjohur teknik."}` 
+    };
   }
 }

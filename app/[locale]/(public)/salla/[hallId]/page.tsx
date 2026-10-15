@@ -130,7 +130,17 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
 
   const displayTitle = listing.marketing_name || listing.hall.name;
   const displayAddress = listing.address ? listing.address : getCityName(listing.business.city);
-  const galleryImages = (listing.gallery as string[]) || [];
+  let galleryImages: string[] = [];
+  if (typeof listing.gallery === "string") {
+    try {
+      galleryImages = JSON.parse(listing.gallery);
+    } catch (error) {
+      console.error("Gabim në leximin e galerisë:", error);
+      galleryImages = [];
+    }
+  } else if (Array.isArray(listing.gallery)) {
+    galleryImages = listing.gallery;
+  }
 
   return (
     <main className="min-h-screen bg-[#0A0D14] text-slate-200 selection:bg-[#8B5CF6] selection:text-white relative font-sans overflow-x-hidden">
