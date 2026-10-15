@@ -512,22 +512,29 @@ model Listing {
 }
 
 model Advertisement {
-  id           String     @id @default(uuid()) @db.VarChar(36)
-  businessId   String     @db.VarChar(36)
-  name         String     @db.VarChar(255)
+  id           String      @id @default(uuid()) @db.VarChar(36)
+  businessId   String?     @db.VarChar(36)
+  name         String      @db.VarChar(255) // Emri i brendshëm për admin
+  title        String?     @db.VarChar(255) // Titulli që shfaqet (psh. ROYAL PALACE)
+  description  String?     @db.Text         // Përshkrimi poshtë titullit
   type         AdType
-  status       AdStatus   @default(DRAFT)
-  desktopImage String     @db.LongText
-  mobileImage  String?    @db.LongText
-  targetUrl    String     @db.VarChar(255)
-  targetCities String?    @db.LongText
-  placement    String?    @db.VarChar(100)
-  priority     Int        @default(0)
-  startDate    DateTime?  @db.Timestamp(0)
-  endDate      DateTime?  @db.Timestamp(0)
-  createdAt    DateTime   @default(now()) @db.Timestamp(0)
-  updatedAt    DateTime   @updatedAt
-  business     businesses @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  status       AdStatus    @default(DRAFT)
+  desktopImage String      @db.LongText     // URL e imazhit të ngarkuar
+  mobileImage  String?     @db.LongText
+  targetUrl    String?     @db.VarChar(255) // Linku i destinacionit (Sponsorit)
+  targetCities String?     @db.LongText     // Psh: "ALL" ose "Prishtinë, Prizren"
+  placement    String?     @db.VarChar(100)
+  priority     Int         @default(0)
+  views        Int         @default(0)      // Numërimi i shikimeve
+  clicks       Int         @default(0)      // Numërimi i klikimeve
+  
+  // Datat u bashkuan në një definim të vetëm
+  startDate    DateTime?   @default(now()) @db.Timestamp(0)
+  endDate      DateTime?   @db.Timestamp(0)
+  
+  createdAt    DateTime    @default(now()) @db.Timestamp(0)
+  updatedAt    DateTime    @updatedAt
+  business     businesses? @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([type])

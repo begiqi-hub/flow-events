@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, Building2, LifeBuoy, Users, CreditCard, 
-  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, Banknote, FileText, Ticket
+  Settings, LogOut, Menu, X, Bell, Activity, BarChart3, Landmark, Megaphone, MonitorPlay, Banknote, FileText, Ticket
 } from "lucide-react";
 
 export default function SuperadminLayoutUI({ 
@@ -66,6 +66,8 @@ export default function SuperadminLayoutUI({
     { name: "Konfigurimet", href: `/${locale}/superadmin/konfigurimet`, icon: Settings },
     { name: "Promo Kodet", href: `/${locale}/superadmin/promocodes`, icon: Ticket },
     { name: "Njoftimet Globale", href: `/${locale}/superadmin/njoftimet`, icon: Megaphone },
+    { name: "Reklamat (Megabanner)", href: `/${locale}/superadmin/advertisements`, icon: MonitorPlay },
+    
   ];
 
   return (
@@ -73,15 +75,16 @@ export default function SuperadminLayoutUI({
       
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] md:hidden transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] md:hidden transition-opacity print:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
+      {/* SHTOVA print:hidden në klasën e aside për ta fshehur sidebar-in gjatë printimit */}
       <aside className={`
         fixed inset-y-0 left-0 z-[110] flex flex-col bg-[#0F172A] border-r border-slate-800 shadow-2xl transition-all duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:relative md:translate-x-0 w-64 shrink-0
+        md:relative md:translate-x-0 w-64 shrink-0 print:hidden
       `}>
         <button 
           onClick={() => setIsMobileMenuOpen(false)}
@@ -145,7 +148,8 @@ export default function SuperadminLayoutUI({
 
       <div className="flex-1 flex flex-col h-full relative min-w-0">
         
-        <header className="h-16 md:h-20 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 sm:px-6 z-[60] sticky top-0 w-full shadow-sm shrink-0">
+        {/* SHTOVA print:hidden në klasën e header për ta fshehur shiritin e lartë gjatë printimit */}
+        <header className="h-16 md:h-20 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 sm:px-6 z-[60] sticky top-0 w-full shadow-sm shrink-0 print:hidden">
           
           <div className="flex items-center gap-3">
             <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-gray-600 p-2 bg-gray-100 rounded-xl shrink-0">
@@ -212,7 +216,8 @@ export default function SuperadminLayoutUI({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto relative p-4 md:p-8">
+        {/* SHTOVA print:p-0 print:overflow-visible për ta lënë raportin të printohet saktë */}
+        <main className="flex-1 overflow-y-auto relative p-4 md:p-8 print:p-0 print:overflow-visible">
           {children}
         </main>
         

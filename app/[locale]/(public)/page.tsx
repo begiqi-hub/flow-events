@@ -8,6 +8,7 @@ import PublicHeader from "@/components/public/PublicHeader";
 import PublicFooter from "@/components/public/PublicFooter";
 import HeroSearch from "@/components/public/HeroSearch";
 import { getCityName } from "@/lib/constants/cities";
+import Image from 'next/image';
 
 // MAGJIA E PERFORMANCËS: Cache faqen për 1 orë. 
 export const revalidate = 3600; 
@@ -38,6 +39,22 @@ const DEMO_LISTINGS = [
 
 export default async function PublicMarketplaceHome({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const today = new Date();
+
+  // 1. Thërrasim Reklamat Aktive nga Databaza
+  const activeAds = await prisma.advertisement.findMany({
+    where: {
+      status: "ACTIVE",
+      type: "MEGABANNER",
+      startDate: { lte: today },
+      OR: [
+        { endDate: null },
+        { endDate: { gte: today } }
+      ]
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 2
+  });
 
   // Lexojmë sallat nga databaza
   const publishedListings = await prisma.listing.findMany({
@@ -98,11 +115,14 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
           </div>
 
           <div className="hidden lg:block absolute right-6 lg:right-8 top-[-80px] w-[52%] max-w-[700px] h-[520px] z-0 overflow-visible">
-            <div className="w-full h-full overflow-hidden rounded-bl-[160px]">
-              <img 
+            <div className="w-full h-full overflow-hidden rounded-bl-[160px] relative">
+              <Image 
                 src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=2000&auto=format&fit=crop" 
                 alt="Venue background" 
-                className="w-full h-full object-cover"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-[#3B1D5C]/30 mix-blend-multiply" />
               <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-[#070d19]/95" />
@@ -127,9 +147,11 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
       </div>
           
       {/* MEGABANNER 1 */}
-      <section className="w-full mb-20 z-10 relative">
-        <Megabanner />
-      </section>
+      {activeAds[0] && (
+        <section className="w-full mb-20 z-10 relative">
+          <Megabanner ad={activeAds[0]} />
+        </section>
+      )}
 
       {/* LISTA E SALLAVE PREMIUM DHE MEGABANNER 2 */}
       <section className="max-w-[1400px] mx-auto px-6 lg:px-8 pb-32 z-10 relative">
@@ -152,10 +174,12 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
     <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
       <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
         {listing.mainImage || listing.hall?.image ? (
-          <img 
+          <Image 
             src={listing.mainImage || listing.hall.image || ""} 
             alt={listing.hall?.name || "Salla"} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -204,10 +228,10 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
   ))}
 </div>
 
-        {/* MEGABANNER 2 - NË MES TË LISTËS */}
-        {displayListings.length > 8 && (
+        {/* MEGABANNER 2 (Shfaqet nëse kemi tërhequr me sukses reklamën e dytë) */}
+        {activeAds[1] && (
           <div className="w-full my-16">
-            <Megabanner/>
+            <Megabanner ad={activeAds[1]} />
           </div>
         )}
 
@@ -216,18 +240,20 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {secondBatch.map((listing: any) => (
               <Link key={listing.id} href={`/${locale}/salla/${listing.hallId}`} className="group flex flex-col bg-[#0f1a2d] rounded-[24px] overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300">
-      <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
-        {listing.mainImage || listing.hall?.image ? (
-          <img 
-            src={listing.mainImage || listing.hall.image || ""} 
-            alt={listing.hall?.name || "Salla"} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-slate-700"/>
-          </div>
-        )}
+                <div className="relative h-[220px] w-full bg-[#0F111A] overflow-hidden">
+                  {listing.mainImage || listing.hall?.image ? (
+                    <Image 
+                      src={listing.mainImage || listing.hall.image || ""} 
+                      alt={listing.hall?.name || "Salla"} 
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-slate-700"/>
+                    </div>
+                  )}
         
         {/* ETIKETAT LART (Badges individuale) */}
         <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-20 max-w-[70%]">
