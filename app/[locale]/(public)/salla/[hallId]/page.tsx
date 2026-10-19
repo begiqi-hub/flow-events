@@ -26,7 +26,8 @@ import HallGallery from "./HallGallery";
 import PublicHeader from "@/components/public/PublicHeader";
 import PublicFooter from "@/components/public/PublicFooter";
 import { CITIES } from "@/lib/constants/cities"; 
-import ShareButtons from "./ShareButtons"; // <-- IMPORTI I RI SHTUAR KËTU
+import ShareButtons from "./ShareButtons";
+import { DEMO_LISTINGS } from "@/lib/demo-data";
 
 const getCityName = (cityId: string | null | undefined) => {
   if (!cityId) return "Kosovë";
@@ -39,16 +40,23 @@ export const revalidate = 3600;
 export async function generateMetadata({ params }: { params: Promise<{ hallId: string }> }) {
   const { hallId } = await params;
   
-  // ZËVENDËSUAR: findUnique me findFirst për të lejuar filtrat e relacioneve
-  const listing = await prisma.listing.findFirst({
-    where: { 
-      hallId: hallId, 
-      status: "PUBLISHED",
-      business: { status: 'active' }, // Mbron Metadata-n nga bizneset e bllokuara
-      hall: { is_published: true, status: 'active' } // Mbron nëse salla bëhet OFF
-    },
-    include: { hall: true, business: true }
-  });
+  // 1. KONTROLLI PËR DEMO (Metadata)
+  const isDemo = DEMO_LISTINGS.find(item => item.hallId === hallId || item.id === hallId);
+  
+  let listing: any;
+  if (isDemo) {
+    listing = isDemo;
+  } else {
+    listing = await prisma.listing.findFirst({
+      where: { 
+        hallId: hallId, 
+        status: "PUBLISHED",
+        business: { status: 'active' }, 
+        hall: { is_published: true, status: 'active' } 
+      },
+      include: { hall: true, business: true }
+    });
+  }
 
   if (!listing) {
     return {
@@ -95,38 +103,47 @@ const premiumItalicStyle: React.CSSProperties = {
 export default async function PublicHallDetails({ params }: { params: Promise<{ locale: string, hallId: string }> }) {
   const { locale, hallId } = await params;
 
-  // ZËVENDËSUAR: Përdorim findFirst me filtrat e plotë të sigurisë
-  const listing = await prisma.listing.findFirst({
-    where: { 
-      hallId: hallId,
-      status: "PUBLISHED",
-      business: { status: 'active' }, // BLLOKIMI: Kthen 404 nëse biznesi nuk është aktiv
-      hall: { is_published: true, status: 'active' } // BLLOKIMI: Kthen 404 nëse salla është bërë OFF
-    },
-    include: {
-      hall: true,
-      business: true,
-    }
-  });
+  // 2. KONTROLLI PËR DEMO (Detajet e Faqes)
+  const isDemo = DEMO_LISTINGS.find(item => item.hallId === hallId || item.id === hallId);
+  
+  let listing: any;
+  if (isDemo) {
+    listing = isDemo;
+  } else {
+    listing = await prisma.listing.findFirst({
+      where: { 
+        hallId: hallId,
+        status: "PUBLISHED",
+        business: { status: 'active' }, 
+        hall: { is_published: true, status: 'active' } 
+      },
+      include: {
+        hall: true,
+        business: true,
+      }
+    });
+  }
 
-  // Nëse nuk gjendet (prej ID-së gabim ose për shkak se biznesi është i bllokuar), kthe 404
   if (!listing) {
     notFound();
   }
 
-  // Përditësojmë edhe kërkesën e sallave të tjera për t'u siguruar që asnjë sallë e fshehur nuk del
-  const otherListings = await prisma.listing.findMany({
-    where: {
-      businessId: listing.businessId,
-      status: "PUBLISHED",
-      hallId: { not: hallId },
-      hall: { is_published: true, status: 'active' } // Sigurohemi që sallat e tjera janë vërtet publike
-    },
-    include: {
-      hall: true
-    },
-    take: 3
-  });
+  // 3. Kërkojmë salla të tjera VETËM nëse nuk është sallë demo
+  let otherListings: any[] = [];
+  if (!isDemo) {
+    otherListings = await prisma.listing.findMany({
+      where: {
+        businessId: listing.businessId,
+        status: "PUBLISHED",
+        hallId: { not: hallId },
+        hall: { is_published: true, status: 'active' } 
+      },
+      include: {
+        hall: true
+      },
+      take: 3
+    });
+  }
 
   const displayTitle = listing.marketing_name || listing.hall.name;
   const displayAddress = listing.address ? listing.address : getCityName(listing.business.city);
@@ -188,7 +205,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
               {displayTitle}
             </h1>
 
-            {/* Location, Capacity & Share Buttons (NDRYSHIMI KËTU) */}
+            {/* Location, Capacity & Share Buttons */}
             <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-6">
               <div className="flex flex-wrap items-center gap-6 text-sm md:text-base font-light text-slate-300">
                 <span className="flex items-center gap-2.5">
@@ -201,7 +218,6 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
                 </span>
               </div>
               
-              {/* Komponenti i ri për shpërndarje */}
               <ShareButtons 
                 url={`https://hallevo.com/${locale}/salla/${hallId}`} 
                 title={displayTitle} 
