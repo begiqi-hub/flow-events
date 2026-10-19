@@ -83,7 +83,7 @@ export default async function PublicMarketplaceHome({ params }: { params: Promis
             </p>
           </div>
 
-          <div className="hidden lg:block absolute right-6 lg:right-8 top-[-80px] w-[52%] max-w-[700px] h-[520px] z-0 overflow-visible">
+          <div className="hidden lg:block absolute right-6 lg:right-5 top-[-80px] w-[52%] max-w-[700px] h-[520px] z-0 overflow-visible">
             <div className="w-full h-full overflow-hidden rounded-bl-[160px] relative">
               <Image 
                 src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=2000&auto=format&fit=crop" 

@@ -28,6 +28,7 @@ import PublicFooter from "@/components/public/PublicFooter";
 import { CITIES } from "@/lib/constants/cities"; 
 import ShareButtons from "./ShareButtons";
 import { DEMO_LISTINGS } from "@/lib/demo-data";
+import { Metadata } from "next";
 
 const getCityName = (cityId: string | null | undefined) => {
   if (!cityId) return "Kosovë";
@@ -37,7 +38,7 @@ const getCityName = (cityId: string | null | undefined) => {
 
 export const revalidate = 3600;
 
-export async function generateMetadata({ params }: { params: Promise<{ hallId: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ hallId: string }> }): Promise<Metadata> {
   const { hallId } = await params;
   
   // 1. KONTROLLI PËR DEMO (Metadata)

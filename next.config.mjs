@@ -35,6 +35,13 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+
+  /* Mbrojtja e RAM-it të Serverit gjatë procesit Build */
+  experimental: {
+    cpus: 1,
+    workerThreads: false,
+    memoryBasedWorkersCount: true,
+  },
 };
 
 // ==========================================
