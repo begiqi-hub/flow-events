@@ -4,9 +4,9 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { useEffect, Suspense } from 'react';
 
+// Leximi i sigurt nga variablat e mjedisit
 const FB_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
-// Funksioni për të dërguar eventin bazë
 const pageview = () => {
   if (typeof window !== 'undefined' && (window as any).fbq) {
     (window as any).fbq('track', 'PageView');
@@ -18,7 +18,6 @@ function PixelEvents() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Ekzekutohet në ngarkimin e parë dhe sa herë që ndryshon URL (Routimi i brendshëm)
     pageview();
   }, [pathname, searchParams]);
 
@@ -26,7 +25,11 @@ function PixelEvents() {
 }
 
 export default function MetaPixel() {
-  if (!FB_PIXEL_ID) return null;
+  // Bllokon ekzekutimin nëse variabla e mjedisit nuk ekziston
+  if (!FB_PIXEL_ID) {
+    console.warn('Meta Pixel ID mungon në variablat e mjedisit.');
+    return null;
+  }
 
   return (
     <>
@@ -47,10 +50,18 @@ export default function MetaPixel() {
           `,
         }}
       />
-      {/* Përdorimi i Suspense është i detyrueshëm për të mos bllokuar Static Generation (SSG) nga useSearchParams */}
       <Suspense fallback={null}>
         <PixelEvents />
       </Suspense>
+      <noscript>
+        <img 
+          height="1" 
+          width="1" 
+          style={{ display: 'none' }}
+          src={`https://www.facebook.com/tr?id=${FB_PIXEL_ID}&ev=PageView&noscript=1`}
+          alt="Meta Pixel"
+        />
+      </noscript>
     </>
   );
 }
