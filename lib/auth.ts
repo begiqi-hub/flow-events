@@ -60,6 +60,26 @@ export const authOptions: NextAuthOptions = {
              if (businessAccount) {
                const b = businessAccount as any;
                console.log("✅ Gjeta përdorues në 'users':", b.email);
+               
+               // ==========================================
+               // 🛑 KONTROLLI I BLLOKIMIT DIREKT KËTU
+               // ==========================================
+               if (b.status === "suspended" || b.status === "BLOCKED") {
+                 console.log("❌ Ndalim hyrje: Përdoruesi është i bllokuar.");
+                 throw new Error("BLLOKUAR");
+               }
+
+               if (b.business_id) {
+                 const dbBusiness = await prisma.businesses.findUnique({
+                   where: { id: b.business_id }
+                 });
+                 if (dbBusiness?.status === "suspended") {
+                   console.log("❌ Ndalim hyrje: Biznesi është i pezulluar.");
+                   throw new Error("BLLOKUAR");
+                 }
+               }
+               // ==========================================
+
                foundAccount = {
                  id: b.id,
                  email: b.email,
@@ -74,6 +94,8 @@ export const authOptions: NextAuthOptions = {
              }
            } catch (e: any) {
               console.log("🚨 GABIM KRITIK GJATË KËRKIMIT NË 'users':", e.message);
+              // Mos e fshih gabimin nëse nuk është fjalëkalimi
+              if (e.message === "BLLOKUAR") throw e; 
            }
         }
 

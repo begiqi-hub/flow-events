@@ -38,8 +38,8 @@ export default function BlockedPage() {
         </h1>
 
         <p className="mx-auto mt-4 max-w-sm text-sm leading-7 text-slate-400">
-          Aktualisht, qasja në llogarinë tuaj HALLEVO është e kufizuar.
-          Nëse dëshironi të kuptoni arsyen ose mendoni se ky kufizim
+          Aktualisht, qasja në llogarinë tuaj HALLEVO është e kufizuar për arsye shkeljeve të rregullave.
+          Nëse mendoni se ky kufizim
           është bërë gabimisht, ju lutemi kontaktoni ekipin tonë.
         </p>
 

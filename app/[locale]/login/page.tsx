@@ -34,6 +34,13 @@ export default function LoginPage() {
     });
 
     if (res?.error) {
+      // 1. Kapim gabimin specifik nga serveri kur përdoruesi ose biznesi është bllokuar
+      if (res.error === "BLLOKUAR") {
+        window.location.href = `/${locale}/bllokuar`;
+        return; // Ndërpret ekzekutimin që të mos hiqet loading ose të shfaqet errorInvalid
+      }
+
+      // 2. Nëse nuk është "BLLOKUAR", atëherë është vërtet fjalëkalim ose email i gabuar
       setError(t("errorInvalid")); 
       setLoading(false);
     } else {
