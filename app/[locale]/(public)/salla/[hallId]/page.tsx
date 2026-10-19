@@ -52,8 +52,9 @@ export async function generateMetadata({ params }: { params: Promise<{ hallId: s
       where: { 
         hallId: hallId, 
         status: "PUBLISHED",
-        business: { status: 'active' }, 
-        hall: { is_published: true, status: 'active' } 
+        // ZGJIDHJA: Lejon të hapet çdo sallë përveç atyre të bizneseve të bllokuara
+        business: { status: { notIn: ['suspended', 'BLOCKED'] } }, 
+        hall: { is_published: true } 
       },
       include: { hall: true, business: true }
     });
@@ -115,8 +116,9 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
       where: { 
         hallId: hallId,
         status: "PUBLISHED",
-        business: { status: 'active' }, 
-        hall: { is_published: true, status: 'active' } 
+        // ZGJIDHJA E GABIMIT 404 KËTU
+        business: { status: { notIn: ['suspended', 'BLOCKED'] } }, 
+        hall: { is_published: true } 
       },
       include: {
         hall: true,
@@ -137,7 +139,7 @@ export default async function PublicHallDetails({ params }: { params: Promise<{ 
         businessId: listing.businessId,
         status: "PUBLISHED",
         hallId: { not: hallId },
-        hall: { is_published: true, status: 'active' } 
+        hall: { is_published: true } 
       },
       include: {
         hall: true
