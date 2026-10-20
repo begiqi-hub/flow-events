@@ -4,15 +4,16 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { useEffect, Suspense } from 'react';
 
-// Leximi i sigurt nga variablat e mjedisit
-const FB_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+const FB_PIXEL_ID = '161510194612457';
 
+// Funksioni që i tregon Meta-s çdo herë që ndryshon faqja
 const pageview = () => {
   if (typeof window !== 'undefined' && (window as any).fbq) {
     (window as any).fbq('track', 'PageView');
   }
 };
 
+// Komponenti që dëgjon ndryshimet në rrugëtim (URL)
 function PixelEvents() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -25,14 +26,9 @@ function PixelEvents() {
 }
 
 export default function MetaPixel() {
-  // Bllokon ekzekutimin nëse variabla e mjedisit nuk ekziston
-  if (!FB_PIXEL_ID) {
-    console.warn('Meta Pixel ID mungon në variablat e mjedisit.');
-    return null;
-  }
-
   return (
     <>
+      {/* Skripti Baze i Meta Pixel duke përdorur optimizimin e Next.js */}
       <Script
         id="meta-pixel"
         strategy="afterInteractive"
@@ -50,9 +46,13 @@ export default function MetaPixel() {
           `,
         }}
       />
+      
+      {/* Injektimi i gjurmimit të navigimit (I mbështjellë në Suspense për të mos prishur Build-in) */}
       <Suspense fallback={null}>
         <PixelEvents />
       </Suspense>
+      
+      {/* Pjesa Noscript për shfletuesit që kanë JavaScript të fikur */}
       <noscript>
         <img 
           height="1" 
